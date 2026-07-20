@@ -8,12 +8,9 @@ function CotizacionPage() {
     <div className="min-h-screen bg-[#F7F2E8] px-8 py-6">
 
       {/* Volver */}
-      <button
-        onClick={() => navigate('/')}
-        className="flex items-center gap-2 text-[#2D5A27] text-sm mb-6 hover:underline"
-      >
-        ← Volver al carrito
-      </button>
+      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#2D5A27] text-sm mb-6 hover:underline">
+          ← Volver
+        </button>
 
       {/* Documento */}
       <div className="max-w-3xl mx-auto bg-[#E8E8D8] rounded-xl p-10 mb-8">

@@ -9,7 +9,7 @@ const metodosPago = [
   { id: 'nequi',          nombre: 'Nequi',                 descripcion: 'Paga fácilmente desde tu cuenta Nequi.', badge: 'NEQUI',     badgeColor: 'bg-[#7B2D8B]' },
   { id: 'daviplata',      nombre: 'Daviplata',             descripcion: 'Paga fácilmente tu cuenta Daviplata.',   badge: 'Daviplata', badgeColor: 'bg-[#C8102E]' },
   { id: 'transferencia',  nombre: 'Transferencia bancaria',descripcion: 'Te enviaremos los datos para realizar la transferencia.', badge: null, icono: '🏦' },
-  { id: 'contra_entrega', nombre: 'Pago contra entrega',   descripcion: 'Pagas cuando recibas tu pedido.',        badge: null, icono: '🚚' },
+  { id: 'efectivo', nombre: 'Pago contra entrega',   descripcion: 'Pagas cuando recibas tu pedido.',        badge: null, icono: '🚚' },
 ]
 
 const camposObligatorios = ['nombre', 'correo', 'telefono', 'direccion', 'ciudad']
@@ -74,10 +74,14 @@ function ResumenLateral() {
 
 function ConfigurarPedidoPage() {
   const navigate = useNavigate()
+  const { guardarDatosCliente, confirmarPedido } = useCarrito()
+  const [cargando, setCargando] = useState(false)
+  const [error, setError]       = useState(null)
+  const [idPedido, setIdPedido] = useState(null)
   const [pasoActual, setPasoActual] = useState(0)
   const [metodoPago, setMetodoPago] = useState('pse')
   const [intentoContinuar, setIntentoContinuar] = useState(false)
-  const { guardarDatosCliente } = useCarrito()
+  
   const [form, setForm] = useState({
     nombre:    '',
     correo:    '',
@@ -231,49 +235,87 @@ function ConfigurarPedidoPage() {
           )}
 
           {/* Paso 2 — Método de pago */}
-          {pasoActual === 1 && (
-            <div className="flex-1 bg-white rounded-xl p-8 border border-[#E7E7E7]">
-              <h2 className="text-xl font-semibold text-[#010101] mb-1">Selecciona tu método de pago</h2>
-              <p className="text-xs text-[#888888] mb-6">Elige la opción que más te convenga.</p>
-              <div className="grid grid-cols-2 gap-4">
-                {metodosPago.map(m => (
-                  <button key={m.id} onClick={() => setMetodoPago(m.id)}
-                    className={`flex items-start justify-between p-4 rounded-xl border-2 text-left transition-colors
-                      ${metodoPago === m.id ? 'border-[#2D5A27] bg-[#f0f7ee]' : 'border-[#E7E7E7] bg-white hover:border-[#2D5A27]'}
-                      ${m.id === 'contra_entrega' ? 'col-span-2' : ''}`}>
-                    <div className="flex items-start gap-3">
-                      <div className={`w-4 h-4 mt-1 rounded-full border-2 flex-shrink-0 flex items-center justify-center
-                        ${metodoPago === m.id ? 'border-[#2D5A27]' : 'border-[#888888]'}`}>
-                        {metodoPago === m.id && <div className="w-2 h-2 rounded-full bg-[#2D5A27]" />}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-[#010101]">{m.nombre}</p>
-                        <p className="text-xs text-[#888888] mt-1">{m.descripcion}</p>
-                      </div>
-                    </div>
-                    {m.badge && <span className={`text-white text-xs px-2 py-1 rounded font-bold ${m.badgeColor}`}>{m.badge}</span>}
-                    {m.icono && <span className="text-xl">{m.icono}</span>}
-                  </button>
-                ))}
-              </div>
+{/* Paso 2 — Método de pago */}
+{pasoActual === 1 && (
+  <div className="flex-1 bg-white rounded-xl p-8 border border-[#E7E7E7]">
+    <h2 className="text-xl font-semibold text-[#010101] mb-1">Selecciona tu método de pago</h2>
+    <p className="text-xs text-[#888888] mb-6">Elige la opción que más te convenga.</p>
+    <div className="grid grid-cols-2 gap-4">
+      {metodosPago.map(m => (
+        <button key={m.id} onClick={() => setMetodoPago(m.id)}
+          className={`flex items-start justify-between p-4 rounded-xl border-2 text-left transition-colors
+            ${metodoPago === m.id ? 'border-[#2D5A27] bg-[#f0f7ee]' : 'border-[#E7E7E7] bg-white hover:border-[#2D5A27]'}
+            ${m.id === 'contra_entrega' ? 'col-span-2' : ''}`}>
+          <div className="flex items-start gap-3">
+            <div className={`w-4 h-4 mt-1 rounded-full border-2 flex-shrink-0 flex items-center justify-center
+              ${metodoPago === m.id ? 'border-[#2D5A27]' : 'border-[#888888]'}`}>
+              {metodoPago === m.id && <div className="w-2 h-2 rounded-full bg-[#2D5A27]" />}
             </div>
-          )}
-
-          {/* Paso 3 — Confirmación */}
-          {pasoActual === 2 && (
-            <div className="flex-1 bg-white rounded-xl p-8 border border-[#E7E7E7] flex flex-col items-center justify-center gap-4 py-16">
-              <div className="w-16 h-16 bg-[#f0f7ee] rounded-full flex items-center justify-center text-3xl">✅</div>
-              <h2 className="text-xl font-semibold text-[#010101]">¡Pedido confirmado!</h2>
-              <p className="text-sm text-[#888888] text-center max-w-xs">
-                Tu pedido ha sido recibido. Te enviaremos un correo con los detalles de tu compra.
-              </p>
-              <button onClick={() => navigate('/')}
-                className="mt-4 bg-[#2D5A27] text-white text-sm px-10 py-3 rounded-xl hover:bg-[#215511] transition-colors">
-                Volver al inicio
-              </button>
+            <div>
+              <p className="text-sm font-semibold text-[#010101]">{m.nombre}</p>
+              <p className="text-xs text-[#888888] mt-1">{m.descripcion}</p>
             </div>
-          )}
+          </div>
+          {m.badge && <span className={`text-white text-xs px-2 py-1 rounded font-bold ${m.badgeColor}`}>{m.badge}</span>}
+          {m.icono && <span className="text-xl">{m.icono}</span>}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
 
+{/* Paso 3 — Confirmación */}
+{pasoActual === 2 && (
+  <div className="flex-1 bg-white rounded-xl p-8 border border-[#E7E7E7] flex flex-col items-center justify-center gap-4 py-16">
+    {!idPedido ? (
+      <>
+        <div className="w-16 h-16 bg-[#f0f7ee] rounded-full flex items-center justify-center text-3xl">
+          🛒
+        </div>
+        <h2 className="text-xl font-semibold text-[#010101]">Confirmar pedido</h2>
+        <p className="text-sm text-[#888888] text-center max-w-xs">
+          Método de pago: <span className="font-semibold text-[#010101]">{metodoPago}</span>
+        </p>
+        {error && (
+          <p className="text-sm text-red-500 text-center">{error}</p>
+        )}
+        <button
+          onClick={async () => {
+            setCargando(true)
+            setError(null)
+            const resultado = await confirmarPedido(form, metodoPago)
+            if (resultado.ok) {
+              setIdPedido(resultado.id_pedido)
+            } else {
+              setError(resultado.mensaje)
+            }
+            setCargando(false)
+          }}
+          disabled={cargando}
+          className="mt-4 bg-[#2D5A27] text-white text-sm px-10 py-3 rounded-xl hover:bg-[#215511] transition-colors disabled:opacity-50"
+        >
+          {cargando ? "Procesando..." : "Confirmar pedido"}
+        </button>
+      </>
+    ) : (
+      <>
+        <div className="w-16 h-16 bg-[#f0f7ee] rounded-full flex items-center justify-center text-3xl">
+          ✅
+        </div>
+        <h2 className="text-xl font-semibold text-[#010101]">¡Pedido confirmado!</h2>
+        <p className="text-sm text-[#888888] text-center max-w-xs">
+          Tu pedido ha sido recibido. Te enviaremos un correo con los detalles.
+        </p>
+        <button
+          onClick={() => navigate("/")}
+          className="mt-4 bg-[#2D5A27] text-white text-sm px-10 py-3 rounded-xl hover:bg-[#215511] transition-colors"
+        >
+          Volver al inicio
+        </button>
+      </>
+    )}
+  </div>
+)}
           <ResumenLateral />
         </div>
 
