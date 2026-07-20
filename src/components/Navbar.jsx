@@ -4,26 +4,38 @@ function Navbar() {
   const navigate = useNavigate()
 
   return (
-    <nav className="bg-[#1C3A0A] px-8 py-4 flex items-center justify-between">
+    <nav className="bg-[#1e3a10] px-6 h-14 flex items-center relative z-40">
       
       <span
         onClick={() => navigate('/')}
-        className="text-white font-bold text-xl tracking-wide cursor-pointer"
+        className="text-stone-100 font-serif text-lg mr-8 cursor-pointer"
       >
-        GRANOVA
+        Granova
       </span>
 
-      <ul className="flex gap-8 list-none">
-        {['Inicio', 'Catalogo', 'Promociones', 'Nosotros', 'Contacto'].map(l => (
-          <li key={l}>
-            <a href="#" className="text-white text-sm hover:text-[#D4C49A] transition-colors">
-              {l}
-            </a>
-          </li>
+      <div className="hidden sm:flex gap-6">
+        {[
+          { label: 'Catálogo',   ruta: '/catalogo'    },
+          { label: 'Mis pedidos', ruta: '/mis-pedidos' },
+          { label: 'Promociones', ruta: null           },
+          { label: 'Mi cuenta',   ruta: null           },
+        ].map((item, i) => (
+          <span
+            key={item.label}
+            onClick={() => item.ruta && navigate(item.ruta)}
+            className={`text-sm pb-0.5 
+              ${item.ruta ? 'cursor-pointer' : 'cursor-default'}
+              ${i === 0 ? 'text-white border-white font-medium' : 'text-white/60 hover:text-white/90'}
+            `}
+          >
+            {item.label}
+          </span>
         ))}
-      </ul>
+      </div>
 
-      <span className="text-white text-sm font-medium">Carlos Andrade</span>
+      <div className="ml-auto">
+        <span className="text-white text-sm font-medium">Carlos Andrade</span>
+      </div>
 
     </nav>
   )
