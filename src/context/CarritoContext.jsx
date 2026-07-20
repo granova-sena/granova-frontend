@@ -3,15 +3,55 @@ import { createContext, useContext, useState } from 'react'
 const CarritoContext = createContext()
 
 const productosIniciales = [
-  { id: 1, nombre: 'Cafe tostado',  presentacion: 'Grano-100g',  precio: 15000, cantidad: 10 },
-  { id: 2, nombre: 'Cafe premium',  presentacion: 'Molido-150g', precio: 30000, cantidad: 3  },
-  { id: 3, nombre: 'Cafe Orgánico', presentacion: 'Grano-300g',  precio: 35000, cantidad: 1  },
+
 ]
 
 const DESCUENTO = 0.06
 const IVA       = 0.19
 
 export function CarritoProvider({ children }) {
+  const confirmarPedido = async (datosFormulario, metodoPago) => {
+  try {
+    const body = {
+      id_cliente:     1, // temporal hasta tener autenticación
+      metodo_pago:    metodoPago,
+      direccion_envio: datosFormulario.direccion,
+      ciudad_envio:   datosFormulario.ciudad,
+      productos: productos.map(p => ({
+  id_producto:     p.id,
+  cantidad:        p.cantidad,
+  precio_unitario: p.precio,
+}))
+    }
+
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pedidos`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify(body)
+    })
+
+    const json = await res.json()
+
+    if (!json.ok) throw new Error(json.mensaje)
+
+    return { ok: true, id_pedido: json.data.id_pedido }
+
+  } catch (error) {
+    console.error("Error confirmando pedido:", error.message)
+    return { ok: false, mensaje: error.message }
+  }
+}
+  const sincronizarCarrito = (productosExternos) => {
+  const productosAdaptados = productosExternos.map(p => ({
+    id:           p.id,
+    nombre:       p.nombre,
+    presentacion: p.origen || '',
+    precio:       p.precio,
+    cantidad:     p.cant || 1,
+  }))
+  setProductos(productosAdaptados)
+}
+  
   const [productos, setProductos] = useState(productosIniciales)
   const [datosCliente, setDatosCliente] = useState(null)
 
@@ -42,19 +82,22 @@ export function CarritoProvider({ children }) {
 
   return (
     <CarritoContext.Provider value={{
-      productos,
-      aumentarCantidad,
-      disminuirCantidad,
-      eliminarProducto,
-      datosCliente,
-      guardarDatosCliente,
-      subtotal,
-      descuentoMonto,
-      ivaMonto,
-      total,
-      DESCUENTO,
-      IVA,
-    }}>
+  productos,
+  aumentarCantidad,
+  disminuirCantidad,
+  eliminarProducto,
+  sincronizarCarrito,
+  datosCliente,
+  guardarDatosCliente,
+  confirmarPedido,
+  subtotal,
+  descuentoMonto,
+  ivaMonto,
+  total,
+  DESCUENTO,
+  IVA,
+}}>   
+      
       {children}
     </CarritoContext.Provider>
   )

@@ -10,6 +10,9 @@ function CarritoPage() {
 
       {/* Columna izquierda */}
       <div className="flex-1">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#2D5A27] text-sm mb-6 hover:underline">
+          ← Volver
+        </button>
         <h1 className="text-[#2D5A27] text-3xl font-bold mb-1">
           Tu carrito de compras
         </h1>
