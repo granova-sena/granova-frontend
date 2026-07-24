@@ -1,2 +1,2 @@
-# granova-backend
-Backend de Granova - Node.js + Express + MySQL
+# granova-frontend
+Frontend de Granova - React.js + Tailwind CSS
