@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo, Component } from "react";
 import { useNavigate } from "react-router-dom";
 import { useModalBehavior } from "../hooks/useModalBehavior";
 import { useCarrito } from "../context/CarritoContext";
+import { API_URL as BASE_API_URL } from "../config";
 
 // ── CONFIG API ────────────────────────────────────────────
-const API_URL = "http://localhost:3000/productos";
+const API_URL = `${BASE_API_URL}/productos`;
 
 // ── SISTEMA DE COLOR ───────────────────────────────────────
 // fondo: #0a1a0a   tarjeta: #FFFFFF   borde: neutro (no verde)
