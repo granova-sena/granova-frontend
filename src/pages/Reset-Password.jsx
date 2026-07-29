@@ -140,20 +140,21 @@ function ResetPassword() {
         className="absolute inset-0 w-full h-full object-cover"
         src={registerBg}
       />
-      <div className="absolute inset-0 bg-[#FAFAF7]/80"></div>
+      <div className="absolute inset-0 bg-[#0a1a0a]/80"></div>
 
-      <div className="relative z-10 w-full max-w-sm rounded-2xl p-8 bg-white border border-[#17140F]/8 shadow-2xl">
+      <div className="relative z-10 w-full max-w-sm rounded-2xl p-8"
+        style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.15)' }}>
 
         <div className="flex justify-center mb-6">
-          <span className="text-[#17140F] text-2xl font-medium tracking-tight">Granova</span>
+          <span className="text-[#E1F5EE] text-2xl font-medium tracking-tight">Granova</span>
         </div>
 
-        <h2 className="text-xl font-medium text-[#17140F] mb-1 text-center">Nueva contraseña</h2>
-        <p className="text-sm text-[#17140F]/60 mb-6 text-center">Elige una contraseña segura para tu cuenta</p>
+        <h2 className="text-xl font-medium text-white mb-1 text-center">Nueva contraseña</h2>
+        <p className="text-sm text-white/60 mb-6 text-center">Elige una contraseña segura para tu cuenta</p>
 
         <form onSubmit={handleReset}>
           <div className="mb-2 relative">
-            <label className="block text-sm text-[#17140F]/70 mb-1.5">Nueva contraseña</label>
+            <label className="block text-sm text-white/70 mb-1.5">Nueva contraseña</label>
             <input
               type={verContraseña ? 'text' : 'password'}
               name="nuevaContraseña"
@@ -163,13 +164,13 @@ function ResetPassword() {
               onBlur={() => setContraseñaFocus(false)}
               disabled={cargando}
               placeholder="••••••••"
-              className="w-full px-4 py-2.5 pr-11 rounded-xl text-sm text-[#17140F] placeholder-[#17140F]/30 focus:outline-none transition disabled:opacity-50"
-              style={{ background: '#FAFAF7', border: '1px solid rgba(23,20,15,0.12)' }}
+              className="w-full px-4 py-2.5 pr-11 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition disabled:opacity-50"
+              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
             />
             <button
               type="button"
               onClick={() => setVerContraseña(!verContraseña)}
-              className="absolute right-3 top-9 text-[#17140F]/40 hover:text-[#17140F]/80 transition"
+              className="absolute right-3 top-9 text-white/40 hover:text-white/80 transition"
               tabIndex={-1}
             >
               <IconoOjo ver={verContraseña} />
@@ -184,7 +185,7 @@ function ResetPassword() {
                   key={regla.id}
                   className={`overflow-hidden transition-all duration-300 ${regla.cumplida ? 'max-h-0 opacity-0' : 'max-h-6 opacity-100'}`}
                 >
-                  <p className="text-xs text-[#17140F]/40">○ {regla.label}</p>
+                  <p className="text-xs text-white/40">○ {regla.label}</p>
                 </div>
               ))}
             </div>
@@ -194,7 +195,7 @@ function ResetPassword() {
           )}
 
           <div className="mb-2 relative">
-            <label className="block text-sm text-[#17140F]/70 mb-1.5">Confirmar contraseña</label>
+            <label className="block text-sm text-white/70 mb-1.5">Confirmar contraseña</label>
             <input
               type={verConfirmar ? 'text' : 'password'}
               name="confirmarContraseña"
@@ -202,20 +203,20 @@ function ResetPassword() {
               onChange={handleChange}
               disabled={cargando}
               placeholder="••••••••"
-              className="w-full px-4 py-2.5 pr-11 rounded-xl text-sm text-[#17140F] placeholder-[#17140F]/30 focus:outline-none transition disabled:opacity-50"
-              style={{ background: '#FAFAF7', border: '1px solid rgba(23,20,15,0.12)' }}
+              className="w-full px-4 py-2.5 pr-11 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition disabled:opacity-50"
+              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
             />
             <button
               type="button"
               onClick={() => setVerConfirmar(!verConfirmar)}
-              className="absolute right-3 top-9 text-[#17140F]/40 hover:text-[#17140F]/80 transition"
+              className="absolute right-3 top-9 text-white/40 hover:text-white/80 transition"
               tabIndex={-1}
             >
               <IconoOjo ver={verConfirmar} />
             </button>
           </div>
           <div className={`overflow-hidden transition-all duration-300 ${confirmarTocado && !contraseñasCoinciden ? 'max-h-6 opacity-100 mb-4' : 'max-h-0 opacity-0 mb-0'}`}>
-            <p className="text-xs text-[#B5451F]">Las contraseñas no coinciden</p>
+            <p className="text-xs text-red-400">Las contraseñas no coinciden</p>
           </div>
           {confirmarTocado && contraseñasCoinciden && (
             <p className="text-xs text-[#1D9E75] mb-6">✓ Coinciden</p>
@@ -224,7 +225,7 @@ function ResetPassword() {
           <button
             type="submit"
             disabled={cargando || !puedeActualizar}
-            className="w-full py-2.5 bg-[#17140F] text-[#FFFFFF] rounded-xl text-sm font-medium hover:bg-[#2B271F] transition disabled:opacity-50 mt-2"
+            className="w-full py-2.5 bg-[#1D9E75] text-white rounded-xl text-sm font-medium hover:bg-[#0F6E56] transition disabled:opacity-50 mt-2"
           >
             {cargando ? 'Actualizando...' : 'Actualizar contraseña'}
           </button>
