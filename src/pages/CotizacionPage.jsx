@@ -1,11 +1,137 @@
 import { useNavigate } from 'react-router-dom'
 import { useCarrito } from '../context/CarritoContext'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 function CotizacionPage() {
   const navigate = useNavigate()
   const { productos, subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, datosCliente } = useCarrito()
+  // Agrega esto al inicio del componente, junto a los otros estados
+const clienteSesion = (() => {
+  try {
+    return JSON.parse(localStorage.getItem('cliente')) || null
+  } catch {
+    return null
+  }
+})()
+  const generarPDF = () => {
+  const doc = new jsPDF()
+
+  doc.setFontSize(20)
+  doc.setTextColor(45, 90, 39)
+  doc.text('COTIZACIÓN', 105, 20, { align: 'center' })
+
+  doc.setFontSize(9)
+  doc.setTextColor(100)
+  const fechaHoy    = new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
+  const fechaValida = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
+  doc.text(`Fecha: ${fechaHoy}`,          150, 30)
+  doc.text(`Válida hasta: ${fechaValida}`, 150, 35)
+
+  doc.setFontSize(10)
+  doc.setTextColor(0)
+  doc.text('Datos del cliente', 15, 45)
+  doc.setFontSize(9)
+  doc.setTextColor(80)
+
+  if (datosCliente) {
+    doc.text(`Nombre: ${datosCliente.nombre}`,     15, 52)
+    doc.text(`Correo: ${datosCliente.correo}`,     15, 57)
+    doc.text(`Teléfono: ${datosCliente.telefono}`, 15, 62)
+    doc.text(`Ciudad: ${datosCliente.ciudad}`,     15, 67)
+  }
+
+  doc.setFontSize(10)
+  doc.setTextColor(0)
+  doc.text('Condiciones comerciales', 110, 45)
+  doc.setFontSize(9)
+  doc.setTextColor(80)
+  doc.text('• Los precios incluyen IVA.',                      110, 52)
+  doc.text('• Esta cotización no representa orden de compra.', 110, 57)
+  doc.text('• Sujeto a disponibilidad de inventario.',         110, 62)
+
+  autoTable(doc, {
+    startY: 75,
+    head: [['Producto', 'Presentación', 'Cantidad', 'Precio Unitario', 'Subtotal']],
+    body: productos.map(p => [
+      p.nombre,
+      p.presentacion || '-',
+      p.cantidad,
+      `$${p.precio.toLocaleString()}`,
+      `$${(p.precio * p.cantidad).toLocaleString()}`
+    ]),
+    headStyles:          { fillColor: [45, 90, 39], textColor: 255, fontSize: 9 },
+    bodyStyles:          { fontSize: 9 },
+    alternateRowStyles:  { fillColor: [240, 247, 238] }
+  })
+
+  const finalY = doc.lastAutoTable.finalY + 10
+
+  doc.setFontSize(9)
+  doc.setTextColor(80)
+  doc.text(`Subtotal:`,                             130, finalY)
+  doc.text(`$${subtotal.toLocaleString()}`,         175, finalY,      { align: 'right' })
+
+  doc.setTextColor(45, 90, 39)
+  doc.text(`Descuento (${(DESCUENTO * 100).toFixed(0)}%):`, 130, finalY + 6)
+  doc.text(`- $${descuentoMonto.toLocaleString()}`, 175, finalY + 6,  { align: 'right' })
+
+  doc.setTextColor(200, 0, 0)
+  doc.text(`IVA (${(IVA * 100).toFixed(0)}%):`,    130, finalY + 12)
+  doc.text(`$${ivaMonto.toLocaleString()}`,         175, finalY + 12, { align: 'right' })
+
+  doc.setTextColor(0)
+  doc.setFontSize(11)
+  doc.setFont('helvetica', 'bold')
+  doc.text(`TOTAL:`,                                130, finalY + 20)
+  doc.text(`$${total.toLocaleString()}`,            175, finalY + 20, { align: 'right' })
+
+  doc.save(`cotizacion-granova-${Date.now()}.pdf`)
+}
+
+const enviarPorCorreo = async () => {
+  const clienteGuardado = JSON.parse(localStorage.getItem('cliente') || '{}')
+
+  if (!clienteGuardado.email) {
+    alert('No hay sesión activa')
+    return
+  }
+
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/correo/cotizacion`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email:     clienteGuardado.email,
+        nombre:    clienteGuardado.nombre,
+        productos: productos.map(p => ({
+          nombre:       p.nombre,
+          presentacion: p.presentacion,
+          cantidad:     p.cantidad,
+          precio:       p.precio,
+        })),
+        subtotal,
+        descuento: descuentoMonto,
+        iva:       ivaMonto,
+        total,
+      })
+    })
+
+    const json = await res.json()
+
+    if (json.ok) {
+      alert('✅ Cotización enviada a ' + clienteGuardado.email)
+    } else {
+      alert('❌ Error: ' + json.mensaje)
+    }
+
+  } catch (error) {
+    alert('❌ No se pudo conectar con el servidor')
+  }
+}
 
   return (
+    
     <div className="min-h-screen px-4 sm:px-8 py-6" style={{ background: '#0a1a0a' }}>
 
       {/* Volver */}
@@ -36,21 +162,26 @@ function CotizacionPage() {
         <div className="flex gap-8 mb-8">
           <div className="flex-1 text-xs text-[#3D3D3D] flex flex-col gap-1">
             <p className="font-semibold mb-1">Datos del cliente</p>
-            {datosCliente ? (
-              <>
-                <p>Nombre: {datosCliente.nombre}</p>
-                <p>Correo: {datosCliente.correo}</p>
-                <p>Teléfono: {datosCliente.telefono}</p>
-                <p>Dirección: {datosCliente.direccion}</p>
-                <p>Ciudad: {datosCliente.ciudad}</p>
-              </>
-            ) : (
-              <>
-                <p>Nombre: —</p>
-                <p>Correo: —</p>
-                <p>Teléfono: —</p>
-              </>
-            )}
+            {(() => {
+  const cliente = datosCliente || clienteSesion
+  return cliente ? (
+    <>
+      <p>Nombre: {cliente.nombre} {cliente.apellido || ''}</p>
+      <p>Correo: {cliente.email || cliente.correo || '—'}</p>
+      <p>Teléfono: {datosCliente?.telefono || '—'}</p>
+      <p>Dirección: {datosCliente?.direccion || '—'}</p>
+      <p>Ciudad: {datosCliente?.ciudad || '—'}</p>
+    </>
+  ) : (
+    <>
+      <p>Nombre: —</p>
+      <p>Correo: —</p>
+      <p>Teléfono: —</p>
+      <p>Dirección: —</p>
+      <p>Ciudad: —</p>
+    </>
+  )
+})()}
           </div>
         </div>
 
@@ -104,10 +235,14 @@ function CotizacionPage() {
 
       {/* Botones */}
       <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-4">
-        <button className="flex-1 border border-white/15 bg-white/[0.08] backdrop-blur-xl text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/[0.14] transition-colors">
+        <button 
+        onClick={enviarPorCorreo}
+        className="flex-1 border border-white/15 bg-white/[0.08] backdrop-blur-xl text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/[0.14] transition-colors">
           ✉️ Enviar por correo
         </button>
-        <button className="flex-1 border border-white/15 bg-white/[0.08] backdrop-blur-xl text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/[0.14] transition-colors">
+        <button 
+        onClick={generarPDF}
+        className="flex-1 border border-white/15 bg-white/[0.08] backdrop-blur-xl text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/[0.14] transition-colors">
           📄 Descargar PDF
         </button>
         <button
