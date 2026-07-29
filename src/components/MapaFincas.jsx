@@ -284,35 +284,40 @@ function MapaFincas() {
   return (
     <div>
       <div
-        className="flex items-center justify-between px-4 sm:px-5 py-3 border-b"
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 px-4 sm:px-5 py-3 border-b"
         style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}
       >
         <button
           onClick={solicitarUbicacion}
           disabled={buscandoUbicacion}
-          className="px-4 py-2 bg-[#6FA98C] text-white rounded-lg text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto px-4 py-2 bg-[#6FA98C] text-white rounded-lg text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {buscandoUbicacion ? "Buscando tu ubicación..." : "Ver fincas más cercanas a mí"}
         </button>
 
         {errorUbicacion && (
-          <p className="text-xs text-[#D85A30] ml-3">{errorUbicacion}</p>
+          <p className="text-xs text-[#D85A30]">{errorUbicacion}</p>
         )}
 
-
-        <form onSubmit={(e) => {e.preventDefault(); buscarZona(textoBusqueda);}}>
-        <input
-        type="text"
-        value={textoBusqueda}
-        onChange={(e) => setTextoBusqueda(e.target.value)}
-        placeholder="Buscar una zona..."/>
-        <button type="submit" className="ml-2 px-3 py-1 bg-[#6FA98C] text-white rounded-lg text-sm font-medium hover:bg-[#4F8A70] transition">Buscar</button>
-
+        <form
+          onSubmit={(e) => { e.preventDefault(); buscarZona(textoBusqueda); }}
+          className="flex items-center gap-2 w-full sm:w-auto"
+        >
+          <input
+            type="text"
+            value={textoBusqueda}
+            onChange={(e) => setTextoBusqueda(e.target.value)}
+            placeholder="Buscar una zona..."
+            className="flex-1 sm:w-40 min-w-0 px-3 py-2 rounded-lg text-sm text-white placeholder-white/40 focus:outline-none transition"
+            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}
+          />
+          <button
+            type="submit"
+            className="shrink-0 px-3 py-2 bg-[#6FA98C] text-white rounded-lg text-sm font-medium hover:bg-[#4F8A70] transition"
+          >
+            Buscar
+          </button>
         </form>
-
-       
-
-
       </div>
 
       {/*
