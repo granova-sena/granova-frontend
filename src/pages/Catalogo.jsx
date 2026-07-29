@@ -4,6 +4,7 @@ import { useModalBehavior } from "../hooks/useModalBehavior";
 import { useCarrito } from "../context/CarritoContext";
 import { API_URL as BASE_API_URL } from "../config";
 
+
 // ── CONFIG API ────────────────────────────────────────────
 const API_URL = `${BASE_API_URL}/productos`;
 
@@ -682,8 +683,9 @@ function CatalogoInterno() {
         setError(null);
         const res = await fetch(API_URL);
         if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
-        const data = await res.json();
-        if (!cancelado) setProductos(eliminarDuplicados(data.map(adaptarProducto)));
+        const json = await res.json();
+if (!json.ok) throw new Error(json.mensaje || "Error del servidor");
+if (!cancelado) setProductos(eliminarDuplicados(json.data.map(adaptarProducto)));
       } catch (err) {
         if (!cancelado) setError(err.message);
       } finally {

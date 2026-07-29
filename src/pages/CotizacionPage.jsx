@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import { useCarrito } from '../context/CarritoContext'
+import { API_URL } from '../config'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-
+fetch
 function CotizacionPage() {
   const navigate = useNavigate()
   const { productos, subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, datosCliente } = useCarrito()
@@ -98,8 +99,7 @@ const enviarPorCorreo = async () => {
   }
 
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/correo/cotizacion`, {
-      method:  'POST',
+      const res = await fetch(`${API_URL}/api/correo/cotizacion`, {      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email:     clienteGuardado.email,
