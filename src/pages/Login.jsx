@@ -4,7 +4,7 @@ import { useState } from 'react'
 import logo from '../assets/logo.png'
 import registerBg from '../assets/register-bg.mp4'
 import toast from 'react-hot-toast'
-
+import { API_URL, FRONTEND_URL } from "../config";
 
 
 function Login() {
@@ -41,7 +41,9 @@ const handleLogin = async (e) => {
     setLoading(true)
 
     try {
-      const respuesta = await fetch('http://localhost:3000/auth/login', {
+      const respuesta = await fetch(`${API_URL}/auth/login`,
+        
+         {
         method: 'POST',
         headers: { 'Content-type': 'application/json' },
         body: JSON.stringify({
@@ -76,7 +78,7 @@ function iniciarLoginGoogle() {
   const arriba = (window.screen.height - alto) / 2
 
   const popup = window.open(
-    'http://localhost:3000/auth/google',
+  `${API_URL}/auth/google`,
     'googleLogin',
     `width=${ancho},height=${alto},left=${izquierda},top=${arriba}`
   )
@@ -85,8 +87,7 @@ function iniciarLoginGoogle() {
     // El popup termina en /auth/callback, que es una vista del FRONTEND (5173),
     // no del backend (3000). Comparar contra 3000 hacía que este mensaje
     // se ignorara siempre, sin importar si venía token o error.
-    if (evento.origin !== 'http://localhost:5173') return
-
+if (evento.origin !== FRONTEND_URL) return
     const { token, cliente, error } = evento.data
 
     if (error) {

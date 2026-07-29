@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import registerBg from '../assets/register-bg.mp4'
 import toast from 'react-hot-toast'
+import { API_URL } from "../config";
+
 
 const REGEX_MAYUSCULA = /[A-Z]/
 const REGEX_NUMERO = /[0-9]/
@@ -86,7 +88,7 @@ function ResetPassword() {
     setCargando(true)
 
     try {
-      const respuesta = await fetch('http://localhost:3000/auth/reset-password', {
+      const respuesta = await fetch(`${API_URL}/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

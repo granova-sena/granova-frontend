@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import logo from '../assets/logo.png'
+import { API_URL } from "../config";
+
 
 function VerificarCuenta() {
   const navigate = useNavigate()
@@ -27,7 +29,7 @@ function VerificarCuenta() {
 
     async function verificar() {
       try {
-        const respuesta = await fetch(`http://localhost:3000/auth/verificar-cuenta?token=${encodeURIComponent(token)}`)
+        const respuesta = await fetch(`${API_URL}/auth/verificar-cuenta?token=${encodeURIComponent(token)}`)
         const datos = await respuesta.json()
 
         if (!respuesta.ok) {
@@ -53,7 +55,7 @@ function VerificarCuenta() {
 
     setReenviando(true)
     try {
-      const respuesta = await fetch('http://localhost:3000/auth/reenviar-verificacion', {
+      const respuesta = await fetch(`${API_URL}/auth/reenviar-verificacion`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FRONTEND_URL } from '../config';
 
 function AuthCallback() {
     const navigate = useNavigate();
@@ -18,7 +19,7 @@ function AuthCallback() {
         if (token && clienteData && window.opener) {
             window.opener.postMessage(
                 { token, cliente: clienteData },
-                'http://localhost:5173'
+                FRONTEND_URL
             );
             window.close();
             return;
@@ -30,7 +31,7 @@ function AuthCallback() {
         if (error && window.opener) {
             window.opener.postMessage(
                 { error },
-                'http://localhost:5173'
+                FRONTEND_URL
             );
             window.close();
             return;

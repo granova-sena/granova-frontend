@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import registerBg from '../assets/register-bg.mp4'
 import logo from '../assets/logo.png'
 import toast from 'react-hot-toast'
+import { API_URL } from "../config";
 
 function AdminLogin() {
   const navigate = useNavigate()
@@ -32,7 +33,7 @@ function AdminLogin() {
     setCargando(true)
 
     try {
-      const respuesta = await fetch('http://localhost:3000/auth/login-admin', {
+      const respuesta = await fetch(`${API_URL}/auth/login-admin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

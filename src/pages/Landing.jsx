@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import registerBg from '../assets/register-bg.mp4'
+import { API_URL } from "../config";
 
 function Landing() {
   const navigate = useNavigate()
@@ -27,7 +28,7 @@ function Landing() {
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         callback: async (response) => {
           try {
-            const respuesta = await fetch('http://localhost:3000/auth/google-onetap', {
+                  const respuesta = await fetch(`${API_URL}/auth/google-onetap`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ credential: response.credential }),

@@ -1,11 +1,117 @@
 import { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap} from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "../style/leaflet-oscuro.css"
+import toast from "react-hot-toast";
+
+
 // Sin cliente de Supabase en el frontend: hablamos con nuestro propio backend Express
 // Mismo patrón que usa Catalogo.jsx para consumir /productos
-const API_URL = "http://localhost:3000/fincas";
+import { API_URL } from "../config";
 
 const CENTRO_IBAGUE = [4.4389, -75.2322];
+
+/**
+ * Ícono personalizado con L.divIcon(): HTML/CSS crudo en vez de una imagen.
+ * IMPORTANTE: esto es un string plano, no JSX — Leaflet lo inserta directo
+ * en el DOM por fuera del control de React (Fundamento 6, llevado al extremo).
+ */
+const iconoFinca = L.divIcon({
+  className: "", // vacío para que Leaflet no le agregue sus estilos por defecto
+  html: `
+    <div style="
+      width: 30px;
+      height: 30px;
+      background: #6FA98C;
+      border: 2px solid rgba(255,255,255,0.85);
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+    ">
+      <span style="
+        display: block;
+        transform: rotate(45deg);
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      ">☕</span>
+    </div>
+  `,
+  iconSize: [30, 30],
+  iconAnchor: [15, 30], // la "punta" del pin (abajo-centro) es el punto exacto de la coordenada
+  popupAnchor: [0, -32], // el popup se abre arriba del ícono, no encima
+});
+
+/**
+ * Ícono para "tu ubicación": deliberadamente distinto en FORMA (círculo, no pin)
+ * para que nunca se confunda con una finca real, aunque comparta color.
+ * El anillo animado es el patrón visual estándar de "punto GPS activo".
+ */
+const iconoUsuario = L.divIcon({
+  className: "",
+  html: `
+    <div style="position: relative; width: 20px; height: 20px;">
+      <div style="
+        position: absolute;
+        inset: -8px;
+        border-radius: 50%;
+        background: rgba(111,169,140,0.35);
+        animation: pulso-ubicacion 1.8s ease-out infinite;
+      "></div>
+      <div style="
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #6FA98C;
+        border: 3px solid white;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      "></div>
+    </div>
+    <style>
+      @keyframes pulso-ubicacion {
+        0% { transform: scale(0.6); opacity: 0.9; }
+        100% { transform: scale(1.8); opacity: 0; }
+      }
+    </style>
+  `,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10], // círculo: el ancla es el centro, no una punta como en el pin
+  popupAnchor: [0, -14],
+});
+
+
+
+function MoverMapa({posicion}) {
+
+
+      const mapa = useMap();
+
+
+
+      useEffect(() => {
+
+
+          if(posicion){
+
+
+
+              mapa.setView([posicion.lat, posicion.lng], 13);
+          }
+
+        }, [posicion]);
+        
+        
+        return null;
+
+
+
+
+          }
+
 
 function calcularDistanciaKm(lat1, lng1, lat2, lng2) {
   const radioTierraKm = 6371;
@@ -28,6 +134,9 @@ function MapaFincas() {
   const [fincas, setFincas] = useState([]);
   const [cargandoFincas, setCargandoFincas] = useState(true);
   const [errorFincas, setErrorFincas] = useState(null);
+  const [textoBusqueda, setTextoBusqueda] = useState("");
+  const [resultadoBusqueda, setResultadoBusqueda] = useState(null);
+  
 
   const [ubicacionUsuario, setUbicacionUsuario] = useState(null);
   const [buscandoUbicacion, setBuscandoUbicacion] = useState(false);
@@ -41,7 +150,7 @@ function MapaFincas() {
 
     async function cargarFincas() {
       try {
-        const respuesta = await fetch(API_URL);
+        const respuesta = await fetch(`${API_URL}/fincas`);
 
         if (!respuesta.ok) {
           throw new Error("Respuesta no exitosa del servidor");
@@ -80,6 +189,75 @@ function MapaFincas() {
     );
   };
 
+
+  async function buscarZona(texto) {
+
+      if(!texto.trim()) return;
+
+      try {
+
+
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(texto)}&limit=1`;
+
+        const respuesta = await fetch (url, {
+
+            headers:  {
+
+                "User-Agent": "Granova-App (contacto@granova.com)",
+            },
+          });
+
+
+          if(!respuesta.ok) {
+
+
+            throw new Error("No se pudo buscar la zona")
+              
+          }
+
+          const resultados = await respuesta.json();
+
+
+          if(resultados.length === 0) {
+
+          toast.error("No se encontro esa zona", {id: "error-busqueda-mapa"});
+            return;
+          }
+
+          const { lat, lon} = resultados [0];
+
+
+          setResultadoBusqueda ({lat: parseFloat(lat), lng: parseFloat(lon)});
+          toast.success("Zona encontrada", {id: "success-busqueda-mapa"});
+
+
+            }
+
+            catch (error) {
+
+              toast.error("No se pudo buscar la zona. Intenta nuevamente.", {id: "error-busqueda-mapa"});
+            }
+
+
+        
+
+
+      }
+
+
+  
+
+
+
+
+      
+
+
+
+
+
+
+
   const fincasOrdenadas = ubicacionUsuario
     ? [...fincas]
         .map((finca) => ({
@@ -96,27 +274,50 @@ function MapaFincas() {
 
   // Mientras cargan las fincas desde Supabase, no tiene sentido mostrar un mapa vacío
   if (cargandoFincas) {
-    return <p>Cargando fincas...</p>;
+    return <p className="text-white/50 text-sm p-4">Cargando fincas...</p>;
   }
 
   if (errorFincas) {
-    return <p style={{ color: "#993C1D" }}>{errorFincas}</p>;
+    return <p className="text-[#D85A30] text-sm p-4">{errorFincas}</p>;
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between px-4 sm:px-5 py-3 bg-white border-b border-[#17140F]/8">
+      <div
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 px-4 sm:px-5 py-3 border-b"
+        style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}
+      >
         <button
           onClick={solicitarUbicacion}
           disabled={buscandoUbicacion}
-          className="px-4 py-2 bg-[#1D9E75] text-white rounded-lg text-sm font-medium hover:bg-[#15805F] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto px-4 py-2 bg-[#6FA98C] text-white rounded-lg text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {buscandoUbicacion ? "Buscando tu ubicación..." : "Ver fincas más cercanas a mí"}
         </button>
 
         {errorUbicacion && (
-          <p className="text-xs text-[#993C1D] ml-3">{errorUbicacion}</p>
+          <p className="text-xs text-[#D85A30]">{errorUbicacion}</p>
         )}
+
+        <form
+          onSubmit={(e) => { e.preventDefault(); buscarZona(textoBusqueda); }}
+          className="flex items-center gap-2 w-full sm:w-auto"
+        >
+          <input
+            type="text"
+            value={textoBusqueda}
+            onChange={(e) => setTextoBusqueda(e.target.value)}
+            placeholder="Buscar una zona..."
+            className="flex-1 sm:w-40 min-w-0 px-3 py-2 rounded-lg text-sm text-white placeholder-white/40 focus:outline-none transition"
+            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}
+          />
+          <button
+            type="submit"
+            className="shrink-0 px-3 py-2 bg-[#6FA98C] text-white rounded-lg text-sm font-medium hover:bg-[#4F8A70] transition"
+          >
+            Buscar
+          </button>
+        </form>
       </div>
 
       {/*
@@ -135,8 +336,16 @@ function MapaFincas() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
 
+
+          <MoverMapa posicion={resultadoBusqueda} />
+
+
+
+
+
+
         {fincasOrdenadas.map((finca) => (
-          <Marker key={finca.id} position={[finca.lat, finca.lng]}>
+          <Marker key={finca.id} position={[finca.lat, finca.lng]} icon={iconoFinca}>
             <Popup>
               <strong>{finca.nombre}</strong>
               <br />
@@ -150,6 +359,13 @@ function MapaFincas() {
             </Popup>
           </Marker>
         ))}
+
+        {/* Marcador de "tu ubicación": solo existe si ya se obtuvo el permiso del navegador */}
+        {ubicacionUsuario && (
+          <Marker position={[ubicacionUsuario.lat, ubicacionUsuario.lng]} icon={iconoUsuario}>
+            <Popup>Estás aquí</Popup>
+          </Marker>
+        )}
       </MapContainer>
     </div>
   );

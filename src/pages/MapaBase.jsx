@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import "../utils/leafletIconFix";
 
 const CENTRO_IBAGUE = [4.4389, -75.2322];
 const RETRASO_DEBOUNCE_MS = 800;

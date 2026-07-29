@@ -1,0 +1,18 @@
+.leaflet-popup-content-wrapper {
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    box-shadow: none;
+
+}
+
+.leaflet-popup-content{
+    color: black;
+}
+
+.leaflet-popup-tip {
+
+    background: rgba(255,255,255,0.95)
+}
+

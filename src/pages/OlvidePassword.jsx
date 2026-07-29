@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import registerBg from '../assets/register-bg.mp4'
 import toast from 'react-hot-toast'
+import { API_URL } from "../config";
+
+
 
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -36,7 +39,7 @@ function OlvidePassword() {
     setCargando(true)
 
     try {
-      const respuesta = await fetch('http://localhost:3000/auth/recuperar-password', {
+      const respuesta = await fetch(`${API_URL}/auth/recuperar-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import { API_URL } from "../config";
+
 
 const ROLES_DISPONIBLES = ['admin', 'gerente', 'empleado']
 
@@ -43,7 +45,7 @@ function Users() {
   async function cargarUsuarios() {
     try {
       const token = localStorage.getItem('token')
-      const respuesta = await fetch('http://localhost:3000/usuarios', {
+      const respuesta = await fetch(`${API_URL}/usuarios`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const datos = await respuesta.json()
@@ -58,7 +60,7 @@ function Users() {
   async function cargarMetricas() {
     try {
       const token = localStorage.getItem('token')
-      const respuesta = await fetch('http://localhost:3000/usuarios/metricas', {
+      const respuesta = await fetch(`${API_URL}/usuarios/metricas`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const datos = await respuesta.json()
@@ -110,7 +112,7 @@ function Users() {
 
     try {
       const token = localStorage.getItem('token')
-      const respuesta = await fetch('http://localhost:3000/usuarios', {
+      const respuesta = await fetch(`${API_URL}/usuarios`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +145,7 @@ function Users() {
 
     try {
       const token = localStorage.getItem('token')
-      const respuesta = await fetch(`http://localhost:3000/usuarios/${usuario.id_usuario}/estado`, {
+      const respuesta = await fetch(`${API_URL}/usuarios/${usuario.id_usuario}/estado`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -172,7 +174,7 @@ function Users() {
 
     try {
       const token = localStorage.getItem('token')
-      const respuesta = await fetch(`http://localhost:3000/usuarios/${usuario.id_usuario}/rol`, {
+      const respuesta = await fetch(`${API_URL}/usuarios/${usuario.id_usuario}/rol`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -208,7 +210,7 @@ function Users() {
 
     try {
       const token = localStorage.getItem('token')
-      const respuesta = await fetch(`http://localhost:3000/usuarios/${usuario.id_usuario}`, {
+      const respuesta = await fetch(`${API_URL}/usuarios/${usuario.id_usuario}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -248,7 +250,7 @@ function Users() {
 
       // OJO: no se pone 'Content-Type' a mano — el navegador arma el header
       // multipart/form-data con el boundary correcto solo si lo dejamos solo.
-      const respuesta = await fetch('http://localhost:3000/usuarios/importar', {
+      const respuesta = await fetch(`${API_URL}/usuarios/importar`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -401,7 +403,7 @@ function Users() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <span
             className="text-xs px-2.5 py-1 rounded-full text-[#1F2A24]/50"
             style={{ background: 'rgba(20,40,32,0.07)', border: '1px solid rgba(20,40,32,0.14)' }}
@@ -480,9 +482,9 @@ function Users() {
         </div>
       )}
       <div className="rounded-2xl overflow-hidden" style={glass}>
-        {/* Header tabla */}
+        {/* Header tabla (oculto en móvil, la vista de tarjetas no lo necesita) */}
         <div
-          className="grid grid-cols-12 gap-4 px-6 py-3 text-xs text-[#1F2A24]/40 uppercase tracking-wider"
+          className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3 text-xs text-[#1F2A24]/40 uppercase tracking-wider"
           style={{ borderBottom: '1px solid rgba(20,40,32,0.12)', background: 'rgba(20,40,32,0.045)' }}
         >
           <div className="col-span-1">#</div>
@@ -514,88 +516,156 @@ function Users() {
         ) : (
           <div>
             {usuariosFiltrados.map((usuario, i) => (
-              <div
-                key={usuario.id_usuario}
-                className="grid grid-cols-12 gap-4 px-6 py-4 items-center transition-all duration-200 hover:bg-[#1D9E75]/[0.04] group"
-                style={{ borderBottom: i < usuariosFiltrados.length - 1 ? '1px solid rgba(20,40,32,0.06)' : 'none' }}
-              >
-                {/* Número */}
-                <div className="col-span-1 text-xs text-[#1F2A24]/30">{i + 1}</div>
+              <div key={usuario.id_usuario}>
+                {/* Fila de escritorio (sm y mayor) */}
+                <div
+                  className="hidden sm:grid grid-cols-12 gap-4 px-6 py-4 items-center transition-all duration-200 hover:bg-[#1D9E75]/[0.04] group"
+                  style={{ borderBottom: i < usuariosFiltrados.length - 1 ? '1px solid rgba(20,40,32,0.06)' : 'none' }}
+                >
+                  {/* Número */}
+                  <div className="col-span-1 text-xs text-[#1F2A24]/30">{i + 1}</div>
 
-                {/* Usuario */}
-                <div className="col-span-4 flex items-center gap-3">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
-                    style={{
-                      background: 'rgba(29,158,117,0.12)',
-                      color: '#1D9E75',
-                    }}
-                  >
-                    {usuario.nombre?.charAt(0).toUpperCase()}
+                  {/* Usuario */}
+                  <div className="col-span-4 flex items-center gap-3">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
+                      style={{
+                        background: 'rgba(29,158,117,0.12)',
+                        color: '#1D9E75',
+                      }}
+                    >
+                      {usuario.nombre?.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm text-[#1F2A24]/85 font-medium">{usuario.nombre} {usuario.apellido}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-[#1F2A24]/85 font-medium">{usuario.nombre} {usuario.apellido}</p>
+
+                  {/* Correo */}
+                  <div className="col-span-2">
+                    <p className="text-sm text-[#1F2A24]/50 truncate">{usuario.email}</p>
                   </div>
-                </div>
 
-                {/* Correo */}
-                <div className="col-span-2">
-                  <p className="text-sm text-[#1F2A24]/50 truncate">{usuario.email}</p>
-                </div>
+                  {/* Rol */}
+                  <div className="col-span-2">
+                    <select
+                      value={usuario.rol}
+                      disabled={idEnProceso === usuario.id_usuario}
+                      onChange={(e) => cambiarRol(usuario, e.target.value)}
+                      className="text-xs px-2.5 py-1.5 rounded-full capitalize cursor-pointer focus:outline-none disabled:opacity-50 disabled:cursor-wait"
+                      style={{ background: getRolColor(usuario.rol).bg, border: `1px solid ${getRolColor(usuario.rol).border}`, color: getRolColor(usuario.rol).color }}
+                    >
+                      {ROLES_DISPONIBLES.map((rol) => (
+                        <option key={rol} value={rol} className="capitalize">{rol}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Rol */}
-                <div className="col-span-2">
-                  <select
-                    value={usuario.rol}
-                    disabled={idEnProceso === usuario.id_usuario}
-                    onChange={(e) => cambiarRol(usuario, e.target.value)}
-                    className="text-xs px-2.5 py-1.5 rounded-full capitalize cursor-pointer focus:outline-none disabled:opacity-50 disabled:cursor-wait"
-                    style={{ background: getRolColor(usuario.rol).bg, border: `1px solid ${getRolColor(usuario.rol).border}`, color: getRolColor(usuario.rol).color }}
-                  >
-                    {ROLES_DISPONIBLES.map((rol) => (
-                      <option key={rol} value={rol} className="capitalize">{rol}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Estado */}
-                <div className="col-span-2">
-                  <button
-                    onClick={() => toggleEstado(usuario)}
-                    disabled={idEnProceso === usuario.id_usuario}
-                    className="flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
-                    title={usuario.estado === 'activo' ? 'Clic para desactivar' : 'Clic para activar'}
-                  >
-                    <span
-                      className="relative inline-flex h-5 w-9 rounded-full transition-colors duration-200 flex-shrink-0"
-                      style={{ background: usuario.estado === 'activo' ? '#1D9E75' : 'rgba(20,40,32,0.18)' }}
+                  {/* Estado */}
+                  <div className="col-span-2">
+                    <button
+                      onClick={() => toggleEstado(usuario)}
+                      disabled={idEnProceso === usuario.id_usuario}
+                      className="flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
+                      title={usuario.estado === 'activo' ? 'Clic para desactivar' : 'Clic para activar'}
                     >
                       <span
-                        className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all duration-200"
-                        style={{ left: usuario.estado === 'activo' ? '18px' : '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.25)' }}
-                      />
-                    </span>
-                    <span
-                      className="text-xs capitalize"
-                      style={{ color: usuario.estado === 'activo' ? '#1D9E75' : 'rgba(31,42,36,0.5)' }}
+                        className="relative inline-flex h-5 w-9 rounded-full transition-colors duration-200 flex-shrink-0"
+                        style={{ background: usuario.estado === 'activo' ? '#1D9E75' : 'rgba(20,40,32,0.18)' }}
+                      >
+                        <span
+                          className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all duration-200"
+                          style={{ left: usuario.estado === 'activo' ? '18px' : '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.25)' }}
+                        />
+                      </span>
+                      <span
+                        className="text-xs capitalize"
+                        style={{ color: usuario.estado === 'activo' ? '#1D9E75' : 'rgba(31,42,36,0.5)' }}
+                      >
+                        {usuario.estado}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="col-span-1 flex justify-end">
+                    <button
+                      onClick={() => eliminarUsuarioAccion(usuario)}
+                      disabled={idEnProceso === usuario.id_usuario}
+                      className="p-1.5 rounded-lg text-[#1F2A24]/30 hover:text-[#dc2626] hover:bg-[#dc2626]/[0.08] transition disabled:opacity-40 disabled:cursor-wait"
+                      title="Eliminar usuario"
                     >
-                      {usuario.estado}
-                    </span>
-                  </button>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
 
-                {/* Acciones */}
-                <div className="col-span-1 flex justify-end">
-                  <button
-                    onClick={() => eliminarUsuarioAccion(usuario)}
-                    disabled={idEnProceso === usuario.id_usuario}
-                    className="p-1.5 rounded-lg text-[#1F2A24]/30 hover:text-[#dc2626] hover:bg-[#dc2626]/[0.08] transition disabled:opacity-40 disabled:cursor-wait"
-                    title="Eliminar usuario"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
+                {/* Tarjeta de móvil (oculta en sm y mayor) */}
+                <div
+                  className="sm:hidden px-4 py-4 flex flex-col gap-3"
+                  style={{ borderBottom: i < usuariosFiltrados.length - 1 ? '1px solid rgba(20,40,32,0.06)' : 'none' }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
+                      style={{ background: 'rgba(29,158,117,0.12)', color: '#1D9E75' }}
+                    >
+                      {usuario.nombre?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-[#1F2A24]/85 font-medium truncate">{usuario.nombre} {usuario.apellido}</p>
+                      <p className="text-xs text-[#1F2A24]/45 truncate">{usuario.email}</p>
+                    </div>
+                    <button
+                      onClick={() => eliminarUsuarioAccion(usuario)}
+                      disabled={idEnProceso === usuario.id_usuario}
+                      className="p-2 -mr-2 rounded-lg text-[#1F2A24]/30 hover:text-[#dc2626] hover:bg-[#dc2626]/[0.08] transition disabled:opacity-40 disabled:cursor-wait flex-shrink-0"
+                      title="Eliminar usuario"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <select
+                      value={usuario.rol}
+                      disabled={idEnProceso === usuario.id_usuario}
+                      onChange={(e) => cambiarRol(usuario, e.target.value)}
+                      className="text-xs px-2.5 py-1.5 rounded-full capitalize cursor-pointer focus:outline-none disabled:opacity-50 disabled:cursor-wait"
+                      style={{ background: getRolColor(usuario.rol).bg, border: `1px solid ${getRolColor(usuario.rol).border}`, color: getRolColor(usuario.rol).color }}
+                    >
+                      {ROLES_DISPONIBLES.map((rol) => (
+                        <option key={rol} value={rol} className="capitalize">{rol}</option>
+                      ))}
+                    </select>
+
+                    <button
+                      onClick={() => toggleEstado(usuario)}
+                      disabled={idEnProceso === usuario.id_usuario}
+                      className="flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
+                      title={usuario.estado === 'activo' ? 'Clic para desactivar' : 'Clic para activar'}
+                    >
+                      <span
+                        className="relative inline-flex h-5 w-9 rounded-full transition-colors duration-200 flex-shrink-0"
+                        style={{ background: usuario.estado === 'activo' ? '#1D9E75' : 'rgba(20,40,32,0.18)' }}
+                      >
+                        <span
+                          className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all duration-200"
+                          style={{ left: usuario.estado === 'activo' ? '18px' : '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.25)' }}
+                        />
+                      </span>
+                      <span
+                        className="text-xs capitalize"
+                        style={{ color: usuario.estado === 'activo' ? '#1D9E75' : 'rgba(31,42,36,0.5)' }}
+                      >
+                        {usuario.estado}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

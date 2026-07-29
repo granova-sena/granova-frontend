@@ -2,6 +2,9 @@ import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import registerBg from '../assets/register-bg.mp4'
 import toast from 'react-hot-toast'
+import { API_URL } from "../config";
+
+
 
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const REGEX_MAYUSCULA = /[A-Z]/
@@ -102,7 +105,7 @@ function Register() {
 
     setVerificandoEmail(true)
     try {
-      const respuesta = await fetch(`http://localhost:3000/auth/verificar-email?email=${encodeURIComponent(formData.email.trim())}`)
+      const respuesta = await fetch(`${API_URL}/auth/verificar-email?email=${encodeURIComponent(formData.email.trim())}`)
       const datos = await respuesta.json()
 
       if (!respuesta.ok) {
@@ -147,7 +150,7 @@ function Register() {
     const apellido = resto.join(' ')
 
     try {
-      const respuesta = await fetch('http://localhost:3000/auth/register', {
+      const respuesta = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

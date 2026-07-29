@@ -4,7 +4,9 @@ import registerBg from '../assets/register-bg.mp4'
 import ImagenProducto from '../components/ImagenProducto'
 import MapaFincas from '../components/MapaFincas'
 
-const API_URL = 'http://localhost:3000/productos'
+import { API_URL } from "../config";
+
+
 
 function saludoSegunHora() {
   const hora = new Date().getHours()
@@ -61,7 +63,7 @@ function ClienteInicio() {
     let cancelado = false
     async function cargar() {
       try {
-        const res = await fetch(API_URL)
+        const res = await fetch(`${API_URL}/productos`)
         if (!res.ok) throw new Error()
         const data = await res.json()
         if (!cancelado) setDestacados(data.slice(0, 3))
