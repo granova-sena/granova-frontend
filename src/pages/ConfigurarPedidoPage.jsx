@@ -131,7 +131,7 @@ function ConfigurarPedidoPage() {
   return (
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8">
+      <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
 
         {/* Volver */}
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#9DC9B4] text-sm mb-6 hover:underline">
@@ -139,7 +139,8 @@ function ConfigurarPedidoPage() {
         </button>
 
         {/* Indicador de pasos */}
-        <div className="flex items-center justify-center gap-0 mb-10 overflow-x-auto">
+        <div className="w-full overflow-x-auto pb-2 mb-8 sm:mb-10">
+          <div className="flex items-center justify-center gap-0 min-w-max px-2">
           {pasos.map((paso, i) => (
             <div key={i} className="flex items-center">
               <div className="flex flex-col items-center gap-1">
@@ -159,13 +160,14 @@ function ConfigurarPedidoPage() {
               )}
             </div>
           ))}
+          </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
+        <div className="flex flex-col lg:flex-row gap-5 sm:gap-8 items-stretch lg:items-start">
 
           {/* Paso 1 — Datos y dirección */}
           {pasoActual === 0 && (
-            <div className="flex-1 rounded-xl p-6 sm:p-8 border border-white/15 bg-white/[0.08] backdrop-blur-xl">
+            <div className="w-full min-w-0 flex-1 rounded-xl p-4 sm:p-6 lg:p-8 border border-white/15 bg-white/[0.08] backdrop-blur-xl">
               <h2 className="text-xl font-semibold text-white mb-6">Datos personales</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
@@ -229,7 +231,7 @@ function ConfigurarPedidoPage() {
 
           {/* Paso 2 — Método de pago */}
           {pasoActual === 1 && (
-            <div className="flex-1 rounded-xl p-6 sm:p-8 border border-white/15 bg-white/[0.08] backdrop-blur-xl">
+            <div className="w-full min-w-0 flex-1 rounded-xl p-4 sm:p-6 lg:p-8 border border-white/15 bg-white/[0.08] backdrop-blur-xl">
               <h2 className="text-xl font-semibold text-white mb-1">Selecciona tu método de pago</h2>
               <p className="text-xs text-white/40 mb-6">Elige la opción que más te convenga.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -257,7 +259,7 @@ function ConfigurarPedidoPage() {
 
           {/* Paso 3 — Confirmación */}
           {pasoActual === 2 && (
-            <div className="flex-1 rounded-xl p-8 border border-white/15 bg-white/[0.08] backdrop-blur-xl flex flex-col items-center justify-center gap-4 py-16">
+            <div className="w-full min-w-0 flex-1 rounded-xl p-5 sm:p-8 border border-white/15 bg-white/[0.08] backdrop-blur-xl flex flex-col items-center justify-center gap-4 py-16">
               {!idPedido ? (
                 <>
                   <div className="w-16 h-16 bg-[#6FA98C]/15 rounded-full flex items-center justify-center text-3xl">
@@ -312,16 +314,16 @@ function ConfigurarPedidoPage() {
 
         {/* Botones navegación */}
         {pasoActual < 2 && (
-          <div className="flex justify-between mt-8">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 mt-6 sm:mt-8">
             <button
               onClick={pasoActual === 0 ? () => navigate(-1) : pasoAnterior}
-              className="border border-white/15 bg-white/[0.06] text-white/70 text-sm px-8 py-3 rounded-xl hover:bg-white/10 transition-colors"
+              className="w-full sm:w-auto border border-white/15 bg-white/[0.06] text-white/70 text-sm px-6 sm:px-8 py-3 rounded-xl hover:bg-white/10 transition-colors"
             >
               ← Volver
             </button>
             <button
               onClick={siguientePaso}
-              className={`text-white text-sm px-10 sm:px-16 py-3 rounded-xl transition-colors
+              className={`w-full sm:w-auto text-white text-sm px-8 sm:px-16 py-3 rounded-xl transition-colors
                 ${pasoActual === 0 && intentoContinuar && !formularioValido
                   ? 'bg-white/15 cursor-not-allowed'
                   : 'bg-[#6FA98C] hover:bg-[#4F8A70]'
