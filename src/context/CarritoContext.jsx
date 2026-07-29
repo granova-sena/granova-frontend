@@ -12,32 +12,38 @@ const IVA       = 0.19
 export function CarritoProvider({ children }) {
   const confirmarPedido = async (datosFormulario, metodoPago) => {
   try {
+    // Leer el cliente real del localStorage
+    const clienteGuardado = JSON.parse(localStorage.getItem('cliente') || '{}')
+    const id_cliente = Number(clienteGuardado.id)
+    if (!id_cliente) {
+      return { ok: false, mensaje: "No hay sesión activa. Por favor inicia sesión." }
+    }
+
     const body = {
-      id_cliente:     1, // temporal hasta tener autenticación
-      metodo_pago:    metodoPago,
+      id_cliente,
+      metodo_pago:     metodoPago,
       direccion_envio: datosFormulario.direccion,
-      ciudad_envio:   datosFormulario.ciudad,
+      ciudad_envio:    datosFormulario.ciudad,
       productos: productos.map(p => ({
-  id_producto:     p.id,
-  cantidad:        p.cantidad,
-  precio_unitario: p.precio,
-}))
+        id_producto:     p.id,
+        cantidad:        p.cantidad,
+        precio_unitario: p.precio,
+      }))
     }
 
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pedidos`, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(body)
     })
 
     const json = await res.json()
-
     if (!json.ok) throw new Error(json.mensaje)
 
     return { ok: true, id_pedido: json.data.id_pedido }
 
   } catch (error) {
-    console.error("Error confirmando pedido:", error.message)
+    console.error('Error confirmando pedido:', error.message)
     return { ok: false, mensaje: error.message }
   }
 }

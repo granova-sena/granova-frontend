@@ -41,11 +41,12 @@ function MisPedidosPage() {
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
 
-  // ID temporal hasta tener autenticación
-  const id_cliente = 1
+   1
 
   useEffect(() => {
     async function cargarPedidos() {
+      const clienteGuardado = JSON.parse(localStorage.getItem('cliente') || '{}')
+      const id_cliente = Number(clienteGuardado.id)
       try {
         setCargando(true)
         const res  = await fetch(`${import.meta.env.VITE_API_URL}/api/pedidos/cliente/${id_cliente}`)

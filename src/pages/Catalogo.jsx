@@ -367,9 +367,6 @@ async function cargarProductos() {
   return (
     <div className="min-h-screen bg-[#f5f0e8] font-sans">
 
-      <Navbar />
-      
-      
 
       {/* HERO */}
       <div className="bg-[#1e3a10] px-6 pt-8 pb-12">
