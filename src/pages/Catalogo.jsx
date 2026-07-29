@@ -915,6 +915,33 @@ if (!cancelado) setProductos(eliminarDuplicados(json.data.map(adaptarProducto)))
             </div>
           )}
 
+          {/* GRID TODOS LOS PRODUCTOS (se convierte en "Favoritos" cuando soloFavoritos=true) */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white">{soloFavoritos ? "Tus favoritos" : "Todos los productos"}</h2>
+              <p className="text-sm text-white/40">{filtrados.length} productos</p>
+            </div>
+            {filtrados.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {filtrados.map(p => (
+                  <ProductoCard
+                    key={p.id}
+                    p={p}
+                    onAgregar={agregar}
+                    onVerDetalle={verDetalle}
+                    cantidadEnCarrito={carrito.find(c => c.id === p.id)?.cant || 0}
+                    esFavorito={favoritos.has(p.id)}
+                    onToggleFavorito={toggleFavorito}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 text-white/40">
+                <p className="text-sm">{soloFavoritos ? "Aún no tienes productos favoritos." : "No se encontraron productos."}</p>
+              </div>
+            )}
+          </div>
+
           {/* SECCIÓN DESTACADOS */}
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -966,33 +993,6 @@ if (!cancelado) setProductos(eliminarDuplicados(json.data.map(adaptarProducto)))
                 </div>
               );
             })()}
-          </div>
-
-          {/* GRID TODOS LOS PRODUCTOS */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-white">{soloFavoritos ? "Tus favoritos" : "Todos los productos"}</h2>
-              <p className="text-sm text-white/40">{filtrados.length} productos</p>
-            </div>
-            {filtrados.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filtrados.map(p => (
-                  <ProductoCard
-                    key={p.id}
-                    p={p}
-                    onAgregar={agregar}
-                    onVerDetalle={verDetalle}
-                    cantidadEnCarrito={carrito.find(c => c.id === p.id)?.cant || 0}
-                    esFavorito={favoritos.has(p.id)}
-                    onToggleFavorito={toggleFavorito}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-16 text-white/40">
-                <p className="text-sm">{soloFavoritos ? "Aún no tienes productos favoritos." : "No se encontraron productos."}</p>
-              </div>
-            )}
           </div>
         </div>
       )}
