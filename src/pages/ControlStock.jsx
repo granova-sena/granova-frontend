@@ -102,11 +102,10 @@ function ControlStock() {
     setPagina(1)
   }
 
-  const exportarExcel = async () => {
+  const exportarExcel = () => {
     setExportando(true)
     try {
-      const res = await api.get('/inventario/productos', { params: { tab: 'Todos', search: '', page: 1, limit: 10000 } })
-      const datos = res.data.productos.map(p => ({
+      const datos = productos.map(p => ({
         Nombre: p.nombre,
         Categoría: p.categoria,
         Origen: p.origen,
@@ -116,10 +115,11 @@ function ControlStock() {
         'Precio/kg': p.precio,
         Estado: p.estado,
       }))
+      datos.push({ Nombre: `— Página ${pagina} de ${totalPaginas} (${totalFiltrados} productos en total) —` })
       const hoja = XLSX.utils.json_to_sheet(datos)
       const libro = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(libro, hoja, 'Inventario')
-      XLSX.writeFile(libro, 'inventario-granova.xlsx')
+      XLSX.writeFile(libro, `inventario-granova-pagina-${pagina}.xlsx`)
     } catch (err) {
       alert('No se pudo generar el Excel: ' + err.message)
     } finally {

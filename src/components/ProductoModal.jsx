@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import api from '../services/api'
+import { formatMoney } from '../utils/format'
 
 const formVacio = {
   categoria_producto: 'cafe',
@@ -21,12 +22,20 @@ function ProductoModal({ producto, onClose, onGuardado }) {
   const [modo, setModo] = useState('individual') // 'individual' | 'excel'
 
   const [lotes, setLotes] = useState([])
+  const [categorias, setCategorias] = useState([])
+  const [marcas, setMarcas] = useState([])
   const [cargandoLotes, setCargandoLotes] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [cargandoProducto, setCargandoProducto] = useState(false)
   const [error, setError] = useState(null)
 
   const [form, setForm] = useState(formVacio)
+
+  const [sugerenciasPrecio, setSugerenciasPrecio] = useState([])
+  const [sugerenciasGarantia, setSugerenciasGarantia] = useState([])
+
+  const [confirmarPrecioBajo, setConfirmarPrecioBajo] = useState(false)
+  const precioRef = useRef(null)
 
   const [archivoExcel, setArchivoExcel] = useState(null)
   const [filasExcel, setFilasExcel] = useState([])
@@ -35,10 +44,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
   const [resultadoImport, setResultadoImport] = useState(null)
 
   useEffect(() => {
-    api.get('/inventario/lotes')
-      .then(res => setLotes(res.data.lotes))
-      .catch(err => setError('No se pudieron cargar los lotes: ' + err.message))
-      .finally(() => setCargandoLotes(false))
+    api.get('/inventario/lotes').then(res => setLotes(res.data.lotes)).catch(() => {}).finally(() => setCargandoLotes(false))
+    api.get('/inventario/categorias').then(res => setCategorias(res.data.categorias)).catch(() => {})
+    api.get('/inventario/marcas').then(res => setMarcas(res.data.marcas)).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -77,7 +85,29 @@ function ProductoModal({ producto, onClose, onGuardado }) {
 
   const esMaquina = form.categoria_producto === 'maquina'
 
-  const guardar = async (e) => {
+  // Sugerencias de precio/garantía basadas en tus propios productos similares
+  // (no hay integración con Google ni ningún buscador externo).
+  useEffect(() => {
+    const clave = esMaquina ? form.marca : form.tipo_cafe
+    if (!clave) {
+      setSugerenciasPrecio([])
+      setSugerenciasGarantia([])
+      return
+    }
+    const timer = setTimeout(() => {
+      api.get('/inventario/sugerencias-precio', {
+        params: { categoria_producto: form.categoria_producto, marca: form.marca, tipo_cafe: form.tipo_cafe }
+      })
+        .then(res => {
+          setSugerenciasPrecio(res.data.precios || [])
+          setSugerenciasGarantia(res.data.garantias || [])
+        })
+        .catch(() => {})
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [form.marca, form.tipo_cafe, form.categoria_producto])
+
+  const intentarGuardar = async (e) => {
     e.preventDefault()
     setError(null)
 
@@ -87,7 +117,11 @@ function ProductoModal({ producto, onClose, onGuardado }) {
     }
     if (esMaquina) {
       if (!form.marca || !form.modelo) {
-        setError('Para máquinas, marca y modelo son obligatorios.')
+        setError('Para máquinas, marca y número de identificación son obligatorios.')
+        return
+      }
+      if (form.modelo.length > 20) {
+        setError('El número de identificación no puede tener más de 20 caracteres.')
         return
       }
     } else {
@@ -97,6 +131,18 @@ function ProductoModal({ producto, onClose, onGuardado }) {
       }
     }
 
+    if (Number(form.precio) < 10000 && !confirmarPrecioBajo) {
+      // pide confirmar antes de crear; no guarda todavía
+      precioRef.current?.focus()
+      precioRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setConfirmarPrecioBajo(true)
+      return
+    }
+
+    await guardar()
+  }
+
+  const guardar = async () => {
     setGuardando(true)
     try {
       const payload = {
@@ -116,6 +162,7 @@ function ProductoModal({ producto, onClose, onGuardado }) {
       setError(err.response?.data?.error || 'No se pudo guardar el producto.')
     } finally {
       setGuardando(false)
+      setConfirmarPrecioBajo(false)
     }
   }
 
@@ -124,7 +171,7 @@ function ProductoModal({ producto, onClose, onGuardado }) {
     setErrorExcel(null)
     setResultadoImport(null)
     setFilasExcel([])
-    if (!archivo) return
+    if (!archivo) { setArchivoExcel(null); return }
 
     setArchivoExcel(archivo)
     try {
@@ -133,12 +180,12 @@ function ProductoModal({ producto, onClose, onGuardado }) {
       const hoja = libro.Sheets[libro.SheetNames[0]]
       const filas = XLSX.utils.sheet_to_json(hoja)
       if (filas.length === 0) {
-        setErrorExcel('El archivo no tiene filas de datos.')
+        setErrorExcel('El archivo no es compatible: no se encontraron filas de datos.')
         return
       }
       setFilasExcel(filas)
     } catch (err) {
-      setErrorExcel('No se pudo leer el archivo. Asegúrate de que sea un .xlsx válido.')
+      setErrorExcel('El archivo no es compatible. Asegúrate de subir un .xlsx válido.')
     }
   }
 
@@ -151,7 +198,7 @@ function ProductoModal({ producto, onClose, onGuardado }) {
       setResultadoImport(res.data)
       if (res.data.creados > 0) onGuardado()
     } catch (err) {
-      setErrorExcel(err.response?.data?.error || 'No se pudo importar el archivo.')
+      setErrorExcel(err.response?.data?.error || 'El archivo no es compatible.')
     } finally {
       setImportando(false)
     }
@@ -187,8 +234,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
         {modo === 'excel' && !producto ? (
           <div className="p-6 space-y-4">
             <div className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-3">
-              Sube un .xlsx con columnas: <strong>nombre, categoria (tipo de café), presentacion, precio, stock, codigo_lote</strong>.
-              La primera fila debe ser el encabezado. Por ahora esta opción solo sirve para café (no máquinas).
+              Sube un .xlsx con columnas: <strong>nombre, categoria, presentacion, precio, stock, codigo_lote</strong>.
+              Si escribes algún encabezado con error de tipeo (ej. "Nombe"), lo detectamos e igual funciona.
+              Por ahora esta opción solo sirve para café (no máquinas).
             </div>
 
             {errorExcel && (
@@ -197,16 +245,21 @@ function ProductoModal({ producto, onClose, onGuardado }) {
               </div>
             )}
 
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={onArchivoSeleccionado}
-              className="w-full text-sm"
-            />
+            <div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <span className="text-sm px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition whitespace-nowrap">
+                  Elegir archivo
+                </span>
+                <span className="text-sm text-gray-500 truncate">
+                  {archivoExcel ? archivoExcel.name : 'Ningún archivo seleccionado'}
+                </span>
+                <input type="file" accept=".xlsx,.xls" onChange={onArchivoSeleccionado} className="hidden" />
+              </label>
+            </div>
 
             {filasExcel.length > 0 && !resultadoImport && (
               <div className="text-sm text-gray-600">
-                Se detectaron <strong>{filasExcel.length}</strong> fila(s) en "{archivoExcel?.name}". Revisa que estén bien y dale a importar.
+                Se detectaron <strong>{filasExcel.length}</strong> fila(s). Revisa que estén bien y dale a importar.
               </div>
             )}
 
@@ -241,7 +294,7 @@ function ProductoModal({ producto, onClose, onGuardado }) {
             </div>
           </div>
         ) : (
-          <form onSubmit={guardar} className="p-6 space-y-4">
+          <form onSubmit={intentarGuardar} className="p-6 space-y-4">
             {error && (
               <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
                 {error}
@@ -286,20 +339,25 @@ function ProductoModal({ producto, onClose, onGuardado }) {
                     <label className="block text-sm text-gray-600 mb-1">Marca *</label>
                     <input
                       type="text"
+                      list="lista-marcas"
                       value={form.marca}
                       onChange={(e) => cambiarCampo('marca', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
                       placeholder="Ej: DeLonghi"
                     />
+                    <datalist id="lista-marcas">
+                      {marcas.map((m) => <option key={m} value={m} />)}
+                    </datalist>
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Modelo *</label>
+                    <label className="block text-sm text-gray-600 mb-1">Número de identificación *</label>
                     <input
                       type="text"
+                      maxLength={20}
                       value={form.modelo}
                       onChange={(e) => cambiarCampo('modelo', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
-                      placeholder="Ej: EC685M"
+                      placeholder="Ej: EC685M (máx. 20 caracteres)"
                     />
                   </div>
                 </div>
@@ -313,6 +371,21 @@ function ProductoModal({ producto, onClose, onGuardado }) {
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
                     placeholder="Ej: 12"
                   />
+                  {sugerenciasGarantia.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      <span className="text-xs text-gray-400 mr-1">Sugeridas:</span>
+                      {sugerenciasGarantia.map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => cambiarCampo('garantia_meses', String(g))}
+                          className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 hover:bg-[#1D9E75]/10 hover:text-[#1D9E75] transition"
+                        >
+                          {g} meses
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
@@ -339,11 +412,15 @@ function ProductoModal({ producto, onClose, onGuardado }) {
                     <label className="block text-sm text-gray-600 mb-1">Categoría *</label>
                     <input
                       type="text"
+                      list="lista-categorias"
                       value={form.tipo_cafe}
                       onChange={(e) => cambiarCampo('tipo_cafe', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
                       placeholder="Ej: Especiales"
                     />
+                    <datalist id="lista-categorias">
+                      {categorias.map((c) => <option key={c} value={c} />)}
+                    </datalist>
                   </div>
                   <div>
                     <label className="block text-sm text-gray-600 mb-1">Presentación *</label>
@@ -363,13 +440,31 @@ function ProductoModal({ producto, onClose, onGuardado }) {
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Precio {esMaquina ? '' : 'por kg'} *</label>
                 <input
+                  ref={precioRef}
                   type="number"
                   min="0"
                   value={form.precio}
-                  onChange={(e) => cambiarCampo('precio', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                  onChange={(e) => { cambiarCampo('precio', e.target.value); setConfirmarPrecioBajo(false) }}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none transition ${
+                    confirmarPrecioBajo ? 'border-amber-400 ring-2 ring-amber-200 scale-105' : 'border-gray-200 focus:border-[#1D9E75]'
+                  }`}
                   placeholder="28500"
                 />
+                {sugerenciasPrecio.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    <span className="text-xs text-gray-400 mr-1">Sugeridos:</span>
+                    {sugerenciasPrecio.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => cambiarCampo('precio', String(p))}
+                        className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 hover:bg-[#1D9E75]/10 hover:text-[#1D9E75] transition"
+                      >
+                        {formatMoney(p)}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Stock {esMaquina ? '(unidades)' : 'inicial (kg)'} *</label>
@@ -383,6 +478,30 @@ function ProductoModal({ producto, onClose, onGuardado }) {
                 />
               </div>
             </div>
+
+            {confirmarPrecioBajo && (
+              <div className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3">
+                <p className="text-sm text-amber-800 font-medium mb-2">
+                  El precio ({formatMoney(Number(form.precio))}) es menor a {formatMoney(10000)}. ¿Está correcto?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmarPrecioBajo(false)}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-100 transition"
+                  >
+                    No, quiero corregirlo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={guardar}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition"
+                  >
+                    Sí, está correcto — crear producto
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm text-gray-600 mb-1">Descripción</label>

@@ -64,7 +64,7 @@ function VentaModal({ onClose, onCreado }) {
     for (const it of itemsValidos) {
       const producto = productoPorId(it.id_producto)
       if (producto && Number(it.cantidad) > Number(producto.stock)) {
-        setError(`Stock insuficiente para ${producto.nombre} (disponible: ${producto.stock} kg).`)
+        setError(`Stock insuficiente para ${producto.nombre} (disponible: ${producto.stock} ${producto.categoria_producto === 'maquina' ? 'unidades' : 'kg'}).`)
         return
       }
     }
@@ -134,7 +134,7 @@ function VentaModal({ onClose, onCreado }) {
                       <option value="">Selecciona un producto</option>
                       {productos.map((p) => (
                         <option key={p.id_producto} value={p.id_producto}>
-                          {p.nombre} — {formatMoney(p.precio)}/kg ({p.stock} kg disp.)
+                          {p.nombre} — {formatMoney(p.precio)}{p.categoria_producto === 'maquina' ? '/unidad' : '/kg'} ({p.stock} {p.categoria_producto === 'maquina' ? 'unid.' : 'kg'} disp.)
                         </option>
                       ))}
                     </select>
@@ -144,7 +144,7 @@ function VentaModal({ onClose, onCreado }) {
                       max={producto ? producto.stock : undefined}
                       value={it.cantidad}
                       onChange={(e) => cambiarItem(it.key, 'cantidad', e.target.value)}
-                      placeholder="kg"
+                      placeholder={producto?.categoria_producto === 'maquina' ? 'unid.' : 'kg'}
                       className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
                     />
                     <button
@@ -210,7 +210,7 @@ function VentaModal({ onClose, onCreado }) {
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
               >
                 <option value="Pendiente">Pendiente</option>
-                <option value="Pagado">Pagado</option>
+                <option value="Confirmado">Confirmado</option>
               </select>
             </div>
           </div>
