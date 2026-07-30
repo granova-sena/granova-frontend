@@ -4,6 +4,7 @@ import { useModalBehavior } from "../hooks/useModalBehavior";
 import { useCarrito } from "../context/CarritoContext";
 import { API_URL as BASE_API_URL } from "../config";
 
+
 // ── CONFIG API ────────────────────────────────────────────
 const API_URL = `${BASE_API_URL}/productos`;
 
@@ -682,8 +683,9 @@ function CatalogoInterno() {
         setError(null);
         const res = await fetch(API_URL);
         if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
-        const data = await res.json();
-        if (!cancelado) setProductos(eliminarDuplicados(data.map(adaptarProducto)));
+        const json = await res.json();
+if (!json.ok) throw new Error(json.mensaje || "Error del servidor");
+if (!cancelado) setProductos(eliminarDuplicados(json.data.map(adaptarProducto)));
       } catch (err) {
         if (!cancelado) setError(err.message);
       } finally {
@@ -913,6 +915,33 @@ function CatalogoInterno() {
             </div>
           )}
 
+          {/* GRID TODOS LOS PRODUCTOS (se convierte en "Favoritos" cuando soloFavoritos=true) */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white">{soloFavoritos ? "Tus favoritos" : "Todos los productos"}</h2>
+              <p className="text-sm text-white/40">{filtrados.length} productos</p>
+            </div>
+            {filtrados.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {filtrados.map(p => (
+                  <ProductoCard
+                    key={p.id}
+                    p={p}
+                    onAgregar={agregar}
+                    onVerDetalle={verDetalle}
+                    cantidadEnCarrito={carrito.find(c => c.id === p.id)?.cant || 0}
+                    esFavorito={favoritos.has(p.id)}
+                    onToggleFavorito={toggleFavorito}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 text-white/40">
+                <p className="text-sm">{soloFavoritos ? "Aún no tienes productos favoritos." : "No se encontraron productos."}</p>
+              </div>
+            )}
+          </div>
+
           {/* SECCIÓN DESTACADOS */}
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -964,33 +993,6 @@ function CatalogoInterno() {
                 </div>
               );
             })()}
-          </div>
-
-          {/* GRID TODOS LOS PRODUCTOS */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-white">{soloFavoritos ? "Tus favoritos" : "Todos los productos"}</h2>
-              <p className="text-sm text-white/40">{filtrados.length} productos</p>
-            </div>
-            {filtrados.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filtrados.map(p => (
-                  <ProductoCard
-                    key={p.id}
-                    p={p}
-                    onAgregar={agregar}
-                    onVerDetalle={verDetalle}
-                    cantidadEnCarrito={carrito.find(c => c.id === p.id)?.cant || 0}
-                    esFavorito={favoritos.has(p.id)}
-                    onToggleFavorito={toggleFavorito}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-16 text-white/40">
-                <p className="text-sm">{soloFavoritos ? "Aún no tienes productos favoritos." : "No se encontraron productos."}</p>
-              </div>
-            )}
           </div>
         </div>
       )}

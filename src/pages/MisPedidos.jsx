@@ -1,6 +1,93 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { API_URL } from "../config";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+const descargarFactura = async (id_pedido) => {
+  try {
+    // Genera la factura si no existe
+    await fetch(`${API_URL}/api/facturas`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ id_pedido })
+    })
+
+    // Obtiene la factura
+    const res  = await fetch(`${API_URL}/api/facturas/${id_pedido}`)
+    const json = await res.json()
+
+    if (!json.ok) throw new Error(json.mensaje)
+
+    const factura = json.data
+    const doc     = new jsPDF()
+
+    doc.setFontSize(20)
+    doc.setTextColor(45, 90, 39)
+    doc.text('FACTURA', 105, 20, { align: 'center' })
+
+    doc.setFontSize(9)
+    doc.setTextColor(100)
+    doc.text(`N°: ${factura.numero_factura}`, 150, 30)
+    doc.text(`Fecha: ${new Date(factura.fecha_emision).toLocaleDateString('es-CO')}`, 150, 35)
+
+    doc.setFontSize(10)
+    doc.setTextColor(0)
+    doc.text('Datos del cliente', 15, 45)
+    doc.setFontSize(9)
+    doc.setTextColor(80)
+    doc.text(`Nombre: ${factura.nombre_cliente} ${factura.apellido_cliente}`, 15, 52)
+    doc.text(`Correo: ${factura.email_cliente}`,      15, 57)
+    doc.text(`Ciudad: ${factura.ciudad_envio}`,       15, 62)
+    doc.text(`Dirección: ${factura.direccion_envio}`, 15, 67)
+
+    doc.setFontSize(10)
+    doc.setTextColor(0)
+    doc.text('Datos del pedido', 110, 45)
+    doc.setFontSize(9)
+    doc.setTextColor(80)
+    doc.text(`Método de pago: ${factura.metodo_pago}`, 110, 52)
+    doc.text(`Estado: ${factura.estado_pedido}`,        110, 57)
+
+    autoTable(doc, {
+      startY: 75,
+      head: [['Producto', 'Presentación', 'Cantidad', 'Precio Unit.', 'Subtotal']],
+      body: factura.productos.map(p => [
+        p.producto_nombre,
+        p.producto_presentacion || '-',
+        p.cantidad,
+        `$${Number(p.precio_unitario).toLocaleString()}`,
+        `$${Number(p.subtotal).toLocaleString()}`
+      ]),
+      headStyles:         { fillColor: [45, 90, 39], textColor: 255, fontSize: 9 },
+      bodyStyles:         { fontSize: 9 },
+      alternateRowStyles: { fillColor: [240, 247, 238] }
+    })
+
+    const finalY = doc.lastAutoTable.finalY + 10
+
+    doc.setFontSize(9)
+    doc.setTextColor(80)
+    doc.text('Subtotal:', 130, finalY)
+    doc.text(`$${Number(factura.subtotal).toLocaleString()}`, 175, finalY, { align: 'right' })
+
+    doc.setTextColor(200, 0, 0)
+    doc.text('IVA:', 130, finalY + 6)
+    doc.text(`$${Number(factura.impuestos).toLocaleString()}`, 175, finalY + 6, { align: 'right' })
+
+    doc.setTextColor(0)
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.text('TOTAL:', 130, finalY + 14)
+    doc.text(`$${Number(factura.total).toLocaleString()}`, 175, finalY + 14, { align: 'right' })
+
+    doc.save(`factura-${factura.numero_factura}.pdf`)
+
+  } catch (error) {
+    console.error('Error descargando factura:', error.message)
+    alert('❌ No se pudo generar la factura')
+  }
+}
 
 const PASOS = [
   { titulo: 'Pedido confirmado', desc: 'Recibimos tu compra' },
@@ -53,7 +140,7 @@ function MisPedidos() {
     async function cargarPedidos() {
       try {
         setCargando(true)
-        const res = await fetch(`${API_URL}/pedidos/cliente/${id_cliente}`)
+        const res = await fetch(`${API_URL}/api/pedidos/cliente/${id_cliente}`)
         const json = await res.json()
         if (!json.ok) throw new Error(json.mensaje)
         if (!cancelado) setPedidos(json.data)
@@ -112,17 +199,20 @@ function MisPedidos() {
         )}
 
         {!cargando && !error && pedidos.length > 0 && (
-          <div className="rounded-2xl overflow-hidden bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm divide-y divide-white/10">
-            {pedidos.map((p) => (
+        <div className="rounded-2xl overflow-hidden bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm divide-y divide-white/10">
+          {pedidos.map((p) => (
+            <div key={p.id_pedido} className="flex items-center justify-between px-5 sm:px-6 py-4 hover:bg-white/[0.06] transition">
+              
+              {/* Info del pedido — navega al detalle */}
               <button
-                key={p.id_pedido}
                 onClick={() => navigate(`/cliente/pedidos/${p.id_pedido}`)}
-                className="w-full flex items-center justify-between px-5 sm:px-6 py-4 text-left hover:bg-white/[0.06] transition"
+                className="flex-1 text-left"
               >
-                <div>
-                  <p className="text-sm font-medium text-white">{formatearNumero(p.id_pedido)}</p>
-                  <p className="text-xs text-white/40 mt-0.5">{formatearFecha(p.fecha_pedido)}</p>
-                </div>
+                <p className="text-sm font-medium text-white">{formatearNumero(p.id_pedido)}</p>
+                <p className="text-xs text-white/40 mt-0.5">{formatearFecha(p.fecha_pedido)}</p>
+              </button>
+
+              <div className="flex items-center gap-4">
                 <div className="text-right">
                   <p className={`text-xs font-medium ${estadoTexto[p.estado] || 'text-white/50'}`}>
                     {estadoLabel[p.estado] || p.estado}
@@ -131,12 +221,22 @@ function MisPedidos() {
                     ${Number(p.total).toLocaleString('es-CO')}
                   </p>
                 </div>
-              </button>
-            ))}
-          </div>
-        )}
 
-        {/* QUÉ ESPERAR: preview del proceso de pedido */}
+                {/* Botón descargar factura */}
+                <button
+                  onClick={() => descargarFactura(p.id_pedido)}
+                  title="Descargar factura"
+                  className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/50 hover:text-[#9DC9B4] hover:bg-white/20 transition"
+                >
+                  ⬇️
+                </button>
+              </div>
+
+            </div>
+          ))}
+        </div>
+      )}
+
         <div className="mt-6 rounded-2xl p-6 sm:p-8 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
           <p className="text-sm font-semibold text-white mb-6">Así se ve un pedido en camino</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">

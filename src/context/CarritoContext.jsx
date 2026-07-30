@@ -45,7 +45,7 @@ export function CarritoProvider({ children }) {
         })),
       }
 
-      const res = await fetch(`${API_URL}/pedidos`,
+      const res = await fetch(`${API_URL}/api/pedidos`,
          {        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

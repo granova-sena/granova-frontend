@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { API_URL } from "../config";
+import { jwtDecode } from 'jwt-decode'
 
 function AsistenteWidget() {
   const navigate = useNavigate()
@@ -42,9 +43,19 @@ function AsistenteWidget() {
     setCargando(true)
 
     try {
-        const respuesta = await fetch(`${API_URL}/asistente/chat`, {        method: 'POST',
+      const token = localStorage.getItem('token')
+      let idAdmin = 'admin-desconocido'
+      if (token) {
+        try {
+          const decoded = jwtDecode(token)
+          idAdmin = decoded.email || decoded.nombre || 'admin-desconocido'
+        } catch (e) {}
+      }
+
+      const respuesta = await fetch(`${API_URL}/asistente/chat`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mensaje: texto }),
+        body: JSON.stringify({ mensaje: texto, idAdmin }),
       })
 
       const data = await respuesta.json()
