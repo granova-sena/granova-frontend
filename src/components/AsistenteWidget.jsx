@@ -72,14 +72,14 @@ function AsistenteWidget() {
       if (data.accion === 'navegar' && data.parametros?.ruta) {
         navigate(data.parametros.ruta)
       }
-    } catch (error) {
-      setMensajes((prev) => [
-        ...prev,
-        { autor: 'asistente', texto: 'No pude conectarme con el asistente. Verifica que el backend y n8n estén corriendo.' },
-      ])
-    } finally {
-      setCargando(false)
-    }
+    }  catch (error) {
+  setMensajes((prev) => [
+    ...prev,
+    { autor: 'asistente', texto: 'No hay conexión con el servidor. Verifica tu internet e intenta de nuevo.' },
+  ])
+} finally {
+  setCargando(false)
+}
   }
 
   return (
