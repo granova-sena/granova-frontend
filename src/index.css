@@ -34,10 +34,10 @@
   100% { background-position: 200% 0; }
 }
 .skeleton {
-  background: linear-gradient(90deg, rgba(23,20,15,0.06) 25%, rgba(23,20,15,0.1) 37%, rgba(23,20,15,0.06) 63%);
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 37%, rgba(255,255,255,0.05) 63%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
-}
+} 
 
 @media (prefers-reduced-motion: reduce) {
   .anim-overlay, .anim-sheet-right, .anim-sheet-up, .anim-pop, .skeleton { animation: none; }

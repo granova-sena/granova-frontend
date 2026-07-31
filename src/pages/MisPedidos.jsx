@@ -166,9 +166,11 @@ function MisPedidos() {
         <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Historial</span>
         <h1 className="text-2xl sm:text-3xl font-semibold mt-2 mb-8 sm:mb-10 tracking-tight">Mis pedidos</h1>
 
-        {cargando && (
-          <div className="rounded-2xl p-10 sm:p-16 text-center bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
-            <p className="text-white/50 text-sm">Cargando pedidos...</p>
+            {cargando && (
+          <div className="rounded-2xl overflow-hidden bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm divide-y divide-white/10">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <PedidoSkeleton key={i} />
+            ))}
           </div>
         )}
 
@@ -252,6 +254,28 @@ function MisPedidos() {
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function PedidoSkeleton() {
+  return (
+    <div className="flex items-center justify-between px-5 sm:px-6 py-4 animate-pulse">
+      {/* Lado izquierdo — número de pedido y fecha */}
+      <div className="space-y-2">
+        <div className="h-4 bg-white/10 rounded w-32" />
+        <div className="h-3 bg-white/10 rounded w-20" />
+      </div>
+
+      {/* Lado derecho — estado y monto */}
+      <div className="flex items-center gap-4">
+        <div className="space-y-2 text-right">
+          <div className="h-3 bg-white/10 rounded w-16" />
+          <div className="h-4 bg-white/10 rounded w-24" />
+        </div>
+        {/* Botón de descarga */}
+        <div className="w-8 h-8 bg-white/10 rounded-lg" />
       </div>
     </div>
   )
