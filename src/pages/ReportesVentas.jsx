@@ -1,33 +1,16 @@
 import { useState } from 'react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 function ReportesVentas() {
   const periodos = ['Este mes', 'Últimos 3 meses', 'Este año', 'Personalizado']
   const [periodoActivo, setPeriodoActivo] = useState('Este mes')
 
   const tendencia = [
-    { semana: 'Sem 1', valor: '$6.2M', alturaPct: 15 },
-    { semana: 'Sem 2', valor: '$11.4M', alturaPct: 50 },
-    { semana: 'Sem 3', valor: '$11.4M', alturaPct: 70 },
-    { semana: 'Sem 4', valor: '$11.4M', alturaPct: 100 },
+    { semana: 'Sem 1', ventas: 6200000 },
+    { semana: 'Sem 2', ventas: 11400000 },
+    { semana: 'Sem 3', ventas: 11400000 },
+    { semana: 'Sem 4', ventas: 11400000 },
   ]
-
-  const xPositions = tendencia.map((_, i) => 5 + (i * 90) / (tendencia.length - 1))
-
-  const segmentos = []
-  for (let i = 0; i < tendencia.length - 1; i++) {
-    segmentos.push({
-      tipo: 'horizontal',
-      left: xPositions[i],
-      width: xPositions[i + 1] - xPositions[i],
-      bottom: tendencia[i].alturaPct,
-    })
-    segmentos.push({
-      tipo: 'vertical',
-      left: xPositions[i + 1],
-      bottom: Math.min(tendencia[i].alturaPct, tendencia[i + 1].alturaPct),
-      height: Math.abs(tendencia[i + 1].alturaPct - tendencia[i].alturaPct),
-    })
-  }
 
   const resumen = [
     { label: 'Total ventas', value: '$38.4M' },
@@ -37,24 +20,14 @@ function ReportesVentas() {
   ]
 
   const topProductos = [
-    {
-      nombre: 'Café Huila Especial',
-      detalle: 'Pitalito · Arábica',
-      categoria: 'Especiales',
-      kg: '320 kg',
-      total: '$9.1M',
-      pct: 90,
-      color: 'bg-[#E8C786]',
-    },
-    {
-      nombre: 'Espresso Blend',
-      detalle: 'Mezcla intensa · Tueste medio',
-      categoria: 'Tostados',
-      kg: '180 kg',
-      total: '$3.9M',
-      pct: 50,
-      color: 'bg-[#2B1B12]',
-    },
+    { nombre: 'Café Huila Especial', detalle: 'Pitalito · Arábica', categoria: 'Especiales', kg: '320 kg', total: '$9.1M', pct: 90, color: 'bg-[#E8C786]' },
+    { nombre: 'Espresso Blend', detalle: 'Mezcla intensa · Tueste medio', categoria: 'Tostados', kg: '180 kg', total: '$3.9M', pct: 50, color: 'bg-[#2B1B12]' },
+  ]
+
+  const pieData = [
+    { name: 'Café Huila', value: 320, color: '#6FA98C' },
+    { name: 'Espresso Blend', value: 180, color: '#E8C786' },
+    { name: 'Otros', value: 100, color: '#D85A30' },
   ]
 
   return (
@@ -91,52 +64,33 @@ function ReportesVentas() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="xl:col-span-2 bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-          <h2 className="text-base font-semibold text-gray-800 mb-8">Tendencia de ventas — Mayo 2026</h2>
-          <div className="overflow-x-auto">
-            <div className="relative h-40 mb-6 min-w-[420px]">
-            {segmentos.map((seg, i) => (
-              <div
-                key={i}
-                className="absolute bg-[#7CB342]"
-                style={
-                  seg.tipo === 'horizontal'
-                    ? { left: `${seg.left}%`, width: `${seg.width}%`, bottom: `${seg.bottom}%`, height: '2px' }
-                    : { left: `${seg.left}%`, bottom: `${seg.bottom}%`, height: `${seg.height}%`, width: '2px' }
-                }
-              ></div>
-            ))}
-            {tendencia.map((item, i) => (
-              <div
-                key={item.semana}
-                className="absolute flex flex-col items-center"
-                style={{ left: `${xPositions[i]}%`, bottom: `${item.alturaPct}%`, transform: 'translate(-50%, 50%)' }}
-              >
-                <span className="text-xs text-gray-600 mb-1 whitespace-nowrap -translate-y-4">{item.valor}</span>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#1a2e1a]"></span>
-              </div>
-            ))}
-            </div>
-          </div>
-          <div className="relative h-4 min-w-[420px]">
-            {tendencia.map((item, i) => (
-              <span
-                key={item.semana}
-                className="absolute text-xs text-gray-400"
-                style={{ left: `${xPositions[i]}%`, transform: 'translateX(-50%)' }}
-              >
-                {item.semana}
-              </span>
-            ))}
-          </div>
+          <h2 className="text-base font-semibold text-gray-800 mb-4">Tendencia de ventas — Mayo 2026</h2>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={tendencia}>
+              <XAxis dataKey="semana" stroke="#9ca3af" tick={{ fontSize: 12 }} />
+              <YAxis stroke="#9ca3af" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v/1000000).toFixed(1)}M`} />
+              <Tooltip formatter={(v) => [`$${Number(v).toLocaleString('es-CO')}`, 'Ventas']} />
+              <Line type="monotone" dataKey="ventas" stroke="#6FA98C" strokeWidth={2} dot={{ fill: '#6FA98C', r: 4 }} activeDot={{ r: 6 }} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Resumen del mes</h2>
-          <div className="space-y-4">
-            {resumen.map((item) => (
-              <div key={item.label}>
-                <p className="text-sm text-gray-500">{item.label}</p>
-                <p className="text-xl font-semibold text-gray-800">{item.value}</p>
+          <h2 className="text-base font-semibold text-gray-800 mb-4">Productos más vendidos</h2>
+          <ResponsiveContainer width="100%" height={180}>
+            <PieChart>
+              <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3} dataKey="value">
+                {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+              </Pie>
+              <Tooltip formatter={(v, n) => [`${v} kg`, n]} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="flex flex-col gap-1.5 mt-2">
+            {pieData.map((item) => (
+              <div key={item.name} className="flex items-center gap-2 text-xs">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }}></span>
+                <span className="text-gray-600">{item.name}</span>
+                <span className="ml-auto font-medium text-gray-800">{item.value} kg</span>
               </div>
             ))}
           </div>
@@ -144,43 +98,55 @@ function ReportesVentas() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h2 className="text-base font-semibold text-gray-800 mb-4">Resumen del mes</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {resumen.map((item) => (
+            <div key={item.label}>
+              <p className="text-sm text-gray-500">{item.label}</p>
+              <p className="text-xl font-semibold text-gray-800">{item.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="text-base font-semibold text-gray-800 mb-4">Top productos del mes</h2>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
-          <thead>
-            <tr className="text-left text-gray-500 border-b border-gray-200">
-              <th className="py-2 font-medium">Producto</th>
-              <th className="py-2 font-medium">Categoría</th>
-              <th className="py-2 font-medium">Kg vendidos</th>
-              <th className="py-2 font-medium">Total ventas</th>
-              <th className="py-2 font-medium">% del total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {topProductos.map((p) => (
-              <tr key={p.nombre} className="border-b border-gray-100 last:border-0">
-                <td className="py-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg ${p.color} flex-shrink-0`}></div>
-                    <div>
-                      <p className="text-gray-800 font-medium">{p.nombre}</p>
-                      <p className="text-xs text-gray-400">{p.detalle}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="py-3 text-gray-600">{p.categoria}</td>
-                <td className="py-3 text-gray-600">{p.kg}</td>
-                <td className="py-3 text-gray-800 font-medium">{p.total}</td>
-                <td className="py-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-[120px]">
-                      <div className="h-full bg-[#7CB342] rounded-full" style={{ width: `${p.pct}%` }}></div>
-                    </div>
-                    <span className="text-xs text-gray-500">{p.pct}%</span>
-                  </div>
-                </td>
+            <thead>
+              <tr className="text-left text-gray-500 border-b border-gray-200">
+                <th className="py-2 font-medium">Producto</th>
+                <th className="py-2 font-medium">Categoría</th>
+                <th className="py-2 font-medium">Kg vendidos</th>
+                <th className="py-2 font-medium">Total ventas</th>
+                <th className="py-2 font-medium">% del total</th>
               </tr>
-            ))}
+            </thead>
+            <tbody>
+              {topProductos.map((p) => (
+                <tr key={p.nombre} className="border-b border-gray-100 last:border-0">
+                  <td className="py-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg ${p.color} flex-shrink-0`}></div>
+                      <div>
+                        <p className="text-gray-800 font-medium">{p.nombre}</p>
+                        <p className="text-xs text-gray-400">{p.detalle}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-3 text-gray-600">{p.categoria}</td>
+                  <td className="py-3 text-gray-600">{p.kg}</td>
+                  <td className="py-3 text-gray-800 font-medium">{p.total}</td>
+                  <td className="py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-[120px]">
+                        <div className="h-full bg-[#7CB342] rounded-full" style={{ width: `${p.pct}%` }}></div>
+                      </div>
+                      <span className="text-xs text-gray-500">{p.pct}%</span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -189,4 +155,4 @@ function ReportesVentas() {
   )
 }
 
-export default ReportesVentas
+export default ReportesVentas 
