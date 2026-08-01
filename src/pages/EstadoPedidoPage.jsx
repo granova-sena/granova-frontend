@@ -81,11 +81,11 @@ function EstadoPedidoPage() {
               <div key={e.id} className="flex items-start flex-1 min-w-[80px]">
                 <div className="flex flex-col items-center flex-1">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 z-10
-                    ${i < indexActual
+                                        ${i < indexActual
                       ? 'bg-[#6FA98C] border-[#6FA98C] text-white'
                       : i === indexActual
-                      ? 'bg-[#6FA98C] border-[#6FA98C] text-white'
-                      : 'bg-transparent border-white/20 text-white/40'
+                      ? 'bg-[#6FA98C] border-[#6FA98C] text-white animate-pulse ring-4 ring-[#6FA98C]/30'
+                      : 'bg-transparent border-white/20 text- white/40'
                     }`}>
                     {e.icono}
                   </div>
