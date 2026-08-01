@@ -1,42 +1,58 @@
-function AnalisisClientes() {
-  const stats = [
-    { label: 'Clientes activos', value: '142', change: '+9 nuevos este mes', tone: 'green' },
-    { label: 'Frecuencia promedio', value: '2.4 compras/mes' },
-    { label: 'Clientes potenciales', value: '38', change: 'sin primera compra', tone: 'orange' },
-  ]
+import { useState, useEffect } from 'react'
+import { API_URL } from '../config'
 
-  const clientes = [
-    {
-      nombre: 'María López',
-      email: 'maria@gmail.com',
-      badge: 'VIP',
-      badgeColor: 'bg-[#1a2e1a] text-white',
-      compras: '8 compras · $2.4M total',
-      ultimoPedido: 'Último pedido: hace 3 días',
-      fidelidad: 90,
-      barColor: '#1D9E75',
-    },
-    {
-      nombre: 'Restaurante Nómada',
-      email: 'nomada@rest.com',
-      badge: 'Frecuente',
-      badgeColor: 'bg-green-100 text-green-700',
-      compras: '5 compras · $1.8M total',
-      ultimoPedido: 'Último pedido: hace 1 semana',
-      fidelidad: 70,
-      barColor: '#7CB342',
-    },
-    {
-      nombre: 'Juan Herrera',
-      email: 'juan@gmail.com',
-      badge: 'Potencial',
-      badgeColor: 'bg-amber-100 text-amber-700',
-      compras: '2 compras · $320K total',
-      ultimoPedido: 'Último pedido: hace 3 semanas',
-      fidelidad: 30,
-      barColor: '#D8932F',
-    },
-  ]
+
+
+function AnalisisClientes() {
+
+  const [datos, setDatos] = useState(null)
+  const [cargando, setCargando] = useState(true)
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/reportes/clientes`)
+      .then(res => res.json())
+      .then(json => {
+        if (json.ok) setDatos(json.data)
+      })
+      .catch(err => console.error(err))
+      .finally(() => setCargando(false))
+  }, [])
+
+
+
+
+  const stats = [
+  { 
+    label: 'Clientes activos', 
+    value: datos ? String(datos.stats.clientes_activos) : '0', 
+    change: datos ? `+${datos.stats.clientes_nuevos} nuevos este mes` : '', 
+    tone: 'green' 
+  },
+  { 
+    label: 'Frecuencia promedio', 
+    value: datos ? `${datos.stats.frecuencia_promedio} compras/mes` : '0 compras/mes' 
+  },
+  { 
+    label: 'Clientes potenciales', 
+    value: datos ? String(datos.stats.clientes_nuevos) : '0', 
+    change: 'registrados este mes', 
+    tone: 'orange' 
+  },
+]
+
+ const coloresBadge = ['bg-[#1a2e1a] text-white', 'bg-green-100 text-green-700', 'bg-amber-100 text-amber-700', 'bg-blue-100 text-blue-700', 'bg-purple-100 text-purple-700']
+ const badges = ['VIP', 'Frecuente', 'Potencial', 'Nuevo', 'Regular']
+
+      const clientes = datos?.top_clientes.map((c, i) => ({
+        nombre: `${c.nombre} ${c.apellido}`,
+        email: c.email,
+        badge: badges[i] || 'Cliente',
+        badgeColor: coloresBadge[i] || 'bg-gray-100 text-gray-700',
+        compras: `${c.total_compras} compras · $${Number(c.total_gastado).toLocaleString('es-CO')} total`,
+        ultimoPedido: 'Últimos 30 días',
+        fidelidad: Math.min(100, Math.round((Number(c.total_gastado) / 700000) * 100)),
+        barColor: ['#1D9E75', '#7CB342', '#D8932F', '#3B82F6', '#8B5CF6'][i] || '#6FA98C',
+      })) || []
 
   return (
     <div className="space-y-6">
