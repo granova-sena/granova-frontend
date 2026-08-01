@@ -1,34 +1,69 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { API_URL } from '../config'
 
 function ReportesVentas() {
   const periodos = ['Este mes', 'Últimos 3 meses', 'Este año', 'Personalizado']
   const [periodoActivo, setPeriodoActivo] = useState('Este mes')
+  const [datos, setDatos] = useState(null)
+  const [cargando, setCargando] = useState(true)
 
-  const tendencia = [
-    { semana: 'Sem 1', ventas: 6200000 },
-    { semana: 'Sem 2', ventas: 11400000 },
-    { semana: 'Sem 3', ventas: 11400000 },
-    { semana: 'Sem 4', ventas: 11400000 },
-  ]
+
+  useEffect(() => {
+  fetch(`${API_URL}/api/reportes/ventas`)
+    .then(res => res.json())
+    .then(json => {
+      if (json.ok) setDatos(json.data)
+    })
+    .catch(err => console.error(err))
+    .finally(() => setCargando(false))
+}, [])
+  
+
+  
+
+
+  const tendencia = datos?.tendencia || []
+  
 
   const resumen = [
-    { label: 'Total ventas', value: '$38.4M' },
-    { label: 'Productos vendidos', value: '1.340 kg' },
-    { label: 'Clientes únicos', value: '98' },
-    { label: 'Ticket promedio', value: '$391.800' },
-  ]
+  { 
+    label: 'Total ventas', 
+    value: datos ? `$${Number(datos.resumen.total_ventas).toLocaleString('es-CO')}` : '$0' 
+  },
+  { 
+    label: 'Productos vendidos', 
+    value: datos ? `${datos.resumen.productos_vendidos} kg` : '0 kg' 
+  },
+  { 
+    label: 'Clientes únicos', 
+    value: datos ? String(datos.resumen.clientes_unicos) : '0' 
+  },
+  { 
+    label: 'Ticket promedio', 
+    value: datos ? `$${Math.round(datos.resumen.ticket_promedio).toLocaleString('es-CO')}` : '$0' 
+  },
+]
 
-  const topProductos = [
-    { nombre: 'Café Huila Especial', detalle: 'Pitalito · Arábica', categoria: 'Especiales', kg: '320 kg', total: '$9.1M', pct: 90, color: 'bg-[#E8C786]' },
-    { nombre: 'Espresso Blend', detalle: 'Mezcla intensa · Tueste medio', categoria: 'Tostados', kg: '180 kg', total: '$3.9M', pct: 50, color: 'bg-[#2B1B12]' },
-  ]
+  const totalKg = datos?.top_productos.reduce((sum, p) => sum + Number(p.kg_vendidos), 0) || 1
 
-  const pieData = [
-    { name: 'Café Huila', value: 320, color: '#6FA98C' },
-    { name: 'Espresso Blend', value: 180, color: '#E8C786' },
-    { name: 'Otros', value: 100, color: '#D85A30' },
-  ]
+      const topProductos = datos?.top_productos.map((p, i) => ({
+        nombre: p.nombre,
+        detalle: p.categoria || 'Café Granova',
+        categoria: p.categoria || 'Sin categoría',
+        kg: `${p.kg_vendidos} kg`,
+        total: `$${Number(p.total_ventas).toLocaleString('es-CO')}`,
+        pct: Math.round((Number(p.kg_vendidos) / totalKg) * 100),
+        color: ['bg-[#E8C786]', 'bg-[#6FA98C]', 'bg-[#2B1B12]', 'bg-[#D85A30]', 'bg-[#9DC9B4]'][i] || 'bg-[#6FA98C]'
+      })) || []
+
+    const colores = ['#E8C786', '#6FA98C', '#2B1B12', '#D85A30', '#9DC9B4'] 
+
+    const pieData = datos?.top_productos.map((p, i) => ({
+      name: p.nombre,
+      value: Number(p.kg_vendidos),
+      color: colores[i] || '#6FA98C'
+    })) || []
 
   return (
     <div className="space-y-4">
