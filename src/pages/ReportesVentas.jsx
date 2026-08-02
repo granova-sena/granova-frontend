@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { API_URL } from '../config'
 
+
+
+
 function ReportesVentas() {
   const periodos = ['Este mes', 'Últimos 3 meses', 'Este año', 'Personalizado']
   const [periodoActivo, setPeriodoActivo] = useState('Este mes')
@@ -19,7 +22,16 @@ function ReportesVentas() {
     .finally(() => setCargando(false))
 }, [])
   
+const [regionData, setRegionData] = useState([])
 
+    useEffect(() => {
+      fetch(`${API_URL}/api/reportes/ventas-por-region`)
+        .then(res => res.json())
+        .then(json => {
+          if (json.ok) setRegionData(json.data)
+        })
+        .catch(err => console.error(err))
+    }, [])
   
 
 
@@ -186,6 +198,39 @@ function ReportesVentas() {
           </table>
         </div>
       </div>
+
+      {/* VENTAS POR REGIÓN */}
+<div className="bg-white rounded-xl border border-gray-200 p-5">
+  <h2 className="text-base font-semibold text-gray-800 mb-4">Ventas por región</h2>
+  {regionData.length === 0 ? (
+    <p className="text-sm text-gray-400">No hay datos de regiones disponibles.</p>
+  ) : (
+    <div className="flex flex-col gap-3">
+      {regionData.map((r, i) => {
+        const maxVentas = Math.max(...regionData.map(x => Number(x.total_ventas)))
+        const pct = Math.round((Number(r.total_ventas) / maxVentas) * 100)
+        const colores = ['#1D9E75', '#6FA98C', '#9DC9B4', '#E8C786', '#D85A30']
+        return (
+          <div key={i} className="flex flex-col gap-1">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-700 font-medium">{r.ciudad_envio}</span>
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span>{r.total_pedidos} pedidos</span>
+                <span className="font-semibold text-gray-800">${Number(r.total_ventas).toLocaleString('es-CO')}</span>
+              </div>
+            </div>
+            <div className="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${pct}%`, background: colores[i] || '#6FA98C' }}
+              />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )}
+</div>
     </div>
   )
 }
