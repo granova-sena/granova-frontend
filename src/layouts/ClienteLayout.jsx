@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import logo from '../assets/logo.png'
+import AsistenteWidgetCliente from '../components/AsistenteWidgetCliente'
 
 const ENLACES = [
   { to: '/cliente', label: 'Inicio', end: true },
@@ -151,6 +152,7 @@ function ClienteLayout() {
       </nav>
 
       <Outlet />
+      <AsistenteWidgetCliente />
     </div>
   )
 }

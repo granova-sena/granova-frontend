@@ -16,7 +16,6 @@ import Landing from './pages/Landing'
 import OlvidePasswordAdmin from './pages/OlvidePasswordAdmin'
 import ResetPasswordAdmin from './pages/ResetPasswordAdmin'
 import AlertasDeStock from './pages/AlertasDeStock'
-import AnalisisClientes from './pages/AnalisisClientes'
 import ControlStock from './pages/ControlStock'
 import Envios from './pages/Envios'
 import GestionPedidos from './pages/GestionPedidos'
@@ -102,7 +101,6 @@ function App() {
           {/* Ventas */}
           <Route path="ventas" element={<RegistroDeVentas />} />
           <Route path="reportes" element={<ReportesVentas />} />
-          <Route path="clientes" element={<AnalisisClientes />} />
 
           {/* Pedidos y envíos */}
           <Route path="pedidos" element={<GestionPedidos />} />

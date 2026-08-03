@@ -44,7 +44,7 @@ function DashboardLayout() {
     },
     {
       target: '.grupo-ventas',
-      content: 'Aquí está todo lo de Ventas: registro de ventas, reportes y análisis de clientes. Haz clic para desplegar las opciones.',
+      content: 'Aquí está todo lo de Ventas: registro de ventas y reportes. Haz clic para desplegar las opciones.',
       placement: 'right',
       abrirGrupo: 'ventas',
     },
@@ -123,7 +123,6 @@ function DashboardLayout() {
       items: [
         { label: 'Registro de ventas', path: '/dashboard/ventas' },
         { label: 'Reportes', path: '/dashboard/reportes' },
-        { label: 'Clientes', path: '/dashboard/clientes' },
       ],
     },
     {
