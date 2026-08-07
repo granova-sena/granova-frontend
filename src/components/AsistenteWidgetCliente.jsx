@@ -1,18 +1,27 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import { API_URL } from "../config";
-import { jwtDecode } from 'jwt-decode'
 
 const NEON = '#39ff8a'
 const NEON_DIM = 'rgba(57,255,138,0.35)'
 
-function AsistenteWidget() {
+function obtenerClienteSesion() {
+  try {
+    const cliente = JSON.parse(localStorage.getItem('cliente'))
+    const token = localStorage.getItem('token')
+    if (cliente?.email && token) return cliente
+  } catch {}
+  return null
+}
+
+function AsistenteWidgetCliente() {
   const navigate = useNavigate()
   const [abierto, setAbierto] = useState(false)
   const [mensajes, setMensajes] = useState([
     {
       autor: 'asistente',
-      texto: 'Hola, soy el asistente administrativo de Granova. ¿En qué puedo ayudarte hoy?',
+      texto: '¡Hola! Soy el asistente de Granova. Puedo ayudarte a elegir un café, resolver dudas sobre tu pedido o contarte de nuestras fincas. ¿En qué te ayudo?',
     },
   ])
   const [entrada, setEntrada] = useState('')
@@ -46,19 +55,13 @@ function AsistenteWidget() {
     setCargando(true)
 
     try {
-      const token = localStorage.getItem('token')
-      let idAdmin = 'admin-desconocido'
-      if (token) {
-        try {
-          const decoded = jwtDecode(token)
-          idAdmin = decoded.email || decoded.nombre || 'admin-desconocido'
-        } catch (e) {}
-      }
+      const cliente = obtenerClienteSesion()
+      const idCliente = cliente.email
 
-      const respuesta = await fetch(`${API_URL}/asistente/chat`, {
+      const respuesta = await fetch(`${API_URL}/asistente/chat-cliente`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mensaje: texto, idAdmin }),
+        body: JSON.stringify({ mensaje: texto, idCliente }),
       })
 
       const data = await respuesta.json()
@@ -85,10 +88,10 @@ function AsistenteWidget() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end gap-3">
       {abierto && (
         <div
-          className="w-[22rem] sm:w-96 h-[28rem] flex flex-col rounded-2xl overflow-hidden animate-[granova-pop_0.18s_ease-out]"
+          className="w-[20rem] sm:w-96 h-[26rem] sm:h-[28rem] flex flex-col rounded-2xl overflow-hidden animate-[granova-pop_0.18s_ease-out]"
           style={panel}
         >
           {/* Header */}
@@ -116,8 +119,8 @@ function AsistenteWidget() {
                 <span className="text-xs font-bold tracking-tight" style={{ color: NEON }}>G</span>
               </span>
               <div>
-                <p className="text-sm font-medium leading-tight" style={{ color: '#eafff2' }}>Asistente IA</p>
-                <p className="text-[11px] leading-tight font-mono tracking-wide" style={{ color: NEON_DIM }}>granova · admin</p>
+                <p className="text-sm font-medium leading-tight" style={{ color: '#eafff2' }}>Asistente Granova</p>
+                <p className="text-[11px] leading-tight font-mono tracking-wide" style={{ color: NEON_DIM }}>en línea</p>
               </div>
             </div>
             <button
@@ -196,7 +199,7 @@ function AsistenteWidget() {
               type="text"
               value={entrada}
               onChange={(e) => setEntrada(e.target.value)}
-              placeholder="Escribe tu consulta..."
+              placeholder="Escribe tu pregunta..."
               className="flex-1 px-3.5 py-2 rounded-xl text-sm outline-none"
               style={{
                 background: 'rgba(255,255,255,0.04)',
@@ -225,26 +228,30 @@ function AsistenteWidget() {
 
       {/* Botón flotante */}
       <button
-        onClick={() => setAbierto((v) => !v)}
-        className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0 transition-transform hover:scale-105 relative"
+        onClick={() => {
+          const cliente = obtenerClienteSesion()
+          if (!cliente) {
+            toast.error('Inicia sesión para hablar con el asistente')
+            navigate('/login')
+            return
+          }
+          setAbierto((v) => !v)
+        }}
+        className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-full transition-all duration-300 hover:scale-105 relative"
         style={{
-          background: 'radial-gradient(circle at 35% 30%, #4dffa0, #0a3d24)',
-          boxShadow: `0 0 0 1px rgba(57,255,138,0.4), 0 0 24px rgba(57,255,138,0.55), 0 8px 24px rgba(0,0,0,0.4)`,
+          background: 'radial-gradient(circle at 30% 30%, #0f2b1c, #04140c)',
+          border: `1px solid ${NEON_DIM}`,
+          boxShadow: `0 0 0 1px rgba(57,255,138,0.15), 0 0 20px rgba(57,255,138,0.35), 0 8px 24px rgba(0,0,0,0.4)`,
         }}
       >
         <span
           className="absolute inset-0 rounded-full pointer-events-none"
-          style={{ boxShadow: `0 0 0 0 rgba(57,255,138,0.5)`, animation: abierto ? 'none' : 'granova-ring 2.2s infinite' }}
+          style={{ animation: abierto ? 'none' : 'granova-ring 2.2s infinite' }}
         />
-        {abierto ? (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M18 6 6 18M6 6l12 12" stroke="#04140c" strokeWidth="2.2" strokeLinecap="round" />
-          </svg>
-        ) : (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke="#04140c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
+        <span className="text-base sm:text-lg relative" style={{ filter: `drop-shadow(0 0 4px ${NEON})` }}>☕</span>
+        <span className="text-xs sm:text-sm font-medium relative" style={{ color: NEON }}>
+          {abierto ? 'Cerrar chat' : '¿Necesitas ayuda?'}
+        </span>
       </button>
 
       <style>{`
@@ -261,8 +268,8 @@ function AsistenteWidget() {
           50% { opacity: 0.25; }
         }
         @keyframes granova-ring {
-          0% { box-shadow: 0 0 0 0 rgba(57,255,138,0.45); }
-          70% { box-shadow: 0 0 0 14px rgba(57,255,138,0); }
+          0% { box-shadow: 0 0 0 0 rgba(57,255,138,0.4); }
+          70% { box-shadow: 0 0 0 10px rgba(57,255,138,0); }
           100% { box-shadow: 0 0 0 0 rgba(57,255,138,0); }
         }
         @media (prefers-reduced-motion: reduce) {
@@ -273,4 +280,4 @@ function AsistenteWidget() {
   )
 }
 
-export default AsistenteWidget
+export default AsistenteWidgetCliente
