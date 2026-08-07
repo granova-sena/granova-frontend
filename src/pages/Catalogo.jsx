@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, Component } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useModalBehavior } from "../hooks/useModalBehavior";
 import { useCarrito } from "../context/CarritoContext";
 import { API_URL as BASE_API_URL } from "../config";
@@ -387,7 +387,7 @@ function CalculadoraRapida({ precio, stock }) {
   );
 }
 
-function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFavorito, onToggleFavorito }) {
+function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFavorito, onToggleFavorito, seleccionadoComparar, onToggleComparar }) {
   const [feedback, setFeedback] = useState(false);
   const handleAgregar = (e) => {
     if (!p.disponible) return;
@@ -420,6 +420,10 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
         </div>
         {p.stockLabel === "Stock bajo" && p.disponible && <p className="text-[11px] text-amber-500 font-medium animate-pulse">¡Solo {p.stock} kg disponibles, se está agotando!</p>}
         <CalculadoraRapida precio={p.precio} stock={p.stock} />
+        <label className="flex items-center gap-1.5 text-[11px] text-[#9DC9B4]">
+  <input type="checkbox" checked={seleccionadoComparar} onChange={onToggleComparar} className="w-3.5 h-3.5" />
+  Comparar
+</label>
         <button onClick={handleAgregar} disabled={!p.disponible} className={`mt-1 h-9 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed transition active:scale-95 duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] focus-visible:ring-offset-2 ${feedback ? "bg-[#4F8A70] text-white" : "bg-[#6FA98C] text-white hover:bg-[#4F8A70]"}`}>
           {feedback ? "✓ Agregado" : <><IconoCarrito width={14} height={14} /> Agregar</>}
         </button>
@@ -430,6 +434,13 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
 
 function CatalogoInterno() {
   const [productos, setProductos] = useState([]);
+  const [seleccionadosComparar, setSeleccionadosComparar] = useState([])
+
+const alternarComparar = (id) => {
+  setSeleccionadosComparar(prev =>
+    prev.includes(id) ? prev.filter(x => x !== id) : prev.length < 3 ? [...prev, id] : prev
+  )
+}
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [mostrarRecomendador, setMostrarRecomendador] = useState(false);
@@ -633,7 +644,7 @@ function CatalogoInterno() {
                     cantidadEnCarrito={carrito.find(c => c.id === p.id_producto)?.cant || 0}
                     esFavorito={favoritos.has(p.id_producto)}
                     onToggleFavorito={toggleFavorito}
-                  />
+                  />  
                 ))}
               </div>
             </div>
@@ -665,9 +676,15 @@ function CatalogoInterno() {
             </div>
             {filtrados.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filtrados.map(p => (
-                  <ProductoCard key={p.id} p={p} onAgregar={agregar} onVerDetalle={verDetalle} cantidadEnCarrito={carrito.find(c => c.id === p.id)?.cant || 0} esFavorito={favoritos.has(p.id)} onToggleFavorito={toggleFavorito} />
-                ))}
+               {filtrados.map(p => (
+  <ProductoCard
+    key={p.id} p={p} onAgregar={agregar} onVerDetalle={verDetalle}
+    cantidadEnCarrito={carrito.find(c => c.id === p.id)?.cant || 0}
+    esFavorito={favoritos.has(p.id)} onToggleFavorito={toggleFavorito}
+    seleccionadoComparar={seleccionadosComparar.includes(p.id)}
+    onToggleComparar={() => alternarComparar(p.id)}
+  />
+))}
               </div>
             ) : (
               <div className="text-center py-16 text-white/40">
@@ -723,6 +740,15 @@ function CatalogoInterno() {
           </div>
         </div>
       )}
+       
+      {seleccionadosComparar.length >= 2 && (
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#6FA98C] text-[#173404] px-6 py-3 rounded-full font-medium text-sm flex items-center gap-4 shadow-lg z-50">
+    <span>{seleccionadosComparar.length} seleccionados</span>
+    <Link to={`/cliente/comparar?ids=${seleccionadosComparar.join(',')}`}>Ver comparación →</Link>
+  </div>
+)}
+
+
 
       {/* MODALES */}
       {modalFiltros && <ModalFiltros filtros={filtros} setFiltros={setFiltros} onClose={() => setModalFiltros(false)} tiposDisponibles={tiposDisponibles} />}

@@ -1,6 +1,8 @@
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { API_URL } from "../config";
+import FormularioResena from '../components/FormularioResena'
+
 
 const estadosPedido = [
   { id: 'pendiente', label: 'Pendiente', icono: '🕐' },
@@ -9,6 +11,14 @@ const estadosPedido = [
   { id: 'enviado', label: 'Enviado', icono: '🚚' },
   { id: 'entregado', label: 'Entregado', icono: '🏠' },
 ]
+function obtenerIdCliente() {
+  try {
+    const cliente = JSON.parse(localStorage.getItem('cliente'))
+    return cliente?.id ?? null
+  } catch {
+    return null
+  }
+}
 
 function EstadoPedidoPage() {
   const navigate = useNavigate()
@@ -16,6 +26,7 @@ function EstadoPedidoPage() {
   const [pedido, setPedido] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
+  const [resenaAbierta, setResenaAbierta] = useState(null) // guarda el id_detalle abierto, o null
 
   useEffect(() => {
     async function cargarPedido() {
@@ -55,6 +66,8 @@ function EstadoPedidoPage() {
 
   const formatearNumero = (id) =>
     `PED-${new Date().getFullYear()}-${String(id).padStart(4, '0')}`
+
+  const productoEnResena = pedido.productos?.find(p => p.id_detalle === resenaAbierta)
 
   return (
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
@@ -141,27 +154,38 @@ function EstadoPedidoPage() {
           </div>
 
           {/* Productos */}
-          <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-semibold text-white">
-                Productos ({pedido.productos?.length || 0})
-              </h3>
-            </div>
-            <div className="flex flex-col gap-3">
-              {pedido.productos?.map((p, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-[#6FA98C]/15 rounded-lg flex items-center justify-center text-sm">
-                    ☕
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-white">{p.producto_nombre}</p>
-                    <p className="text-[10px] text-white/40">{p.presentacion}</p>
-                  </div>
-                  <span className="text-xs text-white/40">{p.cantidad} und</span>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-sm font-semibold text-white">
+            Productos ({pedido.productos?.length || 0})
+          </h3>
+        </div>
+        <div className="flex flex-col gap-3">
+     {pedido.productos?.map((p, i) => (
+  <div key={i} className="flex items-center gap-3">
+    <div className="w-8 h-8 bg-[#6FA98C]/15 rounded-lg flex items-center justify-center text-sm">☕</div>
+    <div className="flex-1">
+      <p className="text-xs font-medium text-white">{p.producto_nombre}</p>
+      <p className="text-[10px] text-white/40">{p.presentacion}</p>
+      {p.id_lote && (
+        <Link to={`/cliente/trazabilidad/${p.id_lote}`} className="text-[10px] text-[#9DC9B4] hover:underline block">
+          Ver origen →
+        </Link>
+      )}
+      {pedido.estado === 'entregado' && resenaAbierta !== p.id_detalle && (
+        <button
+          onClick={() => setResenaAbierta(p.id_detalle)}
+          className="text-[10px] text-[#9DC9B4] hover:underline block mt-1"
+        >
+          Escribir reseña →
+        </button>
+      )}
+    </div>
+    <span className="text-xs text-white/40">{p.cantidad} und</span>
+  </div>
+))}
+        </div>
+      </div>
 
           {/* Información de envío */}
           <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl p-6">
@@ -182,6 +206,18 @@ function EstadoPedidoPage() {
           </div>
 
         </div>
+
+        {/* Formulario de reseña: a todo el ancho, fuera del grid de 3 columnas */}
+        {resenaAbierta && productoEnResena && (
+          <div className="mb-6">
+            <FormularioResena
+              id_detalle={resenaAbierta}
+              producto_nombre={productoEnResena.producto_nombre}
+              onCerrar={() => setResenaAbierta(null)}
+              onEnviado={() => setResenaAbierta(null)}
+            />
+          </div>
+        )}
 
         {/* Notificación */}
         <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl px-6 py-4 flex items-center gap-4">
@@ -206,5 +242,7 @@ function EstadoPedidoPage() {
     </div>
   )
 }
+
+
 
 export default EstadoPedidoPage
