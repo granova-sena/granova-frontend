@@ -51,7 +51,7 @@ function ClienteLayout() {
       >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8 sm:gap-10">
-            <button onClick={() => navigate('/cliente')} className="flex items-center gap-2.5 shrink-0">
+            <button type="button" onClick={() => navigate('/cliente')} className="flex items-center gap-2.5 shrink-0">
               <span className="w-9 h-9 rounded-full bg-[#6FA98C] flex items-center justify-center p-[7px] shrink-0">
                 <img src={logo} alt="Granova" className="w-full h-full object-contain" />
               </span>
@@ -74,8 +74,9 @@ function ClienteLayout() {
           <div className="flex items-center gap-2">
             {/* Cuenta (desktop) */}
             <div className="relative hidden md:block" ref={cuentaRef}>
-              <button
-                onClick={() => setCuentaOpen((o) => !o)}
+             <button
+  type="button"
+  onClick={() => setCuentaOpen((o) => !o)}
                 className="w-9 h-9 rounded-full bg-[#6FA98C] text-white text-sm font-semibold flex items-center justify-center hover:bg-[#4F8A70] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1a0a]"
               >
                 {inicial}
@@ -87,14 +88,16 @@ function ClienteLayout() {
                 >
                   <p className="px-4 py-2 text-xs text-white/40 truncate border-b" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>{cliente.email}</p>
                   <button
-                    onClick={() => { setCuentaOpen(false); navigate('/cliente/cuenta') }}
+  type="button"
+  onClick={() => { setCuentaOpen(false); navigate('/cliente/cuenta') }}
                     className="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-white transition"
                   >
                     Mi cuenta
                   </button>
                   <button
-                    onClick={cerrarSesion}
-                    className="w-full text-left px-4 py-2.5 text-sm text-[#D85A30] hover:bg-white/10 transition"
+  type="button"
+  onClick={cerrarSesion}
+  className="w-full text-left px-4 py-2.5 text-sm text-[#D85A30] hover:bg-white/10 transition"
                   >
                     Cerrar sesión
                   </button>
@@ -103,7 +106,7 @@ function ClienteLayout() {
             </div>
 
             {/* Hamburguesa móvil */}
-            <button className="md:hidden text-white/70 hover:text-white transition p-2" onClick={() => setMenuOpen((o) => !o)}>
+            <button type="button" className="md:hidden text-white/70 hover:text-white transition p-2" onClick={() => setMenuOpen((o) => !o)}> 
               {menuOpen ? (
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                   <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -138,12 +141,13 @@ function ClienteLayout() {
             ))}
             <div className="flex flex-col gap-1 pt-2 mt-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
               <button
-                onClick={() => { setMenuOpen(false); navigate('/cliente/cuenta') }}
-                className="text-left text-sm py-2.5 text-white/60"
+  type="button"
+  onClick={() => { setMenuOpen(false); navigate('/cliente/cuenta') }}
+  className="text-left text-sm py-2.5 text-white/60"
               >
                 Mi cuenta
               </button>
-              <button onClick={cerrarSesion} className="text-left text-sm py-2.5 text-[#D85A30]">
+              <button type="button" onClick={cerrarSesion} className="text-left text-sm py-2.5 text-[#D85A30]">
                 Cerrar sesión
               </button>
             </div>
