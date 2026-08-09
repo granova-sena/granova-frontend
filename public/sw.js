@@ -1,4 +1,3 @@
-cat > public/sw.js << 'EOF'
 // Kill switch: elimina cualquier service worker viejo y sus caches
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -16,4 +15,3 @@ self.addEventListener('activate', (event) => {
     })()
   );
 });
-EOF
