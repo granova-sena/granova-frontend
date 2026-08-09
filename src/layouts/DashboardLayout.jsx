@@ -251,12 +251,16 @@ function DashboardLayout() {
 
         {/* Overlay móvil */}
         {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/20 z-30 lg:hidden"
-            style={{ backdropFilter: 'blur(4px)' }}
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
+  <div
+    className="fixed inset-0 bg-black/20 z-30 lg:hidden"
+    style={{ backdropFilter: 'blur(4px)' }}
+    onClick={() => setSidebarOpen(false)}
+    onKeyDown={(e) => { if (e.key === 'Escape') setSidebarOpen(false) }}
+    role="button"
+    tabIndex={0}
+    aria-label="Cerrar menú"
+  />
+)}
 
         {/* SIDEBAR */}
         <aside
@@ -282,9 +286,10 @@ function DashboardLayout() {
               const activo = location.pathname === item.path
               return (
                 <button
-                  key={item.path}
-                  onClick={() => handleNavigate(item.path)}
-                  className={`${item.clase || ''} flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200`}
+                            type="button"
+                            key={item.path}
+                            onClick={() => handleNavigate(item.path)}
+                            className="flex items-center gap-2 pl-4 pr-3 py-2 rounded-lg text-sm transition-all duration-200 text-left"
                   style={
                     activo
                       ? { background: 'rgba(29,158,117,0.12)', color: '#1D9E75', fontWeight: 500 }
@@ -307,6 +312,7 @@ function DashboardLayout() {
               return (
                 <div key={grupo.id} className="flex flex-col">
                   <button
+                    type="button"
                     onClick={() => toggleGrupo(grupo.id)}
                     className={`grupo-${grupo.id} flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200`}
                     style={
@@ -337,9 +343,10 @@ function DashboardLayout() {
                         const activo = location.pathname === item.path
                         return (
                           <button
-                            key={item.path}
-                            onClick={() => handleNavigate(item.path)}
-                            className="flex items-center gap-2 pl-4 pr-3 py-2 rounded-lg text-sm transition-all duration-200 text-left"
+                  type="button"
+                  key={item.path}
+                  onClick={() => handleNavigate(item.path)}
+                  className={`${item.clase || ''} flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200`}
                             style={{
                               borderLeft: activo ? '2px solid #1D9E75' : '2px solid rgba(20,40,32,0.10)',
                               color: activo ? '#1D9E75' : 'rgba(31,42,36,0.55)',
@@ -371,6 +378,7 @@ function DashboardLayout() {
 
           {/* Cerrar sesión */}
           <button
+            type="button"
             onClick={handleLogout}
             className="boton-cerrar-sesion flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200"
             style={{ color: 'rgba(31,42,36,0.55)' }}
@@ -393,7 +401,7 @@ function DashboardLayout() {
             className="lg:hidden flex items-center justify-between px-4 py-4 m-3 rounded-2xl"
             style={glass}
           >
-            <button onClick={() => setSidebarOpen(true)} className="text-[#1F2A24]/60 hover:text-[#1F2A24] transition">
+            <button type="button" onClick={() => setSidebarOpen(true)} className="text-[#1F2A24]/60 hover:text-[#1F2A24] transition">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
