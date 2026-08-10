@@ -18,6 +18,14 @@ const formVacio = {
   imagen_url: '',
 }
 
+// Bloquea letras, símbolos y notación científica (e/+/-) en inputs numéricos.
+// Los inputs type="number" del navegador igual dejan escribir "e", "+" y "-".
+function bloquearNoNumerico(e) {
+  if (['e', 'E', '+', '-'].includes(e.key)) {
+    e.preventDefault()
+  }
+}
+
 function ProductoModal({ producto, onClose, onGuardado }) {
   const [modo, setModo] = useState('individual') // 'individual' | 'excel'
 
@@ -35,6 +43,7 @@ function ProductoModal({ producto, onClose, onGuardado }) {
   const [sugerenciasGarantia, setSugerenciasGarantia] = useState([])
 
   const [confirmarPrecioBajo, setConfirmarPrecioBajo] = useState(false)
+  const [confirmarPrecioAlto, setConfirmarPrecioAlto] = useState(false)
   const precioRef = useRef(null)
 
   const [archivoExcel, setArchivoExcel] = useState(null)
@@ -139,6 +148,13 @@ function ProductoModal({ producto, onClose, onGuardado }) {
       return
     }
 
+    if (Number(form.precio) > 1000000 && !confirmarPrecioAlto) {
+      precioRef.current?.focus()
+      precioRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setConfirmarPrecioAlto(true)
+      return
+    }
+
     await guardar()
   }
 
@@ -185,6 +201,7 @@ function ProductoModal({ producto, onClose, onGuardado }) {
       }
       setFilasExcel(filas)
     } catch (err) {
+      console.error('Error en ProductoModal:', err)
       setErrorExcel('El archivo no es compatible. Asegúrate de subir un .xlsx válido.')
     }
   }
@@ -366,6 +383,7 @@ function ProductoModal({ producto, onClose, onGuardado }) {
                   <input
                     type="number"
                     min="0"
+                    onKeyDown={bloquearNoNumerico}
                     value={form.garantia_meses}
                     onChange={(e) => cambiarCampo('garantia_meses', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
@@ -444,9 +462,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
                   type="number"
                   min="0"
                   value={form.precio}
-                  onChange={(e) => { cambiarCampo('precio', e.target.value); setConfirmarPrecioBajo(false) }}
+                  onChange={(e) => { cambiarCampo('precio', e.target.value); setConfirmarPrecioBajo(false); setConfirmarPrecioAlto(false) }}
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none transition ${
-                    confirmarPrecioBajo ? 'border-amber-400 ring-2 ring-amber-200 scale-105' : 'border-gray-200 focus:border-[#1D9E75]'
+                    confirmarPrecioBajo || confirmarPrecioAlto ? 'border-amber-400 ring-2 ring-amber-200 scale-105' : 'border-gray-200 focus:border-[#1D9E75]'
                   }`}
                   placeholder="28500"
                 />
@@ -488,6 +506,30 @@ function ProductoModal({ producto, onClose, onGuardado }) {
                   <button
                     type="button"
                     onClick={() => setConfirmarPrecioBajo(false)}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-100 transition"
+                  >
+                    No, quiero corregirlo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={guardar}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition"
+                  >
+                    Sí, está correcto — crear producto
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {confirmarPrecioAlto && (
+              <div className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3">
+                <p className="text-sm text-amber-800 font-medium mb-2">
+                  El precio ({formatMoney(Number(form.precio))}) supera {formatMoney(1000000)}. ¿Está correcto?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmarPrecioAlto(false)}
                     className="text-xs px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-100 transition"
                   >
                     No, quiero corregirlo

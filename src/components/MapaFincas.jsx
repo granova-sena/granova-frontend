@@ -159,6 +159,7 @@ function MapaFincas() {
         const data = await respuesta.json();
         if (!cancelado) setFincas(data);
       } catch (error) {
+        console.error('Error en MapaFincas:', error)
         if (!cancelado) setErrorFincas("No se pudieron cargar las fincas");
       } finally {
         if (!cancelado) setCargandoFincas(false);
@@ -234,6 +235,8 @@ function MapaFincas() {
             }
 
             catch (error) {
+
+console.error('Error en MapaFincas:', error)
 
               toast.error("No se pudo buscar la zona. Intenta nuevamente.", {id: "error-busqueda-mapa"});
             }

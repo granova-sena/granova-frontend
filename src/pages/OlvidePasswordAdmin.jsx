@@ -47,6 +47,7 @@ function OlvidePasswordAdmin() {
       toast.success(datos.mensaje || 'Correo enviado correctamente')
       setTimeout(() => navigate('/control-interno'), 3000)
     } catch (error) {
+      console.error('Error en OlvidePasswordAdmin:', error)
       toast.error('No se pudo conectar con el servidor', { id: 'error-olvide-admin' })
     } finally {
       setCargando(false)

@@ -140,7 +140,10 @@ function MisPedidos() {
     async function cargarPedidos() {
       try {
         setCargando(true)
-        const res = await fetch(`${API_URL}/api/pedidos/cliente/${id_cliente}`)
+        const token = localStorage.getItem('token')
+        const res = await fetch(`${API_URL}/api/pedidos/cliente/${id_cliente}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        })
         const json = await res.json()
         if (!json.ok) throw new Error(json.mensaje)
         if (!cancelado) setPedidos(json.data)

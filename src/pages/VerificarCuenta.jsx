@@ -41,6 +41,7 @@ function VerificarCuenta() {
         setEstado('exito')
         setMensaje(datos.mensaje || '¡Cuenta verificada!')
       } catch (error) {
+        console.error('Error en VerificarCuenta:', error)
         setEstado('error')
         setMensaje('No se pudo conectar con el servidor.')
       }
@@ -70,6 +71,7 @@ function VerificarCuenta() {
       setReenviado(true)
       setMensaje(datos.mensaje || 'Si el correo existe, te reenviamos el enlace.')
     } catch (error) {
+      console.error('Error en VerificarCuenta:', error)
       setMensaje('No se pudo conectar con el servidor.')
     } finally {
       setReenviando(false)

@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
 
+// Bloquea letras, símbolos y notación científica (e/+/-) en inputs numéricos.
+function bloquearNoNumerico(e) {
+  if (['e', 'E', '+', '-'].includes(e.key)) {
+    e.preventDefault()
+  }
+}
+
 const coloresProducto = ['#E8C786', '#2B1B12', '#8B4A3C', '#5C7A4A', '#A65A3C', '#6B4226']
 
 function colorParaProducto(id) {
@@ -110,7 +117,7 @@ function AlertasStock() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-white">Alertas de stock</h2>
+        <h2 className="text-base font-semibold text-admin-heading">Alertas de stock</h2>
       </div>
 
       <div className="space-y-3">
@@ -193,6 +200,7 @@ function AlertasStock() {
               <input
                 type="number"
                 min="0"
+                onKeyDown={bloquearNoNumerico}
                 step="0.1"
                 autoFocus
                 value={cantidad}

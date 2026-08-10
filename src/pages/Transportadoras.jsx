@@ -39,8 +39,8 @@ function Transportadoras() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-white">Transportadoras</h1>
-          <p className="text-sm text-white">Gestión de empresas logísticas y rendimiento de entregas</p>
+          <h1 className="text-xl font-semibold text-admin-page-title">Transportadoras</h1>
+          <p className="text-sm text-admin-page-subtitle">Gestión de empresas logísticas y rendimiento de entregas</p>
         </div>
         <button className="text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition whitespace-nowrap">
           + Agregar aliada
@@ -66,12 +66,12 @@ function Transportadoras() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {transportadoras.map((t) => (
           <div key={t.nombre}>
-            <p className="text-xs text-white mb-1.5">Rendimiento</p>
+            <p className="text-xs text-admin-page-subtitle mb-1.5">Rendimiento</p>
             <div className="flex items-center gap-2">
               <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${t.pct}%`, backgroundColor: t.barColor }}></div>
               </div>
-              <span className="text-xs text-white">{t.pct}%</span>
+              <span className="text-xs text-admin-page-title">{t.pct}%</span>
             </div>
           </div>
         ))}

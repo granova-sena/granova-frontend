@@ -6,7 +6,7 @@ const ROLES_DISPONIBLES = ['admin', 'gerente', 'empleado']
 
 const REGEX_MAYUSCULA = /[A-Z]/
 const REGEX_NUMERO = /[0-9]/
-const REGEX_ESPECIAL = /[!@#$%^&*(),.?":{}|<>_\-]/
+const REGEX_ESPECIAL = /[!@#$%^&*(),.?":{}|<>_-]/
 
 function evaluarReglasContraseña(value) {
   return {
@@ -133,6 +133,7 @@ function Users() {
       await Promise.all([cargarUsuarios(), cargarMetricas()])
 
     } catch (error) {
+      console.error('Error en Users:', error)
       setErrorFormulario('Error de conexión con el servidor')
     } finally {
       setGuardando(false)
@@ -160,6 +161,7 @@ function Users() {
       await Promise.all([cargarUsuarios(), cargarMetricas()])
 
     } catch (error) {
+      console.error('Error en Users:', error)
       setErrorAccion('Error de conexión con el servidor')
     } finally {
       setIdEnProceso(null)
@@ -193,6 +195,7 @@ function Users() {
       await Promise.all([cargarUsuarios(), cargarMetricas()])
 
     } catch (error) {
+      console.error('Error en Users:', error)
       setErrorAccion('Error de conexión con el servidor')
     } finally {
       setIdEnProceso(null)
@@ -225,6 +228,7 @@ function Users() {
       await Promise.all([cargarUsuarios(), cargarMetricas()])
 
     } catch (error) {
+      console.error('Error en Users:', error)
       setErrorAccion('Error de conexión con el servidor')
     } finally {
       setIdEnProceso(null)
@@ -267,6 +271,7 @@ function Users() {
       await Promise.all([cargarUsuarios(), cargarMetricas()])
 
     } catch (error) {
+      console.error('Error en Users:', error)
       setErrorAccion('Error de conexión con el servidor')
     } finally {
       setImportando(false)
@@ -274,9 +279,20 @@ function Users() {
     }
   }
 
+  function normalizar(texto) {
+    return String(texto || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  const qBusqueda = normalizar(busqueda)
   const usuariosFiltrados = usuarios.filter(u =>
-    u.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-    u.email?.toLowerCase().includes(busqueda.toLowerCase())
+    normalizar(u.nombre).includes(qBusqueda) ||
+    normalizar(u.apellido).includes(qBusqueda) ||
+    normalizar(u.email).includes(qBusqueda)
   )
 
   const getRolColor = (rol) => {

@@ -81,6 +81,7 @@ function Login() {
       navigate('/cliente')
 
     } catch (error) {
+      console.error('Error en Login:', error)
       toast.dismiss()
       toast.error('Error al iniciar sesion')
     } finally {
@@ -101,6 +102,11 @@ function Login() {
       `width=${ancho},height=${alto},left=${izquierda},top=${arriba}`
     )
 
+    if (!popup) {
+      toast.error('Tu navegador bloqueó la ventana de Google. Habilita los popups e intenta de nuevo.')
+      return
+    }
+
     function manejarMensaje(evento) {
       if (evento.origin !== FRONTEND_URL) return
 
@@ -113,6 +119,7 @@ function Login() {
           'message',
           manejarMensaje
         )
+        popup.close()
         return
       }
 
@@ -125,6 +132,7 @@ function Login() {
           manejarMensaje
         )
 
+        popup.close()
         navigate('/cliente')
       }
     }

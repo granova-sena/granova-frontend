@@ -126,6 +126,7 @@ const enviarPorCorreo = async () => {
     }
 
   } catch (error) {
+    console.error('Error en CotizacionPage:', error)
     alert('❌ No se pudo conectar con el servidor')
   }
 }

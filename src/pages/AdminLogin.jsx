@@ -53,6 +53,7 @@ function AdminLogin() {
       localStorage.setItem('usuario', JSON.stringify(datos.usuario))
       navigate('/dashboard')
     } catch (error) {
+      console.error('Error en AdminLogin:', error)
       toast.error('No se pudo conectar con el servidor', { id: 'error-admin' })
     } finally {
       setCargando(false)

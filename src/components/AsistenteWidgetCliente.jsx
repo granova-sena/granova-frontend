@@ -6,12 +6,55 @@ import { API_URL } from "../config";
 const NEON = '#39ff8a'
 const NEON_DIM = 'rgba(57,255,138,0.35)'
 
+// El webhook de n8n devuelve rutas "intuitivas" en lenguaje natural (ej.
+// /mi-perfil, /mis-pedidos) que no siempre coinciden con las rutas reales
+// de App.jsx (ej. /cliente/cuenta). En vez de mantener un mapa de alias
+// exactos (frágil, se rompe con cualquier variante nueva), buscamos por
+// palabras clave dentro de la ruta que n8n mandó y la traducimos al
+// destino real más probable. Cada destino real tiene una lista de palabras
+// que, si aparecen en el texto de la ruta, apuntan a esa página.
+const DESTINOS_CLIENTE = [
+  { ruta: '/cliente/configurar-pedido', palabras: ['configurar', 'personalizar', 'armar'] },
+  { ruta: '/cliente/pedidos', palabras: ['pedido', 'orden', 'compra', 'envio', 'seguimiento'] },
+  { ruta: '/cliente/carrito', palabras: ['carrito', 'cart', 'bolsa'] },
+  { ruta: '/cliente/cuenta', palabras: ['cuenta', 'perfil', 'profile', 'datos', 'ajuste', 'configuracion'] },
+  { ruta: '/cliente/promociones', palabras: ['promocion', 'oferta', 'descuento', 'cupon'] },
+  { ruta: '/cliente/cotizacion', palabras: ['cotizacion', 'cotizar', 'presupuesto'] },
+  { ruta: '/cliente/comparar', palabras: ['comparar', 'comparacion', 'versus'] },
+  { ruta: '/cliente/catalogo', palabras: ['catalogo', 'tienda', 'producto', 'cafe', 'shop', 'comprar'] },
+  { ruta: '/cliente', palabras: ['inicio', 'home', 'principal', 'landing'] },
+]
+
+function quitarAcentos(texto) {
+  return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
+function normalizarRuta(ruta) {
+  if (!ruta) return null
+  const limpia = ruta.trim().replace(/\/+$/, '') || '/cliente'
+
+  // Si ya es exactamente una ruta real del cliente, no hace falta tocarla.
+  const yaEsValida = limpia === '/cliente' || DESTINOS_CLIENTE.some(d => d.ruta === limpia)
+  if (yaEsValida) return limpia
+
+  // Buscamos por palabras clave dentro del texto de la ruta que mandó n8n.
+  const texto = quitarAcentos(limpia.toLowerCase())
+  const match = DESTINOS_CLIENTE.find(d => d.palabras.some(p => texto.includes(p)))
+  if (match) return match.ruta
+
+  // Si no reconocemos nada, dejamos pasar la ruta tal cual vino (mejor
+  // intentarlo que no navegar) — si no existe, React Router mostrará 404.
+  return limpia
+}
+
 function obtenerClienteSesion() {
   try {
     const cliente = JSON.parse(localStorage.getItem('cliente'))
     const token = localStorage.getItem('token')
     if (cliente?.email && token) return cliente
-  } catch {}
+  } catch {
+    // localStorage corrupto o inaccesible: tratamos como cliente no identificado
+  }
   return null
 }
 
@@ -75,9 +118,11 @@ function AsistenteWidgetCliente() {
       ])
 
       if (data.accion === 'navegar' && data.parametros?.ruta) {
-        navigate(data.parametros.ruta)
+        const rutaFinal = normalizarRuta(data.parametros.ruta)
+        if (rutaFinal) navigate(rutaFinal)
       }
     } catch (error) {
+      console.error('Error en AsistenteWidgetCliente:', error)
       setMensajes((prev) => [
         ...prev,
         { autor: 'asistente', texto: 'No hay conexión con el servidor. Verifica tu internet e intenta de nuevo.' },

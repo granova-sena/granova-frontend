@@ -7,7 +7,7 @@ import FacturaModal from '../components/FacturaModal'
 const estadoStyles = {
   Pendiente: 'bg-amber-100 text-amber-700',
   Confirmado: 'bg-green-100 text-green-700',
-  Cancelado: 'bg-red-100 text-red-700',
+  Rechazado: 'bg-red-100 text-red-700',
 }
 
 const coloresProducto = ['#8B4A3C', '#2B1B12', '#5C7A4A', '#E8C786', '#A65A3C', '#6B4226']
@@ -16,6 +16,7 @@ function colorParaPedido(id) {
 }
 
 const LIMITE = 10
+const MAX_MOTIVO = 500
 
 function GestionPedidos() {
   const [tabActivo, setTabActivo] = useState('Todos')
@@ -32,21 +33,24 @@ function GestionPedidos() {
   const [procesando, setProcesando] = useState(null)
   const [facturaId, setFacturaId] = useState(null)
 
+  const [pedidoARechazar, setPedidoARechazar] = useState(null) // id del pedido en el modal de motivo
+  const [motivo, setMotivo] = useState('')
+
   const cargarResumen = () => {
-    api.get('/pedidos/resumen')
+    api.get('/admin/pedidos/resumen')
       .then(res => setResumen(res.data))
-      .catch(err => setError(err.message))
+      .catch(err => setError(err.response?.data?.error || err.message))
   }
 
   const cargarPedidos = () => {
     setLoading(true)
-    api.get('/pedidos/listado', { params: { tab: tabActivo, page: pagina, limit: LIMITE } })
+    api.get('/admin/pedidos/listado', { params: { tab: tabActivo, page: pagina, limit: LIMITE } })
       .then(res => {
         setPedidos(res.data.pedidos)
         setTotalPaginas(res.data.totalPaginas)
         setTotalFiltrados(res.data.totalFiltrados)
       })
-      .catch(err => setError(err.message))
+      .catch(err => setError(err.response?.data?.error || err.message))
       .finally(() => setLoading(false))
   }
 
@@ -66,7 +70,7 @@ function GestionPedidos() {
   const aceptarPedido = async (id) => {
     setProcesando(id)
     try {
-      await api.patch(`/pedidos/${id}/aceptar`)
+      await api.patch(`/admin/pedidos/${id}/aceptar`)
       recargarTodo()
     } catch (err) {
       alert(err.response?.data?.error || 'No se pudo aceptar el pedido.')
@@ -75,14 +79,20 @@ function GestionPedidos() {
     }
   }
 
-  const cancelarPedido = async (id) => {
-    if (!confirm('¿Cancelar este pedido? El stock reservado se devolverá al inventario.')) return
-    setProcesando(id)
+  const abrirModalRechazo = (id) => {
+    setPedidoARechazar(id)
+    setMotivo('')
+  }
+
+  const confirmarRechazo = async () => {
+    if (!pedidoARechazar) return
+    setProcesando(pedidoARechazar)
     try {
-      await api.patch(`/pedidos/${id}/cancelar`)
+      await api.patch(`/admin/pedidos/${pedidoARechazar}/rechazar`, { motivo })
+      setPedidoARechazar(null)
       recargarTodo()
     } catch (err) {
-      alert(err.response?.data?.error || 'No se pudo cancelar el pedido.')
+      alert(err.response?.data?.error || 'No se pudo rechazar el pedido.')
     } finally {
       setProcesando(null)
     }
@@ -91,7 +101,7 @@ function GestionPedidos() {
   const exportarExcel = async () => {
     setExportando(true)
     try {
-      const res = await api.get('/pedidos/listado', { params: { tab: 'Todos', page: 1, limit: 10000 } })
+      const res = await api.get('/admin/pedidos/listado', { params: { tab: 'Todos', page: 1, limit: 10000 } })
       const datos = res.data.pedidos.map(p => ({
         Pedido: p.pedido,
         Cliente: p.cliente,
@@ -118,7 +128,7 @@ function GestionPedidos() {
   const stats = resumen ? [
     { label: 'Pedidos pendientes', value: String(resumen.pendientes), change: 'requieren acción', valueClass: 'text-amber-500', changeClass: 'text-amber-500' },
     { label: 'Pedidos confirmados', value: String(resumen.confirmados), change: 'total acumulado', valueClass: 'text-gray-800', changeClass: 'text-gray-400' },
-    { label: 'Pedidos cancelados', value: String(resumen.cancelados), change: 'total acumulado', valueClass: 'text-red-500', changeClass: 'text-red-500' },
+    { label: 'Pedidos rechazados', value: String(resumen.rechazados), change: 'total acumulado', valueClass: 'text-red-500', changeClass: 'text-red-500' },
     { label: 'Total en pedidos', value: formatMoney(resumen.totalEnPedidos), change: `${resumen.cambioTotal >= 0 ? '↑ +' : ''}${resumen.cambioTotal}% vs mes anterior`, valueClass: 'text-gray-800', changeClass: 'text-[#1D9E75]' },
   ] : []
 
@@ -126,7 +136,7 @@ function GestionPedidos() {
     { key: 'Todos', label: `Todos (${resumen ? resumen.total : 0})` },
     { key: 'Pendientes', label: `Pendientes (${resumen ? resumen.pendientes : 0})` },
     { key: 'Confirmados', label: `Confirmados (${resumen ? resumen.confirmados : 0})` },
-    { key: 'Cancelados', label: `Cancelados (${resumen ? resumen.cancelados : 0})` },
+    { key: 'Rechazados', label: `Rechazados (${resumen ? resumen.rechazados : 0})` },
   ]
 
   return (
@@ -150,13 +160,13 @@ function GestionPedidos() {
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h2 className="text-base font-semibold text-white">Gestión de pedidos</h2>
+        <h2 className="text-base font-semibold text-admin-heading">Gestión de pedidos</h2>
         <button
           onClick={exportarExcel}
           disabled={exportando}
           className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg border border-gray-300 bg-[#1D9E75] text-white hover:bg-[#178a64] transition disabled:opacity-50"
         >
-          ↓ {exportando ? 'Generando...' : 'Exportar'}
+          ↓ {exportando ? 'Generando...' : `Exportar página ${pagina}`}
         </button>
       </div>
 
@@ -196,7 +206,7 @@ function GestionPedidos() {
               ) : (
                 pedidos.map((p) => (
                   <tr key={p.id} className="border-b border-gray-100 last:border-0">
-                    <td className={`py-3 px-5 font-medium ${p.estado === 'Cancelado' ? 'text-red-500' : 'text-gray-600'}`}>{p.pedido}</td>
+                    <td className={`py-3 px-5 font-medium ${p.estado === 'Rechazado' ? 'text-red-500' : 'text-gray-600'}`}>{p.pedido}</td>
                     <td className="py-3 px-5">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
@@ -232,11 +242,11 @@ function GestionPedidos() {
                             ✓ Aceptar
                           </button>
                           <button
-                            onClick={() => cancelarPedido(p.id)}
+                            onClick={() => abrirModalRechazo(p.id)}
                             disabled={procesando === p.id}
                             className="text-xs px-3 py-1.5 rounded-lg border border-red-300 text-red-500 hover:bg-red-50 transition whitespace-nowrap disabled:opacity-50"
                           >
-                            ✕ Cancelar
+                            ✕ Rechazar
                           </button>
                         </div>
                       ) : (
@@ -272,6 +282,42 @@ function GestionPedidos() {
           </div>
         </div>
       </div>
+
+      {pedidoARechazar && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setPedidoARechazar(null)}>
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl w-full max-w-md p-6">
+            <h3 className="text-base font-semibold text-gray-800 mb-1">Rechazar pedido</h3>
+            <p className="text-xs text-gray-400 mb-4">
+              Cuéntale al cliente por qué se rechazó (opcional). El stock reservado se devuelve al inventario.
+            </p>
+
+            <textarea
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value.slice(0, MAX_MOTIVO))}
+              rows={4}
+              placeholder="Ej: El producto no tenía suficiente stock para completar el pedido."
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-red-400 resize-none"
+            />
+            <p className="text-xs text-gray-400 text-right mt-1">{motivo.length}/{MAX_MOTIVO}</p>
+
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setPedidoARechazar(null)}
+                className="flex-1 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarRechazo}
+                disabled={procesando === pedidoARechazar}
+                className="flex-1 py-2.5 rounded-lg bg-red-500 text-white text-sm hover:bg-red-600 transition disabled:opacity-50"
+              >
+                {procesando === pedidoARechazar ? 'Rechazando...' : 'Rechazar pedido'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {facturaId && (
         <FacturaModal idPedido={facturaId} onClose={() => setFacturaId(null)} />

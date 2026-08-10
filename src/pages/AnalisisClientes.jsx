@@ -61,6 +61,10 @@ function AnalisisClientes() {
         <p className="text-sm text-gray-300">Frecuencia de compra y clientes potenciales</p>
       </div>
 
+      {cargando && (
+        <p className="text-sm text-gray-300">Cargando...</p>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {stats.map((stat) => (
           <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5">

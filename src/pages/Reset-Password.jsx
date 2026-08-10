@@ -7,7 +7,7 @@ import { API_URL } from "../config";
 
 const REGEX_MAYUSCULA = /[A-Z]/
 const REGEX_NUMERO = /[0-9]/
-const REGEX_ESPECIAL = /[!@#$%^&*(),.?":{}|<>_\-]/
+const REGEX_ESPECIAL = /[!@#$%^&*(),.?":{}|<>_-]/
 
 function evaluarReglasContraseña(value) {
   return {
@@ -107,6 +107,7 @@ function ResetPassword() {
       toast.success('¡Contraseña actualizada correctamente!')
       setTimeout(() => navigate('/login'), 2000)
     } catch (error) {
+      console.error('Error en Reset-Password:', error)
       toast.error('No se pudo conectar con el servidor', { id: 'error-reset' })
     } finally {
       setCargando(false)

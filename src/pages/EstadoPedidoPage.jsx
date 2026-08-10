@@ -11,14 +11,6 @@ const estadosPedido = [
   { id: 'enviado', label: 'Enviado', icono: '🚚' },
   { id: 'entregado', label: 'Entregado', icono: '🏠' },
 ]
-function obtenerIdCliente() {
-  try {
-    const cliente = JSON.parse(localStorage.getItem('cliente'))
-    return cliente?.id ?? null
-  } catch {
-    return null
-  }
-}
 
 function EstadoPedidoPage() {
   const navigate = useNavigate()
@@ -32,7 +24,10 @@ function EstadoPedidoPage() {
     async function cargarPedido() {
       try {
         setCargando(true)
-        const res = await fetch(`${API_URL}/pedidos/${id}`)
+        const token = localStorage.getItem('token')
+        const res = await fetch(`${API_URL}/pedidos/${id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        })
         const json = await res.json()
         if (!json.ok) throw new Error(json.mensaje)
         setPedido(json.data)

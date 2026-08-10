@@ -60,6 +60,7 @@ function SelectorDireccion() {
         const direccionTexto = await obtenerDireccion(posicion.lat, posicion.lng);
         setDireccion(direccionTexto);
       } catch (error) {
+        console.error('Error en MapaBase:', error)
         setDireccion("No se pudo obtener la dirección, intenta de nuevo");
       } finally {
         setCargando(false);

@@ -58,6 +58,7 @@ function OlvidePassword() {
       toast.success(datos.mensaje || 'Correo enviado correctamente')
       setTimeout(() => navigate('/'), 3000)
     } catch (error) {
+      console.error('Error en OlvidePassword:', error)
       toast.error('No se pudo conectar con el servidor', { id: 'error-olvide' })
     } finally {
       setCargando(false)

@@ -120,6 +120,7 @@ export function CarritoProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- patrón estándar Context+Provider+hook en un solo archivo; separarlo rompería los imports existentes sin beneficio real.
 export function useCarrito() {
   return useContext(CarritoContext)
 }

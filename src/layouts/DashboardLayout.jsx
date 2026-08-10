@@ -10,7 +10,7 @@ function DashboardLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [seccionAbierta, setSeccionAbierta] = useState(null)
+  const [seccionesAbiertas, setSeccionesAbiertas] = useState([])
 
   const [correrTutorial, setCorrerTutorial] = useState(() => {
     return !localStorage.getItem('tutorial_completado')
@@ -73,7 +73,8 @@ function DashboardLayout() {
     // Cuando el tour está a punto de mostrar un paso que apunta a un grupo colapsable,
     // lo abrimos automáticamente para que el usuario vea las opciones reales, no un botón cerrado.
     if (type === EVENTS.STEP_BEFORE && pasos[index]?.abrirGrupo) {
-      setSeccionAbierta(pasos[index].abrirGrupo)
+      const grupo = pasos[index].abrirGrupo
+      setSeccionesAbiertas((prev) => (prev.includes(grupo) ? prev : [...prev, grupo]))
     }
 
     if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
@@ -161,11 +162,13 @@ function DashboardLayout() {
   // Si la ruta activa vive dentro de un grupo, ese grupo debe abrirse solo al cargar/navegar.
   useEffect(() => {
     const grupoActivo = menuGrupos.find((g) => g.items.some((item) => item.path === location.pathname))
-    if (grupoActivo) setSeccionAbierta(grupoActivo.id)
+    if (grupoActivo) {
+      setSeccionesAbiertas((prev) => (prev.includes(grupoActivo.id) ? prev : [...prev, grupoActivo.id]))
+    }
   }, [location.pathname])
 
   function toggleGrupo(id) {
-    setSeccionAbierta((actual) => (actual === id ? null : id))
+    setSeccionesAbiertas((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]))
   }
 
   const handleNavigate = (path) => {
@@ -186,11 +189,26 @@ function DashboardLayout() {
     try {
       const decoded = jwtDecode(token)
       nombreAdmin = decoded.nombre || decoded.email || 'Administrador'
-    } catch (e) {}
+    } catch {
+      // Token inválido o corrupto: seguimos con el nombre por defecto
+    }
   }
 
-  // Sistema de vidrio compartido — tema claro
-  const glass = {
+  // Sistema de vidrio compartido — cambia según modo claro/oscuro
+  const [modoOscuro, setModoOscuro] = useState(() => localStorage.getItem('granova_modo_oscuro') === '1')
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', modoOscuro)
+    localStorage.setItem('granova_modo_oscuro', modoOscuro ? '1' : '0')
+  }, [modoOscuro])
+
+  const glass = modoOscuro ? {
+    background: 'rgba(17,28,23,0.92)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    backdropFilter: 'blur(20px) saturate(160%)',
+    WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+    boxShadow: '0 8px 28px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)',
+  } : {
     background: 'rgba(255,255,255,0.92)',
     border: '1px solid rgba(20,40,32,0.14)',
     backdropFilter: 'blur(20px) saturate(160%)',
@@ -236,7 +254,7 @@ function DashboardLayout() {
         }}
       />
 
-      <div className="relative flex h-screen overflow-hidden" style={{ background: 'linear-gradient(160deg, #EAF1EC 0%, #DCE7DF 100%)' }}>
+      <div className="relative flex h-screen overflow-hidden" style={{ background: modoOscuro ? 'linear-gradient(160deg, #0b130f 0%, #0f1a15 100%)' : 'linear-gradient(160deg, #EAF1EC 0%, #DCE7DF 100%)' }}>
 
         <div className="pointer-events-none fixed inset-0 overflow-hidden">
           <div
@@ -276,8 +294,8 @@ function DashboardLayout() {
             >
               G
             </span>
-            <span className="sidebar-logo text-[#1F2A24] text-lg font-medium tracking-tight">Granova</span>
-            <span className="text-xs text-[#1F2A24]/35 ml-1">Admin</span>
+            <span className="sidebar-logo text-lg font-medium tracking-tight" style={{ color: modoOscuro ? '#eafff2' : '#1F2A24' }}>Granova</span>
+            <span className="text-xs ml-1" style={{ color: modoOscuro ? 'rgba(234,255,242,0.35)' : 'rgba(31,42,36,0.35)' }}>Admin</span>
           </div>
 
           {/* Menú */}
@@ -293,9 +311,9 @@ function DashboardLayout() {
                   style={
                     activo
                       ? { background: 'rgba(29,158,117,0.12)', color: '#1D9E75', fontWeight: 500 }
-                      : { background: 'transparent', color: 'rgba(31,42,36,0.55)' }
+                      : { background: 'transparent', color: modoOscuro ? 'rgba(234,255,242,0.55)' : 'rgba(31,42,36,0.55)' }
                   }
-                  onMouseEnter={(e) => { if (!activo) e.currentTarget.style.background = 'rgba(20,40,32,0.05)' }}
+                  onMouseEnter={(e) => { if (!activo) e.currentTarget.style.background = modoOscuro ? 'rgba(255,255,255,0.06)' : 'rgba(20,40,32,0.05)' }}
                   onMouseLeave={(e) => { if (!activo) e.currentTarget.style.background = 'transparent' }}
                 >
                   {item.icon}
@@ -304,10 +322,10 @@ function DashboardLayout() {
               )
             })}
 
-            <div className="h-px my-2" style={{ background: 'rgba(20,40,32,0.08)' }} />
+            <div className="h-px my-2" style={{ background: modoOscuro ? 'rgba(255,255,255,0.08)' : 'rgba(20,40,32,0.08)' }} />
 
             {menuGrupos.map((grupo) => {
-              const abierto = seccionAbierta === grupo.id
+              const abierto = seccionesAbiertas.includes(grupo.id)
               const grupoTieneActivo = grupo.items.some((item) => item.path === location.pathname)
               return (
                 <div key={grupo.id} className="flex flex-col">
@@ -318,9 +336,9 @@ function DashboardLayout() {
                     style={
                       grupoTieneActivo && !abierto
                         ? { background: 'rgba(29,158,117,0.08)', color: '#1D9E75', fontWeight: 500 }
-                        : { background: 'transparent', color: 'rgba(31,42,36,0.55)' }
+                        : { background: 'transparent', color: modoOscuro ? 'rgba(234,255,242,0.55)' : 'rgba(31,42,36,0.55)' }
                     }
-                    onMouseEnter={(e) => { if (!grupoTieneActivo) e.currentTarget.style.background = 'rgba(20,40,32,0.05)' }}
+                    onMouseEnter={(e) => { if (!grupoTieneActivo) e.currentTarget.style.background = modoOscuro ? 'rgba(255,255,255,0.06)' : 'rgba(20,40,32,0.05)' }}
                     onMouseLeave={(e) => { if (!(grupoTieneActivo && !abierto)) e.currentTarget.style.background = 'transparent' }}
                   >
                     {grupo.icon}
@@ -348,12 +366,12 @@ function DashboardLayout() {
                   onClick={() => handleNavigate(item.path)}
                   className={`${item.clase || ''} flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200`}
                             style={{
-                              borderLeft: activo ? '2px solid #1D9E75' : '2px solid rgba(20,40,32,0.10)',
-                              color: activo ? '#1D9E75' : 'rgba(31,42,36,0.55)',
+                              borderLeft: activo ? '2px solid #1D9E75' : `2px solid ${modoOscuro ? 'rgba(255,255,255,0.12)' : 'rgba(20,40,32,0.10)'}`,
+                              color: activo ? '#1D9E75' : (modoOscuro ? 'rgba(234,255,242,0.55)' : 'rgba(31,42,36,0.55)'),
                               fontWeight: activo ? 500 : 400,
                               background: activo ? 'rgba(29,158,117,0.08)' : 'transparent',
                             }}
-                            onMouseEnter={(e) => { if (!activo) e.currentTarget.style.background = 'rgba(20,40,32,0.05)' }}
+                            onMouseEnter={(e) => { if (!activo) e.currentTarget.style.background = modoOscuro ? 'rgba(255,255,255,0.06)' : 'rgba(20,40,32,0.05)' }}
                             onMouseLeave={(e) => { if (!activo) e.currentTarget.style.background = 'transparent' }}
                           >
                             {item.label}
@@ -370,20 +388,51 @@ function DashboardLayout() {
           {/* Usuario */}
           <div
             className="px-3 py-3 mb-2 rounded-2xl"
-            style={{ background: 'rgba(20,40,32,0.06)', border: '1px solid rgba(20,40,32,0.12)' }}
+            style={modoOscuro
+              ? { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }
+              : { background: 'rgba(20,40,32,0.06)', border: '1px solid rgba(20,40,32,0.12)' }
+            }
           >
-            <p className="text-xs text-[#1F2A24]/40 mb-0.5">Sesión activa</p>
-            <p className="text-sm text-[#1F2A24]/80 truncate">{nombreAdmin}</p>
+            <p className="text-xs mb-0.5" style={{ color: modoOscuro ? 'rgba(255,255,255,0.4)' : 'rgba(31,42,36,0.4)' }}>Sesión activa</p>
+            <p className="text-sm truncate" style={{ color: modoOscuro ? 'rgba(255,255,255,0.85)' : 'rgba(31,42,36,0.8)' }}>{nombreAdmin}</p>
           </div>
+
+          {/* Modo oscuro */}
+          <button
+            onClick={() => setModoOscuro((v) => !v)}
+            className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-xl text-sm transition-all duration-200"
+            style={{
+              color: modoOscuro ? '#e8f5ee' : '#1F2A24',
+              background: modoOscuro ? 'rgba(255,255,255,0.06)' : 'rgba(20,40,32,0.06)',
+              border: modoOscuro ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(20,40,32,0.12)',
+            }}
+          >
+            {modoOscuro ? (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2" /><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+                Modo claro
+              </>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>
+                Modo oscuro
+              </>
+            )}
+          </button>
 
           {/* Cerrar sesión */}
           <button
             type="button"
             onClick={handleLogout}
             className="boton-cerrar-sesion flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200"
-            style={{ color: 'rgba(31,42,36,0.55)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220,38,38,0.08)'; e.currentTarget.style.color = '#dc2626' }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(31,42,36,0.55)' }}
+            style={{
+              color: '#dc2626',
+              background: 'rgba(220,38,38,0.06)',
+              border: '1px solid rgba(220,38,38,0.45)',
+              boxShadow: '0 0 0 1px rgba(220,38,38,0.12), 0 0 10px rgba(220,38,38,0.35)',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220,38,38,0.14)'; e.currentTarget.style.boxShadow = '0 0 0 1px rgba(220,38,38,0.2), 0 0 16px rgba(220,38,38,0.5)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(220,38,38,0.06)'; e.currentTarget.style.boxShadow = '0 0 0 1px rgba(220,38,38,0.12), 0 0 10px rgba(220,38,38,0.35)' }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -401,12 +450,12 @@ function DashboardLayout() {
             className="lg:hidden flex items-center justify-between px-4 py-4 m-3 rounded-2xl"
             style={glass}
           >
-            <button type="button" onClick={() => setSidebarOpen(true)} className="text-[#1F2A24]/60 hover:text-[#1F2A24] transition">
+            <button type="button" onClick={() => setSidebarOpen(true)} className="transition" style={{ color: modoOscuro ? 'rgba(234,255,242,0.6)' : 'rgba(31,42,36,0.6)' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
             </button>
-            <span className="text-[#1F2A24] text-base font-medium">Granova Admin</span>
+            <span className="text-base font-medium" style={{ color: modoOscuro ? '#eafff2' : '#1F2A24' }}>Granova Admin</span>
             <div className="w-6" />
           </header>
 

@@ -74,3 +74,64 @@ button:not(:disabled):active {
 html {
   scroll-behavior: smooth;
 }
+/* ─────────────────────────────────────────────
+   Modo oscuro del panel admin (alcance general,
+   aplicado con la clase .dark en <html>).
+   Cubre las clases de Tailwind que se repiten en
+   Control de stock, Ventas, Pedidos, Alertas y
+   Usuarios, sin tener que tocar archivo por archivo.
+   ───────────────────────────────────────────── */
+.dark { color-scheme: dark; }
+
+.dark .bg-white { background-color: #111c17 !important; }
+.dark .bg-gray-50 { background-color: #0d1512 !important; }
+.dark .bg-gray-100 { background-color: #16221c !important; }
+
+.dark .text-gray-800 { color: #eafff2 !important; }
+.dark .text-gray-700 { color: #d7ece0 !important; }
+.dark .text-gray-600 { color: #b9d3c5 !important; }
+.dark .text-gray-500 { color: #8fab9c !important; }
+.dark .text-gray-400 { color: #6f8a7c !important; }
+.dark .text-gray-300 { color: #b9d3c5 !important; }
+
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300 { border-color: #24352c !important; }
+
+.dark .divide-gray-100 > * + * { border-color: #24352c !important; }
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #0d1512;
+  color: #eafff2;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder { color: #5c7a6b; }
+
+.dark .shadow,
+.dark .shadow-sm,
+.dark .shadow-lg { box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important; }
+
+/* Las tarjetas de estado (verde/ámbar/rojo claritos) se oscurecen un poco
+   para que el texto de color siga siendo legible encima */
+.dark .bg-green-100 { background-color: rgba(34,197,94,0.16) !important; }
+.dark .bg-amber-100 { background-color: rgba(245,158,11,0.16) !important; }
+.dark .bg-red-100 { background-color: rgba(239,68,68,0.16) !important; }
+.dark .bg-red-50 { background-color: rgba(239,68,68,0.10) !important; }
+.dark .bg-amber-50 { background-color: rgba(245,158,11,0.10) !important; }
+
+/* Títulos y etiquetas que antes tenían el verde oscuro (#0d4d33) fijo por
+   inline style: en modo oscuro ese verde queda casi invisible sobre las
+   tarjetas oscurecidas (#111c17). Con esta clase el color se adapta. */
+.text-admin-heading { color: #0d4d33; }
+.dark .text-admin-heading { color: #eafff2 !important; }
+
+/* Títulos de página que se pintaban en blanco fijo (pensados para un fondo
+   oscuro que esas páginas no tienen en modo claro, por eso desaparecían).
+   Ahora se adaptan igual que el resto del panel admin. */
+.text-admin-page-title { color: #0d4d33; }
+.dark .text-admin-page-title { color: #eafff2 !important; }
+.text-admin-page-subtitle { color: rgba(13,77,51,0.65); }
+.dark .text-admin-page-subtitle { color: rgba(234,255,242,0.6) !important; }

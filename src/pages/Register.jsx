@@ -9,7 +9,7 @@ import { API_URL } from "../config";
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const REGEX_MAYUSCULA = /[A-Z]/
 const REGEX_NUMERO = /[0-9]/
-const REGEX_ESPECIAL = /[!@#$%^&*(),.?":{}|<>_\-]/
+const REGEX_ESPECIAL = /[!@#$%^&*(),.?":{}|<>_-]/
 
 function evaluarReglasContraseña(value) {
   return {
@@ -120,6 +120,7 @@ function Register() {
 
       setStep(2)
     } catch (error) {
+      console.error('Error en Register:', error)
       toast.error('No se pudo conectar con el servidor', { id: 'error-register' })
     } finally {
       setVerificandoEmail(false)
@@ -171,6 +172,7 @@ function Register() {
       toast.success('¡Cuenta creada exitosamente! 🎉')
       setStep(3)
     } catch (error) {
+      console.error('Error en Register:', error)
       toast.error('No se pudo conectar con el servidor', { id: 'error-register' })
     } finally {
       setCargando(false)

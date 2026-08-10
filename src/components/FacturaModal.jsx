@@ -7,9 +7,10 @@ import { formatMoney, formatFecha } from '../utils/format'
 function FacturaModal({ idPedido, onClose }) {
   const [pedido, setPedido] = useState(null)
   const [error, setError] = useState(null)
+  const [verMotivo, setVerMotivo] = useState(false)
 
   useEffect(() => {
-    api.get(`/pedidos/${idPedido}`)
+    api.get(`/admin/pedidos/${idPedido}`)
       .then(res => setPedido(res.data.pedido))
       .catch(err => setError(err.response?.data?.error || err.message))
   }, [idPedido])
@@ -60,10 +61,15 @@ function FacturaModal({ idPedido, onClose }) {
     doc.text(`Total: ${formatMoney(pedido.total)}`, 150, finalY + 14, { align: 'right' })
 
     const mensajeY = finalY + 28
-    if (pedido.estado === 'Cancelado') {
+    if (pedido.estado === 'Rechazado') {
       doc.setFontSize(11)
       doc.setTextColor(180, 40, 40)
-      doc.text('No se pudo aceptar la solicitud ya que no cumplió con los requisitos.', 14, mensajeY, { maxWidth: 182 })
+      doc.text('Tu pedido fue rechazado.', 14, mensajeY, { maxWidth: 182 })
+      if (pedido.motivo_rechazo) {
+        doc.setFontSize(9)
+        doc.setTextColor(120, 120, 120)
+        doc.text(`Motivo: ${pedido.motivo_rechazo}`, 14, mensajeY + 7, { maxWidth: 182 })
+      }
     } else {
       doc.setFontSize(12)
       doc.setTextColor(29, 158, 117)
@@ -146,9 +152,20 @@ function FacturaModal({ idPedido, onClose }) {
               <p className="text-base font-semibold text-gray-800">Total: {formatMoney(pedido.total)}</p>
             </div>
 
-            {pedido.estado === 'Cancelado' ? (
-              <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3">
-                No se pudo aceptar la solicitud ya que no cumplió con los requisitos.
+            {pedido.estado === 'Rechazado' ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                <p className="text-red-600 text-sm font-semibold">Tu pedido fue rechazado</p>
+                <button
+                  onClick={() => setVerMotivo((v) => !v)}
+                  className="text-red-500 text-xs font-medium mt-1.5 hover:underline"
+                >
+                  {verMotivo ? '← Ocultar' : 'Ver más →'}
+                </button>
+                {verMotivo && (
+                  <p className="text-sm text-red-600/90 mt-2 pt-2 border-t border-red-200">
+                    {pedido.motivo_rechazo || 'No se indicó un motivo específico.'}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="bg-[#1D9E75]/10 border border-[#1D9E75]/30 text-[#1D9E75] text-sm rounded-lg px-4 py-3 font-medium">

@@ -69,7 +69,7 @@ function RegistroVentas() {
   const confirmarVenta = async (id) => {
     setConfirmando(id)
     try {
-      await api.patch(`/pedidos/${id}/aceptar`)
+      await api.patch(`/admin/pedidos/${id}/aceptar`)
       setMenuAbierto(null)
       cargarResumen()
       cargarVentas()
@@ -135,7 +135,7 @@ function RegistroVentas() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-white">Registro de ventas</h2>
+        <h2 className="text-base font-semibold text-admin-heading">Registro de ventas</h2>
         <div className="flex gap-2">
           <button
             onClick={exportarExcel}
@@ -153,8 +153,9 @@ function RegistroVentas() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200">
+      <div className="bg-white rounded-xl border border-gray-200 lg:mr-20">
         <div className="p-4 border-b border-gray-100">
+          <p className="text-sm font-medium mb-1.5 text-admin-heading">Buscar</p>
           <div className="relative max-w-md">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="16" height="16" viewBox="0 0 24 24" fill="none">
               <circle cx="11" cy="11" r="8" stroke="#9ca3af" strokeWidth="2" />
@@ -165,7 +166,7 @@ function RegistroVentas() {
               value={busqueda}
               onChange={(e) => cambiarBusqueda(e.target.value)}
               placeholder="Buscar cliente, producto o factura..."
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 rounded-lg text-sm focus:outline-none focus:bg-white focus:border focus:border-[#1D9E75] transition"
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 rounded-lg text-sm focus:outline-none focus:bg-white focus:border focus:border-[#1D9E75] transition placeholder:text-[#5c7a6b] text-admin-heading"
             />
           </div>
         </div>
@@ -180,7 +181,7 @@ function RegistroVentas() {
                 <th className="py-3 px-5 font-medium">Cantidad</th>
                 <th className="py-3 px-5 font-medium">Total</th>
                 <th className="py-3 px-5 font-medium">Estado</th>
-                <th className="py-3 px-5 font-medium">Fecha</th>
+                <th className="py-3 px-5 pr-8 font-medium">Fecha</th>
               </tr>
             </thead>
             <tbody>
@@ -239,7 +240,7 @@ function RegistroVentas() {
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-5 text-gray-500">{formatFecha(v.fecha)}</td>
+                      <td className="py-3 px-5 pr-8 text-gray-500">{formatFecha(v.fecha)}</td>
                     </tr>
                   )
                 })

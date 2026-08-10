@@ -6,6 +6,41 @@
   const NEON = '#39ff8a'
   const NEON_DIM = 'rgba(57,255,138,0.35)'
 
+  // Igual que en AsistenteWidgetCliente: en vez de un mapa de alias exactos
+  // (frágil), buscamos por palabras clave dentro de la ruta que devuelve
+  // n8n y la traducimos al destino real más probable del panel admin.
+  // Los destinos más específicos van primero para que "inventario/alertas"
+  // no caiga por error en el match genérico de "inventario".
+  const DESTINOS_ADMIN = [
+    { ruta: '/dashboard/inventario/alertas', palabras: ['alerta', 'stock bajo', 'agotado'] },
+    { ruta: '/dashboard/inventario', palabras: ['inventario', 'stock', 'existencia'] },
+    { ruta: '/dashboard/pedidos', palabras: ['pedido', 'orden'] },
+    { ruta: '/dashboard/envios', palabras: ['envio', 'shipment', 'entrega'] },
+    { ruta: '/dashboard/transportadoras', palabras: ['transportadora', 'courier', 'mensajeria'] },
+    { ruta: '/dashboard/usuarios', palabras: ['usuario', 'cliente', 'admin', 'equipo'] },
+    { ruta: '/dashboard/ventas', palabras: ['venta', 'registro de venta'] },
+    { ruta: '/dashboard/reportes', palabras: ['reporte', 'informe', 'estadistica', 'analisis'] },
+    { ruta: '/dashboard', palabras: ['inicio', 'home', 'principal', 'dashboard'] },
+  ]
+
+  function quitarAcentos(texto) {
+    return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  }
+
+  function normalizarRutaAdmin(ruta) {
+    if (!ruta) return null
+    const limpia = ruta.trim().replace(/\/+$/, '') || '/dashboard'
+
+    const yaEsValida = limpia === '/dashboard' || DESTINOS_ADMIN.some(d => d.ruta === limpia)
+    if (yaEsValida) return limpia
+
+    const texto = quitarAcentos(limpia.toLowerCase())
+    const match = DESTINOS_ADMIN.find(d => d.palabras.some(p => texto.includes(p)))
+    if (match) return match.ruta
+
+    return limpia
+  }
+
   function AsistenteWidget() {
     const navigate = useNavigate()
     const [abierto, setAbierto] = useState(false)
@@ -52,7 +87,9 @@
           try {
             const decoded = jwtDecode(token)
             idAdmin = decoded.email || decoded.nombre || 'admin-desconocido'
-          } catch (e) {}
+          } catch {
+            // Token inválido o corrupto: seguimos con el idAdmin por defecto
+          }
         }
 
         const respuesta = await fetch(`${API_URL}/asistente/chat`, {
@@ -72,9 +109,11 @@
         ])
 
         if (data.accion === 'navegar' && data.parametros?.ruta) {
-          navigate(data.parametros.ruta)
+          const rutaFinal = normalizarRutaAdmin(data.parametros.ruta)
+          if (rutaFinal) navigate(rutaFinal)
         }
       } catch (error) {
+        console.error('Error en AsistenteWidget:', error)
         setMensajes((prev) => [
           ...prev,
           { autor: 'asistente', texto: 'No hay conexión con el servidor. Verifica tu internet e intenta de nuevo.' },

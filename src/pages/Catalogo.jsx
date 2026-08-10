@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useModalBehavior } from "../hooks/useModalBehavior";
 import { useCarrito } from "../context/CarritoContext";
 import { API_URL as BASE_API_URL } from "../config";
+import RecomendadorModal from "../components/RecomendadorModal";
 
 
 // ── CONFIG API ────────────────────────────────────────────
@@ -848,6 +849,10 @@ if (!cancelado) setProductos(eliminarDuplicados(json.data.map(adaptarProducto)))
             className="flex-1 text-sm outline-none bg-transparent text-white placeholder-white/35" />
         </div>
         <p className="text-sm text-white/40 flex-1 text-center hidden sm:block">{filtrados.length} productos encontrados</p>
+        <button onClick={() => setMostrarRecomendador(true)}
+          className="relative h-10 px-4 rounded-xl bg-[#6FA98C]/10 backdrop-blur-xl text-[#9DC9B4] text-sm font-medium flex items-center gap-2 border border-[#6FA98C]/25 hover:bg-[#6FA98C]/20 shrink-0 transition">
+          ✨ ¿No sabes qué elegir?
+        </button>
         <button onClick={() => setSoloFavoritos(v => !v)}
           className={`relative h-10 px-4 rounded-xl text-sm font-medium flex items-center gap-2 border shrink-0 transition ${soloFavoritos ? "bg-[#D85A30] border-[#D85A30] text-white" : "bg-white/[0.08] backdrop-blur-xl border-white/15 text-white"}`}>
           <IconoCorazon lleno={soloFavoritos} /> Favoritos
@@ -1039,6 +1044,12 @@ if (!cancelado) setProductos(eliminarDuplicados(json.data.map(adaptarProducto)))
       {carritoOpen  && <CarritoDrawer carrito={carrito} setCarrito={setCarrito} onClose={() => setCarritoOpen(false)} onAumentar={aumentarEnCarrito} />}
       {detalle      && <DetalleProducto p={detalle} onClose={() => setDetalle(null)} onAgregar={agregar} esFavorito={favoritos.has(detalle.id)} onToggleFavorito={toggleFavorito} />}
       {confirmPendiente && <ModalConfirmarCantidad data={confirmPendiente} onCancelar={cancelarConfirm} onAceptar={aceptarConfirm} />}
+      {mostrarRecomendador && (
+        <RecomendadorModal
+          onClose={() => setMostrarRecomendador(false)}
+          onRecomendaciones={(datos) => setRecomendaciones(datos)}
+        />
+      )}
     </div>
   );
 }

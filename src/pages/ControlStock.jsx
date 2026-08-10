@@ -163,7 +163,7 @@ function ControlStock() {
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h2 className="text-base font-semibold text-white">Productos en inventario</h2>
+        <h2 className="text-base font-semibold text-admin-heading">Productos en inventario</h2>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={exportarExcel}

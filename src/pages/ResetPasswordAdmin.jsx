@@ -45,7 +45,7 @@ function ResetPasswordAdmin() {
         longitud: value.length >= 6,
         mayuscula: /[A-Z]/.test(value),
         numero: /[0-9]/.test(value),
-        especial: /[!@#$%^&*(),.?":{}|<>_\-]/.test(value),
+        especial: /[!@#$%^&*(),.?":{}|<>_-]/.test(value),
       })
     }
   }
@@ -104,6 +104,7 @@ function ResetPasswordAdmin() {
       toast.success('¡Contraseña actualizada correctamente!')
       setTimeout(() => navigate('/control-interno'), 2000)
     } catch (error) {
+      console.error('Error en ResetPasswordAdmin:', error)
       toast.error('No se pudo conectar con el servidor', { id: 'error-reset-admin' })
     } finally {
       setCargando(false)

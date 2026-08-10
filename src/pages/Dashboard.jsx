@@ -87,7 +87,7 @@ function Dashboard() {
           </div>
 
           <div className="panel-card rounded-xl p-4 sm:p-5">
-            <h2 className="text-base font-semibold text-white">Clientes recientes</h2>
+            <h2 className="text-base font-semibold text-admin-heading">Clientes recientes</h2>
             <p className="text-sm text-[#5f7268] mb-4">Últimas compras registradas</p>
             {clientesRecientes.length === 0 ? (
               <p className="text-sm text-[#8a9b8f] py-4">Aún no hay pedidos registrados.</p>
@@ -139,7 +139,7 @@ function Dashboard() {
         </div>
 
         <div className="panel-card rounded-xl p-4 sm:p-5 h-fit">
-          <h2 className="text-base font-semibold text-white">Productos más vendidos</h2>
+          <h2 className="text-base font-semibold text-admin-heading">Productos más vendidos</h2>
           <p className="text-sm text-[#5f7268] mb-4">Este mes</p>
           {productosMasVendidos.length === 0 ? (
             <p className="text-sm text-[#8a9b8f]">Aún no hay ventas este mes.</p>
