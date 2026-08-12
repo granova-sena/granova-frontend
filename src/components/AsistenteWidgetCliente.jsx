@@ -136,7 +136,7 @@ function AsistenteWidgetCliente() {
     <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end gap-3">
       {abierto && (
         <div
-          className="w-[20rem] sm:w-96 h-[26rem] sm:h-[28rem] flex flex-col rounded-2xl overflow-hidden animate-[granova-pop_0.18s_ease-out]"
+          className="w-72 sm:w-80 h-[22rem] sm:h-[24rem] flex flex-col rounded-2xl overflow-hidden animate-[granova-pop_0.18s_ease-out]"
           style={panel}
         >
           {/* Header */}
@@ -282,7 +282,7 @@ function AsistenteWidgetCliente() {
           }
           setAbierto((v) => !v)
         }}
-        className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-full transition-all duration-300 hover:scale-105 relative"
+        className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-full transition-all duration-300 hover:scale-105 relative"
         style={{
           background: 'radial-gradient(circle at 30% 30%, #0f2b1c, #04140c)',
           border: `1px solid ${NEON_DIM}`,
@@ -293,9 +293,9 @@ function AsistenteWidgetCliente() {
           className="absolute inset-0 rounded-full pointer-events-none"
           style={{ animation: abierto ? 'none' : 'granova-ring 2.2s infinite' }}
         />
-        <span className="text-base sm:text-lg relative" style={{ filter: `drop-shadow(0 0 4px ${NEON})` }}>☕</span>
-        <span className="text-xs sm:text-sm font-medium relative" style={{ color: NEON }}>
-          {abierto ? 'Cerrar chat' : '¿Necesitas ayuda?'}
+        <span className="text-sm sm:text-base relative" style={{ filter: `drop-shadow(0 0 4px ${NEON})` }}>☕</span>
+        <span className="text-[11px] sm:text-xs font-medium relative" style={{ color: NEON }}>
+          {abierto ? 'Cerrar chat' : ''}
         </span>
       </button>
 

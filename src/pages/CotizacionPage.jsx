@@ -144,16 +144,16 @@ const enviarPorCorreo = async () => {
       <div className="max-w-3xl mx-auto bg-[#F7F2E8] rounded-xl p-6 sm:p-10 mb-8">
 
         {/* Logo y título */}
-        <div className="flex items-start mb-6">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-0 mb-6 text-center sm:text-left">
           <img src="/logoGranova.jpeg" alt="Logo Granova" className="w-16 h-16 object-contain rounded" />
-          <h1 className="flex-1 text-center text-2xl font-bold text-[#1a2e1a] tracking-widest mt-4">
+          <h1 className="flex-1 text-center text-xl sm:text-2xl font-bold text-[#1a2e1a] tracking-widest sm:mt-4">
             COTIZACIÓN
           </h1>
         </div>
 
         {/* Fecha */}
-        <div className="flex justify-end mb-8">
-          <div className="text-right text-xs text-[#3D3D3D]">
+        <div className="flex justify-center sm:justify-end mb-8">
+          <div className="text-center sm:text-right text-xs text-[#3D3D3D]">
             <p><span className="font-semibold">Fecha:</span> {new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
             <p><span className="font-semibold">Válida hasta:</span> {new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>
@@ -186,29 +186,31 @@ const enviarPorCorreo = async () => {
           </div>
         </div>
 
-        {/* Tabla productos */}
-        <table className="w-full text-xs mb-6">
-          <thead>
-            <tr className="bg-[#1a2e1a]/10">
-              <th className="text-left px-4 py-2 font-semibold text-[#1a2e1a]">Producto</th>
-              <th className="text-left px-4 py-2 font-semibold text-[#1a2e1a]">Presentación</th>
-              <th className="text-left px-4 py-2 font-semibold text-[#1a2e1a]">Cantidad</th>
-              <th className="text-left px-4 py-2 font-semibold text-[#1a2e1a]">Precio unitario</th>
-              <th className="text-left px-4 py-2 font-semibold text-[#1a2e1a]">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {productos.map((p) => (
-              <tr key={p.id} className="border-b border-[#1a2e1a]/10">
-                <td className="px-4 py-2 text-[#3D3D3D]">{p.nombre}</td>
-                <td className="px-4 py-2 text-[#3D3D3D]">{p.presentacion}</td>
-                <td className="px-4 py-2 text-[#3D3D3D]">{p.cantidad}</td>
-                <td className="px-4 py-2 text-[#3D3D3D]">${p.precio.toLocaleString()}</td>
-                <td className="px-4 py-2 text-[#3D3D3D]">${(p.precio * p.cantidad).toLocaleString()}</td>
+        {/* Tabla productos (scroll horizontal en móvil para que no se rompa el layout) */}
+        <div className="overflow-x-auto mb-6 -mx-6 px-6 sm:mx-0 sm:px-0">
+          <table className="w-full min-w-[520px] text-xs">
+            <thead>
+              <tr className="bg-[#1a2e1a]/10">
+                <th className="text-left px-4 py-2 font-semibold text-[#1a2e1a]">Producto</th>
+                <th className="text-left px-4 py-2 font-semibold text-[#1a2e1a]">Presentación</th>
+                <th className="text-left px-4 py-2 font-semibold text-[#1a2e1a]">Cantidad</th>
+                <th className="text-left px-4 py-2 font-semibold text-[#1a2e1a]">Precio unitario</th>
+                <th className="text-left px-4 py-2 font-semibold text-[#1a2e1a]">Subtotal</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {productos.map((p) => (
+                <tr key={p.id} className="border-b border-[#1a2e1a]/10">
+                  <td className="px-4 py-2 text-[#3D3D3D]">{p.nombre}</td>
+                  <td className="px-4 py-2 text-[#3D3D3D]">{p.presentacion}</td>
+                  <td className="px-4 py-2 text-[#3D3D3D]">{p.cantidad}</td>
+                  <td className="px-4 py-2 text-[#3D3D3D]">${p.precio.toLocaleString()}</td>
+                  <td className="px-4 py-2 text-[#3D3D3D]">${(p.precio * p.cantidad).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {/* Totales */}
         <div className="flex justify-end">
