@@ -18,7 +18,7 @@ function ImagenProducto({ src, alt, className = '' }) {
 
   if (!src || fallo) {
     return (
-      <div className={`flex items-center justify-center bg-[#17140F]/5 text-[#17140F]/25 ${className}`}>
+      <div className={`flex items-center justify-center bg-white/10 text-white/25 ${className}`}>
         <IconoTaza />
       </div>
     )

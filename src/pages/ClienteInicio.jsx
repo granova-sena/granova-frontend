@@ -44,7 +44,7 @@ const ACCESOS = [
   { to: '/cliente/cuenta', titulo: 'Mi cuenta' },
 ]
 
-const glass = { background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.15)' }
+const glass = { background: '#0F1D13', border: '1px solid rgba(255,255,255,0.08)' }
 
 function ClienteInicio() {
   const navigate = useNavigate()
@@ -66,7 +66,15 @@ function ClienteInicio() {
         const res = await fetch(`${API_URL}/productos`)
         if (!res.ok) throw new Error()
         const data = await res.json()
-        if (!cancelado) setDestacados(data.slice(0, 3))
+        const cafes = (data.data || []).filter(p => (p.categoria_producto || 'cafe') === 'cafe').slice(0, 2)
+        const maquinas = (data.data || []).filter(p => p.categoria_producto === 'maquina').slice(0, 2)
+        // Intercala café → máquina → café → máquina para mostrar ambos mundos
+        const alternados = []
+        for (let i = 0; i < Math.max(cafes.length, maquinas.length); i++) {
+          if (cafes[i]) alternados.push(cafes[i])
+          if (maquinas[i]) alternados.push(maquinas[i])
+        }
+        if (!cancelado) setDestacados(alternados)
       } catch {
         if (!cancelado) setDestacados([])
       } finally {
@@ -138,7 +146,7 @@ function ClienteInicio() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Del catálogo</span>
-            <h2 className="text-xl sm:text-2xl font-medium text-white mt-1">Café que podría gustarte</h2>
+            <h2 className="text-xl sm:text-2xl font-medium text-white mt-1">Café y máquinas para ti</h2>
           </div>
           <button type="button" onClick={() => navigate('/cliente/catalogo')} className="text-sm text-white/60 hover:text-white shrink-0">
             Ver todo →
@@ -146,8 +154,8 @@ function ClienteInicio() {
         </div>
 
         {cargando && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            {Array.from({ length: 3 }).map((_, i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="rounded-2xl overflow-hidden" style={glass}>
                 <div className="h-48 bg-white/5 animate-pulse"></div>
                 <div className="p-4 flex flex-col gap-2.5">
@@ -166,32 +174,36 @@ function ClienteInicio() {
         )}
 
         {!cargando && destacados.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            {destacados.map((p, i) => (
-              <div
-                key={p.id_producto}
-                role="button"
-                tabIndex={0}
-                aria-label={`Ver ${p.nombre} en el catálogo`}
-                onClick={() => navigate('/cliente/catalogo')}
-                onKeyDown={(e) => { if (e.key === 'Enter') navigate('/cliente/catalogo') }}
-                style={{ ...glass, animationDelay: `${i * 70}ms` }}
-                className="anim-pop group rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.12]"
-              >
-                <div className="h-48 bg-white/5 overflow-hidden">
-                  <ImagenProducto src={p.imagen_url} alt={p.nombre} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                </div>
-                <div className="p-4">
-                  <p className="text-sm font-medium text-white">{p.nombre}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <p className="text-white text-sm font-semibold">
-                      ${Number(p.precio || 0).toLocaleString('es-CO')} <span className="text-white/40 font-normal text-xs">/kg</span>
-                    </p>
-                    <span className="text-xs font-medium text-[#9DC9B4] group-hover:underline">Ver →</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {destacados.map((p, i) => {
+              const esMaquina = p.categoria_producto === 'maquina'
+              return (
+                <div
+                  key={p.id_producto}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Ver ${p.nombre} en el catálogo`}
+                  onClick={() => navigate(esMaquina ? '/cliente/catalogo?seccion=maquinas' : '/cliente/catalogo')}
+                  onKeyDown={(e) => { if (e.key === 'Enter') navigate(esMaquina ? '/cliente/catalogo?seccion=maquinas' : '/cliente/catalogo') }}
+                  style={{ ...glass, animationDelay: `${i * 70}ms` }}
+                  className="anim-pop group rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.12]"
+                >
+                  <div className="h-48 bg-white/5 overflow-hidden">
+                    <ImagenProducto src={p.imagen_url} alt={p.nombre} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  </div>
+                  <div className="p-4">
+                    <p className="text-[10px] font-medium text-[#9DC9B4] uppercase tracking-wide">{esMaquina ? 'Máquina' : 'Café'}</p>
+                    <p className="text-sm font-medium text-white mt-0.5 line-clamp-2">{p.nombre}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-white text-sm font-semibold">
+                        ${Number(p.precio || 0).toLocaleString('es-CO')} <span className="text-white/40 font-normal text-xs">/{esMaquina ? 'und' : 'kg'}</span>
+                      </p>
+                      <span className="text-xs font-medium text-[#9DC9B4] group-hover:underline">Ver →</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </section>
