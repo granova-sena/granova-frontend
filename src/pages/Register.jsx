@@ -325,72 +325,67 @@ function Register() {
         {/* Paso 2 */}
         {step === 2 && (
           <div>
-            <h2 className="text-2xl font-medium text-white mb-1">Identificación</h2>
-            <p className="text-sm text-white/60 mb-6">Cuéntanos si compras a título personal o como empresa</p>
+            <h2 className="text-xl font-medium text-white mb-1">Identificación</h2>
+            <p className="text-xs text-white/60 mb-4">Para tu factura y tu descuento</p>
 
             {/* Selector persona natural / jurídica */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              {[
-                { valor: 'natural', etiqueta: 'Persona natural', descripcion: 'Cédula o pasaporte' },
-                { valor: 'juridica', etiqueta: 'Persona jurídica', descripcion: 'Empresa con NIT' },
-              ].map((opcion) => (
+            <div className="flex rounded-xl overflow-hidden mb-4" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}>
+              {['natural', 'juridica'].map((valor) => (
                 <button
-                  key={opcion.valor}
+                  key={valor}
                   type="button"
-                  onClick={() => handleChange({ target: { name: 'tipoPersona', value: opcion.valor } })}
-                  className={`p-3 rounded-xl text-left transition border ${formData.tipoPersona === opcion.valor ? 'border-[#6FA98C] bg-[#6FA98C]/15' : 'border-white/15 hover:bg-white/5'}`}
-                  style={{ background: formData.tipoPersona === opcion.valor ? 'rgba(111,169,140,0.15)' : 'rgba(255,255,255,0.08)', border: formData.tipoPersona === opcion.valor ? '1px solid #6FA98C' : '1px solid rgba(255,255,255,0.15)' }}
+                  onClick={() => handleChange({ target: { name: 'tipoPersona', value: valor } })}
+                  className={`flex-1 py-2 text-xs font-medium transition ${formData.tipoPersona === valor ? 'bg-[#6FA98C] text-white' : 'text-white/60 hover:text-white'}`}
                 >
-                  <p className="text-sm font-medium text-white">{opcion.etiqueta}</p>
-                  <p className="text-xs text-white/50 mt-0.5">{opcion.descripcion}</p>
+                  {valor === 'natural' ? 'Persona natural' : 'Persona jurídica'}
                 </button>
               ))}
             </div>
 
-            {/* Tipo de documento */}
-            <div className="mb-4">
-              <label htmlFor="tipo-documento-register" className="block text-sm text-white/70 mb-1.5">Tipo de documento</label>
-              <select
-                id="tipo-documento-register"
-                name="tipoDocumento"
-                value={formData.tipoDocumento}
-                onChange={handleChange}
-                disabled={formData.tipoPersona === 'juridica'}
-                className="w-full px-4 py-3 rounded-xl text-sm text-white focus:outline-none transition disabled:opacity-50 appearance-none"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
-              >
-                {formData.tipoPersona === 'juridica' ? (
-                  <option value="NIT">NIT</option>
-                ) : (
-                  <>
-                    <option value="CC">Cédula de ciudadanía (CC)</option>
-                    <option value="CE">Cédula de extranjería (CE)</option>
-                    <option value="PASAPORTE">Pasaporte</option>
-                  </>
-                )}
-              </select>
-            </div>
-
-            {/* Número de documento */}
-            <div className="mb-4">
-              <label htmlFor="numero-documento-register" className="block text-sm text-white/70 mb-1.5">Número de documento</label>
-              <input
-                id="numero-documento-register"
-                type="text"
-                name="numeroDocumento"
-                value={formData.numeroDocumento}
-                onChange={handleChange}
-                placeholder={formData.tipoPersona === 'juridica' ? 'Número del NIT' : 'Número de cédula'}
-                className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
-              />
+            {/* Tipo de documento + número en una sola fila */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label htmlFor="tipo-documento-register" className="block text-xs text-white/60 mb-1">Tipo de documento</label>
+                <select
+                  id="tipo-documento-register"
+                  name="tipoDocumento"
+                  value={formData.tipoDocumento}
+                  onChange={handleChange}
+                  disabled={formData.tipoPersona === 'juridica'}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm text-white focus:outline-none transition disabled:opacity-50 appearance-none"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+                >
+                  {formData.tipoPersona === 'juridica' ? (
+                    <option value="NIT">NIT</option>
+                  ) : (
+                    <>
+                      <option value="CC">CC</option>
+                      <option value="CE">CE</option>
+                      <option value="PASAPORTE">Pasaporte</option>
+                    </>
+                  )}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="numero-documento-register" className="block text-xs text-white/60 mb-1">Número</label>
+                <input
+                  id="numero-documento-register"
+                  type="text"
+                  name="numeroDocumento"
+                  value={formData.numeroDocumento}
+                  onChange={handleChange}
+                  placeholder={formData.tipoPersona === 'juridica' ? 'Número del NIT' : 'Tu cédula'}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none transition"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+                />
+              </div>
             </div>
 
             {/* Campos condicionales para persona jurídica (sin recargar la página) */}
             {formData.tipoPersona === 'juridica' && (
-              <div className="mb-4">
-                <div className="mb-4">
-                  <label htmlFor="razon-social-register" className="block text-sm text-white/70 mb-1.5">Razón social</label>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label htmlFor="razon-social-register" className="block text-xs text-white/60 mb-1">Razón social</label>
                   <input
                     id="razon-social-register"
                     type="text"
@@ -398,12 +393,12 @@ function Register() {
                     value={formData.razonSocial}
                     onChange={handleChange}
                     placeholder="Nombre de la empresa"
-                    className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                    className="w-full px-3 py-2.5 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none transition"
                     style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
                   />
                 </div>
                 <div>
-                  <label htmlFor="digito-verificacion-register" className="block text-sm text-white/70 mb-1.5">Dígito de verificación</label>
+                  <label htmlFor="digito-verificacion-register" className="block text-xs text-white/60 mb-1">Dígito de verificación</label>
                   <input
                     id="digito-verificacion-register"
                     type="text"
@@ -411,7 +406,7 @@ function Register() {
                     value={formData.digitoVerificacion}
                     onChange={handleChange}
                     placeholder="Último dígito del NIT"
-                    className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                    className="w-full px-3 py-2.5 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none transition"
                     style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
                   />
                 </div>
@@ -419,19 +414,23 @@ function Register() {
             )}
 
             {/* Tipo de cliente */}
-            <div className="mb-6">
-              <label htmlFor="tipo-cliente-register" className="block text-sm text-white/70 mb-1.5">Tipo de cliente</label>
-              <select
-                id="tipo-cliente-register"
-                name="tipoCliente"
-                value={formData.tipoCliente}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl text-sm text-white focus:outline-none transition appearance-none"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
-              >
-                <option value="minorista">Minorista — compras personales</option>
-                <option value="mayorista">Mayorista — compras al por mayor con descuento</option>
-              </select>
+            <div className="mb-5">
+              <label className="block text-xs text-white/60 mb-1">Tipo de cliente</label>
+              <div className="flex rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                {[
+                  { valor: 'minorista', etiqueta: 'Minorista' },
+                  { valor: 'mayorista', etiqueta: 'Mayorista · -12%' },
+                ].map((opcion) => (
+                  <button
+                    key={opcion.valor}
+                    type="button"
+                    onClick={() => handleChange({ target: { name: 'tipoCliente', value: opcion.valor } })}
+                    className={`flex-1 py-2 text-xs font-medium transition ${formData.tipoCliente === opcion.valor ? 'bg-[#6FA98C] text-white' : 'text-white/60 hover:text-white'}`}
+                  >
+                    {opcion.etiqueta}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex gap-3">
