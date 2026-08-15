@@ -3,7 +3,7 @@ import { useState } from 'react'
 const coloresEnvio = ['#8B4A3C', '#2B1B12', '#5C7A4A', '#A65A3C', '#6B4226']
 function colorParaEnvio(id) {
   let hash = 0
-  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash)
+  for (let i = 0; i < id.length; i++) hash = id.codePointAt(i) + ((hash << 5) - hash)
   return coloresEnvio[Math.abs(hash) % coloresEnvio.length]
 }
 

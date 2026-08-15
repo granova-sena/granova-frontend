@@ -166,6 +166,7 @@ function ControlStock() {
         <h2 className="text-base font-semibold text-admin-heading">Productos en inventario</h2>
         <div className="flex flex-wrap gap-2">
           <button
+            type="button"
             onClick={exportarExcel}
             disabled={exportando}
             className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg border border-gray-300 bg-[#1D9E75] text-white hover:bg-[#178a64] transition disabled:opacity-50"
@@ -173,6 +174,7 @@ function ControlStock() {
             ↓ {exportando ? 'Generando...' : 'Exportar'}
           </button>
           <button
+            type="button"
             onClick={() => abrirModal(null)}
             className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition"
           >
@@ -185,6 +187,7 @@ function ControlStock() {
         <div className="flex flex-wrap items-center gap-3 sm:gap-6 px-4 sm:px-5 pt-4 border-b border-gray-100">
           {tabs.map((tab) => (
             <button
+              type="button"
               key={tab.key}
               onClick={() => cambiarTab(tab.key)}
               className={`text-sm pb-3 border-b-2 transition ${
@@ -274,6 +277,7 @@ function ControlStock() {
                     </td>
                     <td className="py-3 px-5">
                           <button
+                        type="button"
                         onClick={() => abrirModal(p)}
                         className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition"
                         title="Editar producto"
@@ -298,6 +302,7 @@ function ControlStock() {
           <div className="flex items-center gap-1">
             {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
               <button
+                type="button"
                 key={n}
                 onClick={() => setPagina(n)}
                 className={`w-8 h-8 rounded-lg text-sm transition ${
@@ -308,6 +313,7 @@ function ControlStock() {
               </button>
             ))}
             <button
+              type="button"
               onClick={() => setPagina((p) => Math.min(p + 1, totalPaginas))}
               className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 transition"
             >

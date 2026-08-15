@@ -100,7 +100,8 @@ function RecomendadorModal({ onClose, onRecomendaciones }) {
         {/* Opciones */}
         <div className="grid grid-cols-2 gap-3">
           {preguntaActual.opciones.map((opcion) => (
-            <button
+           <button
+              type="button"
               key={opcion.valor}
               onClick={() => seleccionar(opcion.valor)}
               disabled={cargando}
@@ -116,13 +117,13 @@ function RecomendadorModal({ onClose, onRecomendaciones }) {
         {/* Botones navegación */}
         <div className="flex items-center justify-between mt-6">
           {paso > 0 ? (
-            <button onClick={() => setPaso(paso - 1)} className="text-sm text-white/40 hover:text-white transition">
+            <button type="button" onClick={() => setPaso(paso - 1)} className="text-sm text-white/40 hover:text-white transition">
               ← Anterior
             </button>
           ) : (
             <div />
           )}
-          <button onClick={onClose} className="text-sm text-white/30 hover:text-white/60 transition">
+          <button type="button" onClick={onClose} className="text-sm text-white/30 hover:text-white/60 transition">
             Omitir
           </button>
         </div>

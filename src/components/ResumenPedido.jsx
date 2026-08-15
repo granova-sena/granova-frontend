@@ -3,7 +3,7 @@ import { useCarrito } from '../context/CarritoContext'
 
 function ResumenPedido() {
   const navigate = useNavigate()
-  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA } = useCarrito()
+  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, esMayorista } = useCarrito()
 
   return (
     <div className="w-80 flex flex-col gap-4">
@@ -21,7 +21,7 @@ function ResumenPedido() {
             <span className="text-sm text-white">${subtotal.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-sm text-white/60">Descuento {(DESCUENTO * 100).toFixed(0)}%</span>
+            <span className="text-sm text-white/60">{esMayorista ? 'Descuento mayorista' : 'Descuento'} {(DESCUENTO * 100).toFixed(0)}%</span>
             <span className="text-sm text-[#9DC9B4]">- ${descuentoMonto.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
@@ -37,12 +37,14 @@ function ResumenPedido() {
 
       {/* Botones */}
       <button
+        type="button"
         onClick={() => navigate('/cliente/cotizacion')}
         className="w-full bg-white/[0.08] backdrop-blur-xl border border-white/15 text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/[0.14] transition-colors"
       >
         💾 Generar cotización
       </button>
       <button
+        type="button"
         onClick={() => navigate('/cliente/configurar-pedido')}
         className="w-full bg-[#6FA98C] text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#4F8A70] transition-colors"
       >

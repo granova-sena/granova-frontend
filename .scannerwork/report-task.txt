@@ -2,5 +2,5 @@ projectKey=granova-sena_granova-frontend_cded988a-5c26-4a1f-acbb-da7c69fe9643
 serverUrl=http://localhost:9000
 serverVersion=26.8.0.126808
 dashboardUrl=http://localhost:9000/dashboard?id=granova-sena_granova-frontend_cded988a-5c26-4a1f-acbb-da7c69fe9643
-ceTaskId=e13c010e-9912-4259-ae6f-ad3d5ee40f86
-ceTaskUrl=http://localhost:9000/api/ce/task?id=e13c010e-9912-4259-ae6f-ad3d5ee40f86
+ceTaskId=b9f1a407-6c2c-4de6-8873-2822c3a5d8a1
+ceTaskUrl=http://localhost:9000/api/ce/task?id=b9f1a407-6c2c-4de6-8873-2822c3a5d8a1

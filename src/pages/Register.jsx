@@ -6,7 +6,7 @@ import { API_URL } from "../config";
 
 
 
-const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const REGEX_EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{1,24}$/
 const REGEX_MAYUSCULA = /[A-Z]/
 const REGEX_NUMERO = /[0-9]/
 const REGEX_ESPECIAL = /[!@#$%^&*(),.?":{}|<>_-]/
@@ -20,10 +20,34 @@ function evaluarReglasContraseña(value) {
   }
 }
 
+const IconoOjo = ({ ver }) => ver ? (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+) : (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+  </svg>
+)
+
 function Register() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
-  const [formData, setFormData] = useState({ nombreCompleto: '', email: '', contraseña: '', confirmarContraseña: '' })
+  const [formData, setFormData] = useState({
+    nombreCompleto: '',
+    email: '',
+    contraseña: '',
+    confirmarContraseña: '',
+    tipoPersona: 'natural',
+    tipoDocumento: 'CC',
+    numeroDocumento: '',
+    digitoVerificacion: '',
+    razonSocial: '',
+    tipoCliente: 'minorista',
+  })
   const [cargando, setCargando] = useState(false)
   const [verificandoEmail, setVerificandoEmail] = useState(false)
   const [verContraseña, setVerContraseña] = useState(false)
@@ -54,6 +78,11 @@ function Register() {
   function handleChange(e) {
     const { name, value } = e.target
     setFormData({ ...formData, [name]: value })
+
+    if (name === 'tipoPersona') {
+      // Al cambiar a jurídica forzamos NIT; al volver a natural, CC por defecto
+      setFormData(prev => ({ ...prev, tipoPersona: value, tipoDocumento: value === 'juridica' ? 'NIT' : 'CC' }))
+    }
 
     if (name === 'contraseña') {
       setReglasContraseña(evaluarReglasContraseña(value))
@@ -127,6 +156,28 @@ function Register() {
     }
   }
 
+  function handleSiguientePaso2() {
+    toast.dismiss('error-register')
+
+    if (!formData.numeroDocumento.trim()) {
+      toast.error('El número de documento es obligatorio', { id: 'error-register' })
+      return
+    }
+
+    if (formData.tipoPersona === 'juridica') {
+      if (!formData.razonSocial.trim()) {
+        toast.error('La razón social es obligatoria para personas jurídicas', { id: 'error-register' })
+        return
+      }
+      if (!formData.digitoVerificacion.trim()) {
+        toast.error('El dígito de verificación del NIT es obligatorio', { id: 'error-register' })
+        return
+      }
+    }
+
+    setStep(3)
+  }
+
   async function handleRegister() {
     toast.dismiss('error-register')
 
@@ -159,6 +210,12 @@ function Register() {
           apellido,
           email: formData.email,
           contraseña: formData.contraseña,
+          tipo_persona: formData.tipoPersona,
+          tipo_documento: formData.tipoDocumento,
+          numero_documento: formData.numeroDocumento.trim(),
+          digito_verificacion: formData.tipoPersona === 'juridica' ? formData.digitoVerificacion.trim() : null,
+          razon_social: formData.tipoPersona === 'juridica' ? formData.razonSocial.trim() : null,
+          tipo_cliente: formData.tipoCliente,
         }),
       })
 
@@ -170,7 +227,7 @@ function Register() {
       }
 
       toast.success('¡Cuenta creada exitosamente! 🎉')
-      setStep(3)
+      setStep(4)
     } catch (error) {
       console.error('Error en Register:', error)
       toast.error('No se pudo conectar con el servidor', { id: 'error-register' })
@@ -178,19 +235,6 @@ function Register() {
       setCargando(false)
     }
   }
-
-  const IconoOjo = ({ ver }) => ver ? (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    </svg>
-  ) : (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
-    </svg>
-  )
 
   const reglasLista = [
     { id: 'longitud', label: 'Mínimo 6 caracteres', cumplida: reglasContraseña.longitud },
@@ -209,6 +253,7 @@ function Register() {
       <div className="absolute inset-0 bg-[#0a1a0a]/75"></div>
 
         <button
+  type="button"
   onClick={() => navigate('/')}
   className="absolute top-6 left-6 z-20 flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition"
 >
@@ -222,12 +267,12 @@ function Register() {
 
         {/* Indicador de pasos */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4].map((s) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${step >= s ? 'bg-[#6FA98C] text-white' : 'bg-white/10 text-white/40'}`}>
                 {s}
               </div>
-              {s < 3 && <div className={`w-8 h-px transition-all ${step > s ? 'bg-[#6FA98C]' : 'bg-white/20'}`}></div>}
+              {s < 4 && <div className={`w-8 h-px transition-all ${step > s ? 'bg-[#6FA98C]' : 'bg-white/20'}`}></div>}
             </div>
           ))}
         </div>
@@ -242,8 +287,9 @@ function Register() {
             <p className="text-sm text-white/60 mb-6">Cuéntanos quién eres</p>
 
             <div className="mb-4">
-              <label className="block text-sm text-white/70 mb-1.5">Nombre completo</label>
+              <label htmlFor="nombre-register" className="block text-sm text-white/70 mb-1.5">Nombre completo</label>
               <input
+                id="nombre-register"
                 type="text"
                 name='nombreCompleto'
                 value={formData.nombreCompleto}
@@ -256,8 +302,9 @@ function Register() {
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm text-white/70 mb-1.5">Correo electrónico</label>
+              <label htmlFor="email-register" className="block text-sm text-white/70 mb-1.5">Correo electrónico</label>
               <input
+                id="email-register"
                 type="email"
                 name='email'
                 value={formData.email}
@@ -269,7 +316,7 @@ function Register() {
               {erroresEmail && <p className="text-xs text-[#D85A30] mt-1">{erroresEmail}</p>}
             </div>
 
-            <button onClick={handleSiguientePaso1} disabled={!puedeContinuarPaso1 || verificandoEmail} className="w-full py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50">
+            <button type="button" onClick={handleSiguientePaso1} disabled={!puedeContinuarPaso1 || verificandoEmail} className="w-full py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50">
               {verificandoEmail ? 'Verificando...' : 'Continuar'}
             </button>
           </div>
@@ -278,13 +325,137 @@ function Register() {
         {/* Paso 2 */}
         {step === 2 && (
           <div>
+            <h2 className="text-2xl font-medium text-white mb-1">Identificación</h2>
+            <p className="text-sm text-white/60 mb-6">Cuéntanos si compras a título personal o como empresa</p>
+
+            {/* Selector persona natural / jurídica */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {[
+                { valor: 'natural', etiqueta: 'Persona natural', descripcion: 'Cédula o pasaporte' },
+                { valor: 'juridica', etiqueta: 'Persona jurídica', descripcion: 'Empresa con NIT' },
+              ].map((opcion) => (
+                <button
+                  key={opcion.valor}
+                  type="button"
+                  onClick={() => handleChange({ target: { name: 'tipoPersona', value: opcion.valor } })}
+                  className={`p-3 rounded-xl text-left transition border ${formData.tipoPersona === opcion.valor ? 'border-[#6FA98C] bg-[#6FA98C]/15' : 'border-white/15 hover:bg-white/5'}`}
+                  style={{ background: formData.tipoPersona === opcion.valor ? 'rgba(111,169,140,0.15)' : 'rgba(255,255,255,0.08)', border: formData.tipoPersona === opcion.valor ? '1px solid #6FA98C' : '1px solid rgba(255,255,255,0.15)' }}
+                >
+                  <p className="text-sm font-medium text-white">{opcion.etiqueta}</p>
+                  <p className="text-xs text-white/50 mt-0.5">{opcion.descripcion}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* Tipo de documento */}
+            <div className="mb-4">
+              <label htmlFor="tipo-documento-register" className="block text-sm text-white/70 mb-1.5">Tipo de documento</label>
+              <select
+                id="tipo-documento-register"
+                name="tipoDocumento"
+                value={formData.tipoDocumento}
+                onChange={handleChange}
+                disabled={formData.tipoPersona === 'juridica'}
+                className="w-full px-4 py-3 rounded-xl text-sm text-white focus:outline-none transition disabled:opacity-50 appearance-none"
+                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+              >
+                {formData.tipoPersona === 'juridica' ? (
+                  <option value="NIT">NIT</option>
+                ) : (
+                  <>
+                    <option value="CC">Cédula de ciudadanía (CC)</option>
+                    <option value="CE">Cédula de extranjería (CE)</option>
+                    <option value="PASAPORTE">Pasaporte</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            {/* Número de documento */}
+            <div className="mb-4">
+              <label htmlFor="numero-documento-register" className="block text-sm text-white/70 mb-1.5">Número de documento</label>
+              <input
+                id="numero-documento-register"
+                type="text"
+                name="numeroDocumento"
+                value={formData.numeroDocumento}
+                onChange={handleChange}
+                placeholder={formData.tipoPersona === 'juridica' ? 'Número del NIT' : 'Número de cédula'}
+                className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+              />
+            </div>
+
+            {/* Campos condicionales para persona jurídica (sin recargar la página) */}
+            {formData.tipoPersona === 'juridica' && (
+              <div className="mb-4">
+                <div className="mb-4">
+                  <label htmlFor="razon-social-register" className="block text-sm text-white/70 mb-1.5">Razón social</label>
+                  <input
+                    id="razon-social-register"
+                    type="text"
+                    name="razonSocial"
+                    value={formData.razonSocial}
+                    onChange={handleChange}
+                    placeholder="Nombre de la empresa"
+                    className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="digito-verificacion-register" className="block text-sm text-white/70 mb-1.5">Dígito de verificación</label>
+                  <input
+                    id="digito-verificacion-register"
+                    type="text"
+                    name="digitoVerificacion"
+                    value={formData.digitoVerificacion}
+                    onChange={handleChange}
+                    placeholder="Último dígito del NIT"
+                    className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Tipo de cliente */}
+            <div className="mb-6">
+              <label htmlFor="tipo-cliente-register" className="block text-sm text-white/70 mb-1.5">Tipo de cliente</label>
+              <select
+                id="tipo-cliente-register"
+                name="tipoCliente"
+                value={formData.tipoCliente}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-xl text-sm text-white focus:outline-none transition appearance-none"
+                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+              >
+                <option value="minorista">Minorista — compras personales</option>
+                <option value="mayorista">Mayorista — compras al por mayor con descuento</option>
+              </select>
+            </div>
+
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl text-sm text-white/70 hover:bg-white/10 transition" style={{ border: '1px solid rgba(255,255,255,0.15)' }}>
+                Atrás
+              </button>
+              <button type="button" onClick={handleSiguientePaso2} className="flex-1 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition">
+                Continuar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Paso 3 */}
+        {step === 3 && (
+          <div>
             <h2 className="text-2xl font-medium text-white mb-1">Crea tu acceso</h2>
             <p className="text-sm text-white/60 mb-6">Elige una contraseña segura</p>
 
             {/* Contraseña */}
             <div className="mb-2 relative">
-              <label className="block text-sm text-white/70 mb-1.5">Contraseña</label>
+              <label htmlFor="password-register" className="block text-sm text-white/70 mb-1.5">Contraseña</label>
               <input
+                id="password-register"
                 type={verContraseña ? 'text' : 'password'}
                 name='contraseña'
                 value={formData.contraseña}
@@ -325,8 +496,9 @@ function Register() {
 
             {/* Confirmar contraseña */}
             <div className="mb-2 relative">
-              <label className="block text-sm text-white/70 mb-1.5">Confirmar contraseña</label>
+              <label htmlFor="confirmar-password-register" className="block text-sm text-white/70 mb-1.5">Confirmar contraseña</label>
               <input
+                id="confirmar-password-register"
                 type={verConfirmar ? 'text' : 'password'}
                 name='confirmarContraseña'
                 value={formData.confirmarContraseña}
@@ -353,18 +525,18 @@ function Register() {
             )}
 
             <div className="flex gap-3">
-              <button onClick={() => setStep(1)} disabled={cargando} className="flex-1 py-3 rounded-xl text-sm text-white/70 hover:bg-white/10 transition disabled:opacity-50" style={{ border: '1px solid rgba(255,255,255,0.15)' }}>
+              <button type="button" onClick={() => setStep(2)} disabled={cargando} className="flex-1 py-3 rounded-xl text-sm text-white/70 hover:bg-white/10 transition disabled:opacity-50" style={{ border: '1px solid rgba(255,255,255,0.15)' }}>
                 Atrás
               </button>
-              <button onClick={handleRegister} disabled={cargando || !puedeContinuarPaso2} className="flex-1 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50">
+              <button type="button" onClick={handleRegister} disabled={cargando || !puedeContinuarPaso2} className="flex-1 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50">
                 {cargando ? 'Registrando...' : 'Continuar'}
               </button>
             </div>
           </div>
         )}
 
-        {/* Paso 3 */}
-        {step === 3 && (
+        {/* Paso 4 */}
+        {step === 4 && (
           <div className="text-center">
             <div className="w-16 h-16 bg-[#6FA98C] rounded-full flex items-center justify-center mx-auto mb-4">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
@@ -375,18 +547,18 @@ function Register() {
             <p className="text-sm text-white/60 mb-8">
               Te enviamos un correo a <span className="text-[#9DC9B4]">{formData.email}</span>. Confirma tu cuenta desde ese enlace antes de iniciar sesión.
             </p>
-            <button onClick={() => navigate('/login')} className="w-full py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition">
+            <button type="button" onClick={() => navigate('/login')} className="w-full py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition">
               Iniciar sesión
             </button>
           </div>
         )}
 
-        {step !== 3 && (
+        {step !== 4 && (
           <p className="text-center text-sm text-white/50 mt-6">
             ¿Ya tienes cuenta?{' '}
-            <span className="text-[#9DC9B4] cursor-pointer hover:underline" onClick={() => navigate('/login')}>
+            <button type="button" className="text-[#9DC9B4] cursor-pointer hover:underline bg-transparent border-0 p-0 font-inherit" onClick={() => navigate('/login')}>
               Inicia sesión
-            </span>
+            </button>
           </p>
         )}
 

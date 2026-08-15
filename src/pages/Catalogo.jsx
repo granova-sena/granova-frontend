@@ -262,6 +262,7 @@ class CatalogoErrorBoundary extends Component {
           <p className="text-lg font-semibold">Algo salió mal cargando el catálogo</p>
           <p className="text-sm text-white/50 max-w-sm text-center">{this.state.error.message || "Error desconocido"}</p>
           <button
+            type="button"
             onClick={() => this.setState({ error: null })}
             className="h-10 px-5 rounded-xl bg-[#6FA98C] text-white text-sm font-medium hover:bg-[#4F8A70] transition"
           >
@@ -286,18 +287,30 @@ function ModalFiltros({ onClose, filtros, setFiltros, tiposDisponibles }) {
   const dispFiltro = ["En stock", "Stock bajo"];
 
   const Chip = ({ label, activo, onClick }) => (
-    <button onClick={onClick}
+    <button type="button" onClick={onClick}
       className={`px-4 py-2 rounded-full border text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] focus-visible:ring-offset-2 ${activo ? "bg-[#6FA98C] text-white border-white/20" : "bg-white/[0.08] backdrop-blur-xl text-white/70 border-white/15 hover:border-white/15"}`}>
       {label}
     </button>
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-[2px] anim-overlay" onClick={onClose}>
-      <div className="rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-6 flex flex-col gap-6 bg-white/[0.08] backdrop-blur-xl shadow-2xl anim-sheet-up sm:anim-pop" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-[2px] anim-overlay"
+      role="button"
+      tabIndex={0}
+      aria-label="Cerrar filtros"
+      onClick={onClose}
+      onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") onClose(); }}
+    >
+      <div
+        className="rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-6 flex flex-col gap-6 bg-white/[0.08] backdrop-blur-xl shadow-2xl anim-sheet-up sm:anim-pop"
+        role="presentation"
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between">
           <p className="font-semibold text-white">Filtrar productos</p>
-          <button onClick={onClose} className="text-white/40 hover:text-white text-lg leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] rounded">✕</button>
+          <button type="button" onClick={onClose} className="text-white/40 hover:text-white text-lg leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] rounded">✕</button>
         </div>
         <div>
           <p className="text-xs font-medium text-white/50 uppercase tracking-wide mb-3">Tipo de café</p>
@@ -313,8 +326,8 @@ function ModalFiltros({ onClose, filtros, setFiltros, tiposDisponibles }) {
           </div>
         </div>
         <div className="flex gap-3 pt-2">
-          <button onClick={() => { setLocal({ tipo: "", disp: "" }); }} className="flex-1 py-2.5 rounded-xl text-sm text-white/60 hover:bg-white/10 transition">Limpiar</button>
-          <button onClick={() => { setFiltros(local); onClose(); }} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition">Aplicar filtros</button>
+          <button type="button" onClick={() => { setLocal({ tipo: "", disp: "" }); }} className="flex-1 py-2.5 rounded-xl text-sm text-white/60 hover:bg-white/10 transition">Limpiar</button>
+          <button type="button" onClick={() => { setFiltros(local); onClose(); }} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition">Aplicar filtros</button>
         </div>
       </div>
     </div>
@@ -350,14 +363,26 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-[2px] anim-overlay" onClick={onClose}>
-      <div className="w-full max-w-sm flex flex-col h-full bg-white/[0.08] backdrop-blur-xl shadow-2xl anim-sheet-right" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-[2px] anim-overlay"
+      role="button"
+      tabIndex={0}
+      aria-label="Cerrar carrito"
+      onClick={onClose}
+      onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") onClose(); }}
+    >
+      <div
+        className="w-full max-w-sm flex flex-col h-full bg-white/[0.08] backdrop-blur-xl shadow-2xl anim-sheet-right"
+        role="presentation"
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
+      >
         {/* header */}
         <div className="px-5 py-4 flex items-center justify-between border-b border-white/15">
           <p className="text-white text-base font-semibold">Mi carrito</p>
           <div className="flex items-center gap-4">
             <p className="text-white/40 text-xs">{carrito.length} {carrito.length === 1 ? "producto" : "productos"}</p>
-            <button onClick={onClose} className="text-white/50 hover:text-white text-xl leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] rounded">✕</button>
+            <button type="button" onClick={onClose} className="text-white/50 hover:text-white text-xl leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] rounded">✕</button>
           </div>
         </div>
         {/* items */}
@@ -375,6 +400,7 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar }) {
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-medium text-white truncate">{p.nombre}{p.esMezcla && <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full bg-[#6FA98C]/20 text-[#9DC9B4] align-middle">Mezcla</span>}</p>
                   <button
+                    type="button"
                     onClick={() => quitar(p.id)}
                     className="text-white/30 hover:text-[#D85A30] shrink-0 transition"
                     aria-label={`Quitar ${p.nombre} del carrito`}
@@ -386,9 +412,9 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar }) {
                 <p className="text-xs text-white/40 mt-0.5">${p.precio.toLocaleString("es-CO")} / kg</p>
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-1.5 border border-white/15 rounded-lg">
-                    <button onClick={() => disminuir(p.id)} className="w-7 h-7 text-white/60 hover:text-white text-base flex items-center justify-center">−</button>
+                    <button type="button" onClick={() => disminuir(p.id)} className="w-7 h-7 text-white/60 hover:text-white text-base flex items-center justify-center">−</button>
                     <span className="text-xs font-medium w-4 text-center text-white">{p.cant || 1}</span>
-                    <button onClick={() => onAumentar(p)} disabled={(p.cant || 1) >= p.stock} className="w-7 h-7 text-white/60 hover:text-white text-base flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">+</button>
+                    <button type="button" onClick={() => onAumentar(p)} disabled={(p.cant || 1) >= p.stock} className="w-7 h-7 text-white/60 hover:text-white text-base flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">+</button>
                   </div>
                   <p className="text-sm font-semibold text-white">${((p.cant||1)*p.precio).toLocaleString("es-CO")}</p>
                 </div>
@@ -406,8 +432,8 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar }) {
               <span>Total</span><span>${total.toLocaleString("es-CO")}</span>
             </div>
             <div className="flex gap-3">
-              <button onClick={irACotizacion} className="flex-1 py-3 rounded-xl text-white/70 text-sm border border-white/15 hover:bg-white/10 transition">Cotización</button>
-              <button onClick={irAPagar} className="flex-1 py-3 rounded-xl bg-[#6FA98C] text-white text-sm font-medium hover:bg-[#4F8A70] transition">Pagar</button>
+              <button type="button" onClick={irACotizacion} className="flex-1 py-3 rounded-xl text-white/70 text-sm border border-white/15 hover:bg-white/10 transition">Cotización</button>
+              <button type="button" onClick={irAPagar} className="flex-1 py-3 rounded-xl bg-[#6FA98C] text-white text-sm font-medium hover:bg-[#4F8A70] transition">Pagar</button>
             </div>
           </div>
         )}
@@ -423,13 +449,26 @@ function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito }
   const precioVol = cant <= 5 ? p.precio : cant <= 20 ? Math.round(p.precio * 0.91) : Math.round(p.precio * 0.84);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-4 anim-overlay" onClick={onClose}>
-      <div className="rounded-2xl w-full max-w-3xl flex flex-col sm:flex-row overflow-hidden max-h-[90vh] bg-white/[0.08] backdrop-blur-xl shadow-2xl anim-pop" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-4 anim-overlay"
+      role="button"
+      tabIndex={0}
+      aria-label="Cerrar detalle de producto"
+      onClick={onClose}
+      onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") onClose(); }}
+    >
+      <div
+        className="rounded-2xl w-full max-w-3xl flex flex-col sm:flex-row overflow-hidden max-h-[90vh] bg-white/[0.08] backdrop-blur-xl shadow-2xl anim-pop"
+        role="presentation"
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
+      >
         {/* imagen */}
         <div className="sm:w-1/2 h-56 sm:h-auto bg-white/10 relative">
           <ImagenProducto src={p.img} alt={p.nombre} className="w-full h-full object-cover" />
-          <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 bg-white/[0.08] backdrop-blur-xl rounded-full flex items-center justify-center text-white/70 shadow hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C]">✕</button>
+          <button type="button" onClick={onClose} className="absolute top-3 right-3 w-8 h-8 bg-white/[0.08] backdrop-blur-xl rounded-full flex items-center justify-center text-white/70 shadow hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C]">✕</button>
           <button
+            type="button"
             onClick={() => onToggleFavorito(p.id)}
             className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center shadow transition ${esFavorito ? "bg-[#D85A30] text-white" : "bg-white/[0.08] backdrop-blur-xl text-white/70 hover:text-white"}`}
             aria-label={esFavorito ? "Quitar de favoritos" : "Agregar a favoritos"}
@@ -465,13 +504,14 @@ function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito }
           <div>
             <p className="text-sm text-white/50 mb-2">Cantidad</p>
             <div className="flex items-center gap-3">
-              <button onClick={() => setCant(c => Math.max(1, c-1))} className="w-10 h-10 rounded-xl border border-white/15 text-white/70 text-xl flex items-center justify-center hover:bg-white/10">−</button>
+              <button type="button" onClick={() => setCant(c => Math.max(1, c-1))} className="w-10 h-10 rounded-xl border border-white/15 text-white/70 text-xl flex items-center justify-center hover:bg-white/10">−</button>
               <span className="text-lg font-semibold w-8 text-center text-white">{cant}</span>
-              <button onClick={() => setCant(c => Math.min(p.stock, c+1))} disabled={cant >= p.stock} className="w-10 h-10 rounded-xl border border-white/15 text-white/70 text-xl flex items-center justify-center hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed">+</button>
+              <button type="button" onClick={() => setCant(c => Math.min(p.stock, c+1))} disabled={cant >= p.stock} className="w-10 h-10 rounded-xl border border-white/15 text-white/70 text-xl flex items-center justify-center hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed">+</button>
               <span className="text-white/40 text-sm">kg</span>
             </div>
           </div>
           <button
+            type="button"
             onClick={(e) => { onAgregar({ ...p, cant }, e.currentTarget); onClose(); }}
             className="w-full h-12 rounded-xl bg-[#6FA98C] text-white font-medium flex items-center justify-center gap-2 hover:bg-[#4F8A70] active:scale-95 transition duration-150">
             <IconoCarrito /> Agregar al carrito
@@ -511,14 +551,26 @@ function ModalConfirmarCantidad({ data, onCancelar, onAceptar }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-4 anim-overlay" onClick={onCancelar}>
-      <div className="rounded-2xl w-full max-w-sm p-6 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-2xl anim-pop" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-4 anim-overlay"
+      role="button"
+      tabIndex={0}
+      aria-label="Cancelar"
+      onClick={onCancelar}
+      onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") onCancelar(); }}
+    >
+      <div
+        className="rounded-2xl w-full max-w-sm p-6 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-2xl anim-pop"
+        role="presentation"
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
+      >
         <p className="text-white font-semibold text-base mb-2">{titulo}</p>
         <p className="text-white/60 text-sm mb-6">{mensaje}</p>
         <div className="flex gap-3">
-          <button onClick={onCancelar} className="flex-1 py-2.5 rounded-xl text-sm text-white/60 hover:bg-white/10 transition">Cancelar</button>
+          <button type="button" onClick={onCancelar} className="flex-1 py-2.5 rounded-xl text-sm text-white/60 hover:bg-white/10 transition">Cancelar</button>
           {mostrarAceptar && (
-            <button onClick={onAceptar} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition">Aceptar</button>
+            <button type="button" onClick={onAceptar} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition">Aceptar</button>
           )}
         </div>
       </div>
@@ -533,13 +585,26 @@ function ProductoDelDiaBanner({ producto, onAgregar, onVerDetalle }) {
 
   return (
     <div className="rounded-2xl overflow-hidden flex flex-col sm:flex-row bg-gradient-to-r from-[#6FA98C]/15 to-transparent border border-[#6FA98C]/30">
-      <div className="sm:w-48 h-40 sm:h-auto bg-white/10 cursor-pointer shrink-0" onClick={() => onVerDetalle(producto)}>
+      <div
+        className="sm:w-48 h-40 sm:h-auto bg-white/10 cursor-pointer shrink-0"
+        role="button"
+        tabIndex={0}
+        aria-label={`Ver detalle de ${producto.nombre}`}
+        onClick={() => onVerDetalle(producto)}
+        onKeyDown={(e) => { if (e.key === "Enter") onVerDetalle(producto); }}
+      >
         <ImagenProducto src={producto.img} alt={producto.nombre} className="w-full h-full object-cover" />
       </div>
       <div className="p-5 flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
         <div className="flex-1">
           <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[#6FA98C] text-white">☕ Producto del día · 20% OFF</span>
-          <p className="text-white font-semibold mt-2 cursor-pointer hover:text-[#9DC9B4] transition" onClick={() => onVerDetalle(producto)}>{producto.nombre}</p>
+          <p
+            className="text-white font-semibold mt-2 cursor-pointer hover:text-[#9DC9B4] transition"
+            role="button"
+            tabIndex={0}
+            onClick={() => onVerDetalle(producto)}
+            onKeyDown={(e) => { if (e.key === "Enter") onVerDetalle(producto); }}
+          >{producto.nombre}</p>
           <p className="text-xs text-white/40">{producto.origen}</p>
           <div className="flex items-center gap-2 mt-1.5">
             <p className="text-lg font-semibold text-white">${precioDesc.toLocaleString("es-CO")}</p>
@@ -548,6 +613,7 @@ function ProductoDelDiaBanner({ producto, onAgregar, onVerDetalle }) {
           <p className="text-[11px] text-white/40 mt-0.5">Oferta válida solo hoy</p>
         </div>
         <button
+          type="button"
           onClick={(e) => onAgregar({ ...producto, precio: precioDesc, cant: 1 }, e.currentTarget)}
           className="h-11 px-6 rounded-xl bg-[#6FA98C] text-white text-sm font-medium hover:bg-[#4F8A70] active:scale-95 transition duration-150 shrink-0 flex items-center justify-center gap-2"
         >
@@ -598,7 +664,14 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
 
   return (
     <div className="relative rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm hover:shadow-lg flex flex-col">
-      <div className="relative aspect-[4/3] bg-white/10 cursor-pointer overflow-hidden group/img" onClick={() => onVerDetalle(p)}>
+      <div
+        className="relative aspect-[4/3] bg-white/10 cursor-pointer overflow-hidden group/img"
+        role="button"
+        tabIndex={0}
+        aria-label={`Ver detalle de ${p.nombre}`}
+        onClick={() => onVerDetalle(p)}
+        onKeyDown={(e) => { if (e.key === "Enter") onVerDetalle(p); }}
+      >
         <ImagenProducto src={p.img} alt={p.nombre} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-105" />
         {p.badge && (
           <span className={`absolute top-3 left-3 text-[10px] font-semibold px-2.5 py-1 rounded-full ${badgeColor[p.badge] || "bg-white/15 text-white"}`}>
@@ -606,6 +679,7 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
           </span>
         )}
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); onToggleFavorito(p.id); }}
           className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition ${esFavorito ? "bg-[#D85A30] text-white" : "bg-black/30 backdrop-blur text-white/70 hover:text-white"}`}
           aria-label={esFavorito ? "Quitar de favoritos" : "Agregar a favoritos"}
@@ -622,7 +696,13 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
       <div className="p-4 flex flex-col gap-2 flex-1">
         <div>
           <p className="text-xs text-white/40">{p.origen}</p>
-          <p className="text-sm font-medium text-white mt-0.5 leading-snug cursor-pointer hover:text-[#9DC9B4] transition" onClick={() => onVerDetalle(p)}>{p.nombre}</p>
+          <p
+            className="text-sm font-medium text-white mt-0.5 leading-snug cursor-pointer hover:text-[#9DC9B4] transition"
+            role="button"
+            tabIndex={0}
+            onClick={() => onVerDetalle(p)}
+            onKeyDown={(e) => { if (e.key === "Enter") onVerDetalle(p); }}
+          >{p.nombre}</p>
         </div>
         <div className="flex items-center justify-between">
           <div>
@@ -643,10 +723,10 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
 
         <CalculadoraRapida precio={p.precio} stock={p.stock} />
         <label className="flex items-center gap-1.5 text-[11px] text-[#9DC9B4]">
-  <input type="checkbox" checked={seleccionadoComparar} onChange={onToggleComparar} className="w-3.5 h-3.5" />
-  Comparar
-</label>
-        <button onClick={handleAgregar} disabled={!p.disponible} className={`mt-1 h-9 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed transition active:scale-95 duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] focus-visible:ring-offset-2 ${feedback ? "bg-[#4F8A70] text-white" : "bg-[#6FA98C] text-white hover:bg-[#4F8A70]"}`}>
+          <input type="checkbox" checked={seleccionadoComparar} onChange={onToggleComparar} className="w-3.5 h-3.5" />
+          <span>Comparar</span>
+        </label>
+        <button type="button" onClick={handleAgregar} disabled={!p.disponible} className={`mt-1 h-9 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed transition active:scale-95 duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] focus-visible:ring-offset-2 ${feedback ? "bg-[#4F8A70] text-white" : "bg-[#6FA98C] text-white hover:bg-[#4F8A70]"}`}>
           {feedback ? "✓ Agregado" : <><IconoCarrito width={14} height={14} /> Agregar</>}
         </button>
       </div>
@@ -849,21 +929,21 @@ if (!cancelado) setProductos(eliminarDuplicados(json.data.map(adaptarProducto)))
             className="flex-1 text-sm outline-none bg-transparent text-white placeholder-white/35" />
         </div>
         <p className="text-sm text-white/40 flex-1 text-center hidden sm:block">{filtrados.length} productos encontrados</p>
-        <button onClick={() => setMostrarRecomendador(true)}
+        <button type="button" onClick={() => setMostrarRecomendador(true)}
           className="relative h-10 px-4 rounded-xl bg-[#6FA98C]/10 backdrop-blur-xl text-[#9DC9B4] text-sm font-medium flex items-center gap-2 border border-[#6FA98C]/25 hover:bg-[#6FA98C]/20 shrink-0 transition">
           ✨ ¿No sabes qué elegir?
         </button>
-        <button onClick={() => setSoloFavoritos(v => !v)}
+        <button type="button" onClick={() => setSoloFavoritos(v => !v)}
           className={`relative h-10 px-4 rounded-xl text-sm font-medium flex items-center gap-2 border shrink-0 transition ${soloFavoritos ? "bg-[#D85A30] border-[#D85A30] text-white" : "bg-white/[0.08] backdrop-blur-xl border-white/15 text-white"}`}>
           <IconoCorazon lleno={soloFavoritos} /> Favoritos
           {favoritos.size > 0 && <span className="w-4 h-4 rounded-full bg-white/20 text-[9px] font-bold flex items-center justify-center">{favoritos.size}</span>}
         </button>
-        <button onClick={() => setModalFiltros(true)}
+        <button type="button" onClick={() => setModalFiltros(true)}
           className="relative h-10 px-4 rounded-xl bg-white/[0.08] backdrop-blur-xl text-white text-sm font-medium flex items-center gap-2 border border-white/15 hover:border-white/15 shrink-0 transition">
           <IconoFiltro /> Filtros
           {filtrosActivos > 0 && <span className="w-4 h-4 rounded-full bg-[#6FA98C] text-white text-[9px] font-bold flex items-center justify-center">{filtrosActivos}</span>}
         </button>
-        <button id="icono-carrito-header" onClick={() => setCarritoOpen(true)} className="relative h-10 w-10 rounded-xl flex items-center justify-center shrink-0 bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition" aria-label="Carrito">
+        <button type="button" id="icono-carrito-header" onClick={() => setCarritoOpen(true)} className="relative h-10 w-10 rounded-xl flex items-center justify-center shrink-0 bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition" aria-label="Carrito">
           <IconoCarrito />
           {totalCarrito > 0 && (
             <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-[#6FA98C] text-white text-[10px] font-bold rounded-full flex items-center justify-center">{totalCarrito}</span>
@@ -912,7 +992,7 @@ if (!cancelado) setProductos(eliminarDuplicados(json.data.map(adaptarProducto)))
                   <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Personalizado</span>
                   <h2 className="text-xl font-semibold text-white mt-1">Recomendado para ti</h2>
                 </div>
-                <button onClick={() => setBusqueda('')} className="text-sm text-[#9DC9B4] hover:text-white transition">Ver todos →</button>
+                <button type="button" onClick={() => setBusqueda('')} className="text-sm text-[#9DC9B4] hover:text-white transition">Ver todos →</button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {recomendaciones.map(p => (
@@ -936,7 +1016,15 @@ if (!cancelado) setProductos(eliminarDuplicados(json.data.map(adaptarProducto)))
               <h2 className="text-lg font-semibold text-white mb-3">Vistos recientemente</h2>
               <div className="flex gap-3 overflow-x-auto pb-1">
                 {productosVistos.map(p => (
-                  <div key={p.id} className="shrink-0 w-32 rounded-xl overflow-hidden cursor-pointer bg-white/[0.08] backdrop-blur-xl border border-white/15 hover:-translate-y-1 transition" onClick={() => verDetalle(p)}>
+                  <div
+                    key={p.id}
+                    className="shrink-0 w-32 rounded-xl overflow-hidden cursor-pointer bg-white/[0.08] backdrop-blur-xl border border-white/15 hover:-translate-y-1 transition"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Ver detalle de ${p.nombre}`}
+                    onClick={() => verDetalle(p)}
+                    onKeyDown={(e) => { if (e.key === "Enter") verDetalle(p); }}
+                  >
                     <div className="h-24 bg-white/10">
                       <ImagenProducto src={p.img} alt={p.nombre} className="w-full h-full object-cover" />
                     </div>
@@ -982,7 +1070,7 @@ if (!cancelado) setProductos(eliminarDuplicados(json.data.map(adaptarProducto)))
             </div>
             <div className="flex gap-6 border-b border-white/15 mb-5 mt-4">
               {[["masVendidos","Más vendidos"],["promociones","Promociones"]].map(([val, label]) => (
-                <button key={val} onClick={() => setTabDestacados(val)}
+                <button type="button" key={val} onClick={() => setTabDestacados(val)}
                   className={`text-sm pb-2.5 border-b-2 transition-colors ${tabDestacados === val ? "border-[#6FA98C] text-white font-medium" : "border-transparent text-white/40 hover:text-white/70"}`}>
                   {label}
                 </button>
@@ -994,7 +1082,14 @@ if (!cancelado) setProductos(eliminarDuplicados(json.data.map(adaptarProducto)))
               const [primero, ...resto] = lista;
               return (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="sm:row-span-2 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm hover:shadow-lg" onClick={() => verDetalle(primero)}>
+                  <div
+                    className="sm:row-span-2 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm hover:shadow-lg"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Ver detalle de ${primero.nombre}`}
+                    onClick={() => verDetalle(primero)}
+                    onKeyDown={(e) => { if (e.key === "Enter") verDetalle(primero); }}
+                  >
                     <div className="relative h-64 sm:h-80 bg-white/10">
                       <ImagenProducto src={primero.img} alt={primero.nombre} className="w-full h-full object-cover" />
                       {primero.badge && <span className={`absolute top-3 left-3 text-[10px] font-semibold px-2.5 py-1 rounded-full ${badgeColor[primero.badge]}`}>{primero.badge}</span>}
@@ -1008,18 +1103,26 @@ if (!cancelado) setProductos(eliminarDuplicados(json.data.map(adaptarProducto)))
                         <span className={`w-2 h-2 rounded-full ${stockColor[primero.stockLabel]}`}></span>
                         <span className={`text-xs ${stockTexto[primero.stockLabel]}`}>{primero.stockLabel} · {primero.stock} kg</span>
                       </div>
-                      <button onClick={e => { e.stopPropagation(); agregar({...primero, cant:1}, e.currentTarget); }} className="w-full mt-3 h-9 rounded-xl bg-[#6FA98C] text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#4F8A70] active:scale-95 transition duration-150"><IconoCarrito width={14} height={14} /> Agregar al carrito</button>
+                      <button type="button" onClick={e => { e.stopPropagation(); agregar({...primero, cant:1}, e.currentTarget); }} className="w-full mt-3 h-9 rounded-xl bg-[#6FA98C] text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#4F8A70] active:scale-95 transition duration-150"><IconoCarrito width={14} height={14} /> Agregar al carrito</button>
                     </div>
                   </div>
                   {resto.slice(0,4).map(p => (
-                    <div key={p.id} className="rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm hover:shadow-lg" onClick={() => verDetalle(p)}>
+                    <div
+                      key={p.id}
+                      className="rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm hover:shadow-lg"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Ver detalle de ${p.nombre}`}
+                      onClick={() => verDetalle(p)}
+                      onKeyDown={(e) => { if (e.key === "Enter") verDetalle(p); }}
+                    >
                       <div className="relative h-36 bg-white/10">
                         <ImagenProducto src={p.img} alt={p.nombre} className="w-full h-full object-cover" />
                       </div>
                       <div className="p-3">
                         <p className="text-sm font-medium text-white">{p.nombre}</p>
                         <p className="text-xs text-white mt-0.5 font-semibold">${p.precio.toLocaleString("es-CO")}</p>
-                        <button onClick={e => { e.stopPropagation(); agregar({...p, cant:1}, e.currentTarget); }} className="w-full mt-2 h-8 rounded-lg bg-[#6FA98C] text-white text-xs font-semibold flex items-center justify-center hover:bg-[#4F8A70] active:scale-95 transition duration-150">Agregar</button>
+                        <button type="button" onClick={e => { e.stopPropagation(); agregar({...p, cant:1}, e.currentTarget); }} className="w-full mt-2 h-8 rounded-lg bg-[#6FA98C] text-white text-xs font-semibold flex items-center justify-center hover:bg-[#4F8A70] active:scale-95 transition duration-150">Agregar</button>
                       </div>
                     </div>
                   ))}

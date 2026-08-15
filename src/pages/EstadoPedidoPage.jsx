@@ -169,6 +169,7 @@ function EstadoPedidoPage() {
       )}
       {pedido.estado === 'entregado' && resenaAbierta !== p.id_detalle && (
         <button
+          type="button"
           onClick={() => setResenaAbierta(p.id_detalle)}
           className="text-[10px] text-[#9DC9B4] hover:underline block mt-1"
         >
@@ -194,7 +195,7 @@ function EstadoPedidoPage() {
                 <p className="text-white/40">Ciudad</p>
                 <p className="text-white font-semibold mt-1">{pedido.ciudad_envio}</p>
               </div>
-              <button className="mt-2 w-full border border-white/15 rounded-xl py-2 text-xs text-white flex items-center justify-center gap-2 hover:bg-white/10 transition-colors">
+              <button type="button" className="mt-2 w-full border border-white/15 rounded-xl py-2 text-xs text-white flex items-center justify-center gap-2 hover:bg-white/10 transition-colors">
                 📍 Rastrear envío
               </button>
             </div>
@@ -227,6 +228,7 @@ function EstadoPedidoPage() {
 
         {/* Volver */}
         <button
+          type="button"
           onClick={() => navigate('/cliente/pedidos')}
           className="mt-6 flex items-center gap-2 text-[#9DC9B4] text-sm hover:underline"
         >

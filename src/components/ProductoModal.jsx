@@ -226,7 +226,7 @@ function ProductoModal({ producto, onClose, onGuardado }) {
       <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h3 className="text-base font-semibold text-gray-800">{producto ? 'Editar producto' : 'Nuevo producto'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
 
         {!producto && (
@@ -319,7 +319,7 @@ function ProductoModal({ producto, onClose, onGuardado }) {
             )}
 
             <div>
-              <label className="block text-sm text-gray-600 mb-1">¿Qué estás agregando? *</label>
+              <span className="block text-sm text-gray-600 mb-1">¿Qué estás agregando? *</span>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -339,8 +339,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Nombre del producto *</label>
+              <label htmlFor="nombre-producto" className="block text-sm text-gray-600 mb-1">Nombre del producto *</label>
               <input
+                id="nombre-producto"
                 type="text"
                 value={form.nombre}
                 onChange={(e) => cambiarCampo('nombre', e.target.value)}
@@ -353,8 +354,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Marca *</label>
+                    <label htmlFor="marca-maquina" className="block text-sm text-gray-600 mb-1">Marca *</label>
                     <input
+                      id="marca-maquina"
                       type="text"
                       list="lista-marcas"
                       value={form.marca}
@@ -367,8 +369,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
                     </datalist>
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Número de identificación *</label>
+                    <label htmlFor="modelo-maquina" className="block text-sm text-gray-600 mb-1">Número de identificación *</label>
                     <input
+                      id="modelo-maquina"
                       type="text"
                       maxLength={20}
                       value={form.modelo}
@@ -379,8 +382,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Garantía (meses)</label>
+                  <label htmlFor="garantia-meses" className="block text-sm text-gray-600 mb-1">Garantía (meses)</label>
                   <input
+                    id="garantia-meses"
                     type="number"
                     min="0"
                     onKeyDown={bloquearNoNumerico}
@@ -409,8 +413,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
             ) : (
               <>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Lote de origen *</label>
+                  <label htmlFor="lote-origen" className="block text-sm text-gray-600 mb-1">Lote de origen *</label>
                   <select
+                    id="lote-origen"
                     value={form.id_lote}
                     onChange={(e) => cambiarCampo('id_lote', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
@@ -427,8 +432,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Categoría *</label>
+                    <label htmlFor="categoria-cafe" className="block text-sm text-gray-600 mb-1">Categoría *</label>
                     <input
+                      id="categoria-cafe"
                       type="text"
                       list="lista-categorias"
                       value={form.tipo_cafe}
@@ -441,8 +447,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
                     </datalist>
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Presentación *</label>
+                    <label htmlFor="presentacion-cafe" className="block text-sm text-gray-600 mb-1">Presentación *</label>
                     <input
+                      id="presentacion-cafe"
                       type="text"
                       value={form.presentacion}
                       onChange={(e) => cambiarCampo('presentacion', e.target.value)}
@@ -456,8 +463,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Precio {esMaquina ? '' : 'por kg'} *</label>
+                <label htmlFor="precio-producto" className="block text-sm text-gray-600 mb-1">Precio {esMaquina ? '' : 'por kg'} *</label>
                 <input
+                  id="precio-producto"
                   ref={precioRef}
                   type="number"
                   min="0"
@@ -485,8 +493,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
                 )}
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Stock {esMaquina ? '(unidades)' : 'inicial (kg)'} *</label>
+                <label htmlFor="stock-producto" className="block text-sm text-gray-600 mb-1">Stock {esMaquina ? '(unidades)' : 'inicial (kg)'} *</label>
                 <input
+                  id="stock-producto"
                   type="number"
                   min="0"
                   value={form.stock}
@@ -546,8 +555,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
             )}
 
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Descripción</label>
+              <label htmlFor="descripcion-producto" className="block text-sm text-gray-600 mb-1">Descripción</label>
               <textarea
+                id="descripcion-producto"
                 value={form.descripcion}
                 onChange={(e) => cambiarCampo('descripcion', e.target.value)}
                 rows={2}
@@ -557,8 +567,9 @@ function ProductoModal({ producto, onClose, onGuardado }) {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600 mb-1">URL de imagen</label>
+              <label htmlFor="imagen-url" className="block text-sm text-gray-600 mb-1">URL de imagen</label>
               <input
+                id="imagen-url"
                 type="text"
                 value={form.imagen_url}
                 onChange={(e) => cambiarCampo('imagen_url', e.target.value)}

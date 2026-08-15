@@ -106,7 +106,7 @@ function VerificarCuenta() {
             </div>
             <h2 className="text-2xl font-medium text-[#17140F] mb-2">¡Cuenta verificada!</h2>
             <p className="text-sm text-[#17140F]/60 mb-8">{mensaje}</p>
-            <button onClick={() => navigate('/login')} className="w-full py-3 bg-[#17140F] text-[#FFFFFF] rounded-xl text-sm font-medium hover:bg-[#2B271F] transition">
+            <button type="button" onClick={() => navigate('/login')} className="w-full py-3 bg-[#17140F] text-[#FFFFFF] rounded-xl text-sm font-medium hover:bg-[#2B271F] transition">
               Iniciar sesión
             </button>
           </>
@@ -148,9 +148,9 @@ function VerificarCuenta() {
             )}
 
             <p className="text-center text-sm text-[#17140F]/50 mt-6">
-              <span className="text-[#1D9E75] cursor-pointer hover:underline" onClick={() => navigate('/login')}>
+              <button type="button" className="text-[#1D9E75] cursor-pointer hover:underline bg-transparent border-0 p-0 font-inherit" onClick={() => navigate('/login')}>
                 Volver a iniciar sesión
-              </span>
+              </button>
             </p>
           </>
         )}

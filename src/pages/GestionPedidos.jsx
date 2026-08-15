@@ -162,6 +162,7 @@ function GestionPedidos() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-base font-semibold text-admin-heading">Gestión de pedidos</h2>
         <button
+          type="button"
           onClick={exportarExcel}
           disabled={exportando}
           className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg border border-gray-300 bg-[#1D9E75] text-white hover:bg-[#178a64] transition disabled:opacity-50"
@@ -174,6 +175,7 @@ function GestionPedidos() {
         <div className="flex flex-wrap items-center gap-3 sm:gap-6 px-4 sm:px-5 pt-4 border-b border-gray-100">
           {tabs.map((tab) => (
             <button
+              type="button"
               key={tab.key}
               onClick={() => cambiarTab(tab.key)}
               className={`text-sm pb-3 border-b-2 transition ${
@@ -235,6 +237,7 @@ function GestionPedidos() {
                       {p.estado === 'Pendiente' ? (
                         <div className="flex items-center gap-2">
                           <button
+                            type="button"
                             onClick={() => aceptarPedido(p.id)}
                             disabled={procesando === p.id}
                             className="text-xs px-3 py-1.5 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition whitespace-nowrap disabled:opacity-50"
@@ -242,6 +245,7 @@ function GestionPedidos() {
                             ✓ Aceptar
                           </button>
                           <button
+                            type="button"
                             onClick={() => abrirModalRechazo(p.id)}
                             disabled={procesando === p.id}
                             className="text-xs px-3 py-1.5 rounded-lg border border-red-300 text-red-500 hover:bg-red-50 transition whitespace-nowrap disabled:opacity-50"
@@ -251,6 +255,7 @@ function GestionPedidos() {
                         </div>
                       ) : (
                         <button
+                          type="button"
                           onClick={() => setFacturaId(p.id)}
                           className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
                         >
@@ -270,6 +275,7 @@ function GestionPedidos() {
           <div className="flex items-center gap-1">
             {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
               <button
+                type="button"
                 key={n}
                 onClick={() => setPagina(n)}
                 className={`w-8 h-8 rounded-lg text-sm transition ${
@@ -284,8 +290,20 @@ function GestionPedidos() {
       </div>
 
       {pedidoARechazar && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setPedidoARechazar(null)}>
-          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl w-full max-w-md p-6">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          role="button"
+          tabIndex={0}
+          aria-label="Cerrar"
+          onClick={() => setPedidoARechazar(null)}
+          onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') setPedidoARechazar(null) }}
+        >
+          <div
+            role="presentation"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            className="bg-white rounded-xl w-full max-w-md p-6"
+          >
             <h3 className="text-base font-semibold text-gray-800 mb-1">Rechazar pedido</h3>
             <p className="text-xs text-gray-400 mb-4">
               Cuéntale al cliente por qué se rechazó (opcional). El stock reservado se devuelve al inventario.
@@ -302,12 +320,14 @@ function GestionPedidos() {
 
             <div className="flex gap-3 mt-4">
               <button
+                type="button"
                 onClick={() => setPedidoARechazar(null)}
                 className="flex-1 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition"
               >
                 Cancelar
               </button>
               <button
+                type="button"
                 onClick={confirmarRechazo}
                 disabled={procesando === pedidoARechazar}
                 className="flex-1 py-2.5 rounded-lg bg-red-500 text-white text-sm hover:bg-red-600 transition disabled:opacity-50"

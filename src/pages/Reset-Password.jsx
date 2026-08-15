@@ -155,8 +155,9 @@ function ResetPassword() {
 
         <form onSubmit={handleReset}>
           <div className="mb-2 relative">
-            <label className="block text-sm text-white/70 mb-1.5">Nueva contraseña</label>
+            <label htmlFor="nueva-password-reset" className="block text-sm text-white/70 mb-1.5">Nueva contraseña</label>
             <input
+              id="nueva-password-reset"
               type={verContraseña ? 'text' : 'password'}
               name="nuevaContraseña"
               value={formData.nuevaContraseña}
@@ -196,8 +197,9 @@ function ResetPassword() {
           )}
 
           <div className="mb-2 relative">
-            <label className="block text-sm text-white/70 mb-1.5">Confirmar contraseña</label>
+            <label htmlFor="confirmar-password-reset" className="block text-sm text-white/70 mb-1.5">Confirmar contraseña</label>
             <input
+              id="confirmar-password-reset"
               type={verConfirmar ? 'text' : 'password'}
               name="confirmarContraseña"
               value={formData.confirmarContraseña}

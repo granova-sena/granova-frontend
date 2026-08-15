@@ -195,6 +195,7 @@ function MisPedidos() {
               Cuando compres en el catálogo, cada pedido y su estado de envío aparecerán aquí.
             </p>
             <button
+              type="button"
               onClick={() => navigate('/cliente/catalogo')}
               className="px-6 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] focus-visible:ring-offset-2"
             >
@@ -210,6 +211,7 @@ function MisPedidos() {
               
               {/* Info del pedido — navega al detalle */}
               <button
+                type="button"
                 onClick={() => navigate(`/cliente/pedidos/${p.id_pedido}`)}
                 className="flex-1 text-left"
               >
@@ -229,6 +231,7 @@ function MisPedidos() {
 
                 {/* Botón descargar factura */}
                 <button
+                  type="button"
                   onClick={() => descargarFactura(p.id_pedido)}
                   title="Descargar factura"
                   className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/50 hover:text-[#9DC9B4] hover:bg-white/20 transition"

@@ -91,7 +91,7 @@ function VentaModal({ onClose, onCreado }) {
       <div className="bg-white rounded-xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h3 className="text-base font-semibold text-gray-800">Nueva venta</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
 
         <form onSubmit={guardar} className="p-6 space-y-4">
@@ -102,8 +102,9 @@ function VentaModal({ onClose, onCreado }) {
           )}
 
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Cliente *</label>
+            <label htmlFor="cliente-venta" className="block text-sm text-gray-600 mb-1">Cliente *</label>
             <select
+              id="cliente-venta"
               value={idCliente}
               onChange={(e) => setIdCliente(e.target.value)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
@@ -119,7 +120,7 @@ function VentaModal({ onClose, onCreado }) {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-600 mb-2">Productos *</label>
+            <span className="block text-sm text-gray-600 mb-2">Productos *</span>
             <div className="space-y-2">
               {items.map((it) => {
                 const producto = productoPorId(it.id_producto)
@@ -170,7 +171,7 @@ function VentaModal({ onClose, onCreado }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm text-gray-600 mb-1.5">Método de pago</label>
+              <span className="block text-sm text-gray-600 mb-1.5">Método de pago</span>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -203,8 +204,9 @@ function VentaModal({ onClose, onCreado }) {
               </div>
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Estado</label>
+              <label htmlFor="estado-venta" className="block text-sm text-gray-600 mb-1">Estado</label>
               <select
+                id="estado-venta"
                 value={estado}
                 onChange={(e) => setEstado(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"

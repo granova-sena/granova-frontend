@@ -38,7 +38,7 @@ function Login() {
       return
     }
 
-    const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
+    const emailValido = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{1,24}$/.test(formData.email)
 
     if (!emailValido) {
       toast.error('Ingresa un correo electrónico válido')
@@ -174,6 +174,7 @@ function Login() {
       <div className="absolute inset-0 bg-[#0a1a0a]/75"></div>
 
       <button
+        type="button"
         onClick={() => navigate('/')}
         className="absolute top-6 left-6 z-20 flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition"
       >
@@ -261,11 +262,12 @@ function Login() {
 
           <div className="mb-4">
 
-            <label className="block text-sm text-white/70 mb-1.5">
+            <label htmlFor="email-login" className="block text-sm text-white/70 mb-1.5">
               Correo electrónico
             </label>
 
             <input
+              id="email-login"
               type="email"
               value={formData.email}
               onChange={handleChange}
@@ -282,11 +284,12 @@ function Login() {
 
           <div className="mb-6 relative">
 
-            <label className="block text-sm text-white/70 mb-1.5">
+            <label htmlFor="password-login" className="block text-sm text-white/70 mb-1.5">
               Contraseña
             </label>
 
             <input
+              id="password-login"
               type={verContraseña ? 'text' : 'password'}
               name="contraseña"
               value={formData.contraseña}
@@ -370,14 +373,15 @@ function Login() {
             </p>
           )}
 
-          <p
-            className="text-right text-xs text-[#9DC9B4] mb-6 cursor-pointer hover:underline"
+          <button
+            type="button"
+            className="block ml-auto text-right text-xs text-[#9DC9B4] mb-6 cursor-pointer hover:underline bg-transparent border-0 p-0"
             onClick={() =>
               navigate('/olvide-password')
             }
           >
             ¿Olvidaste tu contraseña?
-          </p>
+          </button>
 
           <button
             type="submit"
@@ -421,12 +425,13 @@ function Login() {
 
             ¿No tienes cuenta?{' '}
 
-            <span
-              className="text-[#9DC9B4] cursor-pointer hover:underline"
+            <button
+              type="button"
+              className="text-[#9DC9B4] cursor-pointer hover:underline bg-transparent border-0 p-0 font-inherit"
               onClick={() => navigate('/register')}
             >
               Regístrate aquí
-            </span>
+            </button>
 
           </p>
 

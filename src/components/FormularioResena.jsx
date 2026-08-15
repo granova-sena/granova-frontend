@@ -51,7 +51,7 @@ function FormularioResena({ id_detalle, producto_nombre, onCerrar, onEnviado }) 
     <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl p-6 sm:p-8">
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-sm font-semibold text-white">Reseñar {producto_nombre}</h3>
-        <button onClick={onCerrar} className="text-white/40 text-xs hover:text-white">✕</button>
+        <button type="button" onClick={onCerrar} className="text-white/40 text-xs hover:text-white">✕</button>
       </div>
 
       <div className="flex gap-2 mb-4">
@@ -83,6 +83,7 @@ function FormularioResena({ id_detalle, producto_nombre, onCerrar, onEnviado }) 
 
       <div className="flex gap-3 mt-4">
         <button
+          type="button"
           onClick={enviarResena}
           disabled={enviando}
           className="text-sm bg-[#6FA98C] text-white px-5 py-2.5 rounded-lg font-medium
@@ -90,7 +91,7 @@ function FormularioResena({ id_detalle, producto_nombre, onCerrar, onEnviado }) 
         >
           {enviando ? 'Enviando...' : 'Enviar reseña'}
         </button>
-        <button onClick={onCerrar} className="text-sm text-white/40 px-5 py-2.5">
+        <button type="button" onClick={onCerrar} className="text-sm text-white/40 px-5 py-2.5">
           Cancelar
         </button>
       </div>

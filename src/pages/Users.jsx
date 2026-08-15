@@ -427,6 +427,7 @@ function Users() {
             {usuariosFiltrados.length} usuario{usuariosFiltrados.length !== 1 ? 's' : ''}
           </span>
           <button
+            type="button"
             onClick={abrirModal}
             className="flex items-center gap-1.5 text-xs font-medium px-3.5 py-2 rounded-xl text-white transition-transform duration-150 hover:-translate-y-0.5"
             style={{ background: '#1D9E75', boxShadow: '0 4px 14px rgba(29,158,117,0.3)' }}
@@ -445,6 +446,7 @@ function Users() {
             className="hidden"
           />
           <button
+            type="button"
             onClick={abrirSelectorArchivo}
             disabled={importando}
             className="flex items-center gap-1.5 text-xs font-medium px-3.5 py-2 rounded-xl transition disabled:opacity-60 disabled:cursor-wait"
@@ -467,7 +469,7 @@ function Users() {
         >
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm text-[#1F2A24]">{resumenImportacion.mensaje}</p>
-            <button onClick={() => setResumenImportacion(null)} className="text-[#1F2A24]/40 hover:text-[#1F2A24] flex-shrink-0">
+            <button type="button" onClick={() => setResumenImportacion(null)} className="text-[#1F2A24]/40 hover:text-[#1F2A24] flex-shrink-0">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
@@ -490,7 +492,7 @@ function Users() {
           style={{ background: 'rgba(220,38,38,0.08)', color: '#dc2626' }}
         >
           <span>{errorAccion}</span>
-          <button onClick={() => setErrorAccion('')} className="opacity-60 hover:opacity-100">
+          <button type="button" onClick={() => setErrorAccion('')} className="opacity-60 hover:opacity-100">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
@@ -580,6 +582,7 @@ function Users() {
                   {/* Estado */}
                   <div className="col-span-2">
                     <button
+                      type="button"
                       onClick={() => toggleEstado(usuario)}
                       disabled={idEnProceso === usuario.id_usuario}
                       className="flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
@@ -606,6 +609,7 @@ function Users() {
                   {/* Acciones */}
                   <div className="col-span-1 flex justify-end">
                     <button
+                      type="button"
                       onClick={() => eliminarUsuarioAccion(usuario)}
                       disabled={idEnProceso === usuario.id_usuario}
                       className="p-1.5 rounded-lg text-[#1F2A24]/30 hover:text-[#dc2626] hover:bg-[#dc2626]/[0.08] transition disabled:opacity-40 disabled:cursor-wait"
@@ -635,6 +639,7 @@ function Users() {
                       <p className="text-xs text-[#1F2A24]/45 truncate">{usuario.email}</p>
                     </div>
                     <button
+                      type="button"
                       onClick={() => eliminarUsuarioAccion(usuario)}
                       disabled={idEnProceso === usuario.id_usuario}
                       className="p-2 -mr-2 rounded-lg text-[#1F2A24]/30 hover:text-[#dc2626] hover:bg-[#dc2626]/[0.08] transition disabled:opacity-40 disabled:cursor-wait flex-shrink-0"
@@ -660,6 +665,7 @@ function Users() {
                     </select>
 
                     <button
+                      type="button"
                       onClick={() => toggleEstado(usuario)}
                       disabled={idEnProceso === usuario.id_usuario}
                       className="flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
@@ -694,16 +700,22 @@ function Users() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(20,40,32,0.35)', backdropFilter: 'blur(4px)' }}
+          role="button"
+          tabIndex={0}
+          aria-label="Cerrar"
           onClick={cerrarModal}
+          onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') cerrarModal() }}
         >
           <div
             className="w-full max-w-md rounded-2xl p-6"
             style={{ ...glass, background: 'rgba(255,255,255,0.98)' }}
+            role="presentation"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold text-[#1F2A24]">Agregar usuario</h2>
-              <button onClick={cerrarModal} className="text-[#1F2A24]/40 hover:text-[#1F2A24] transition">
+              <button type="button" onClick={cerrarModal} className="text-[#1F2A24]/40 hover:text-[#1F2A24] transition">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
@@ -713,8 +725,9 @@ function Users() {
             <form onSubmit={manejarCrearUsuario} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-[#1F2A24]/50 mb-1 block">Nombre</label>
+                  <label htmlFor="nombre-nuevo-usuario" className="text-xs text-[#1F2A24]/50 mb-1 block">Nombre</label>
                   <input
+                    id="nombre-nuevo-usuario"
                     required
                     type="text"
                     value={formulario.nombre}
@@ -724,8 +737,9 @@ function Users() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-[#1F2A24]/50 mb-1 block">Apellido</label>
+                  <label htmlFor="apellido-nuevo-usuario" className="text-xs text-[#1F2A24]/50 mb-1 block">Apellido</label>
                   <input
+                    id="apellido-nuevo-usuario"
                     required
                     type="text"
                     value={formulario.apellido}
@@ -737,8 +751,9 @@ function Users() {
               </div>
 
               <div>
-                <label className="text-xs text-[#1F2A24]/50 mb-1 block">Correo</label>
+                <label htmlFor="email-nuevo-usuario" className="text-xs text-[#1F2A24]/50 mb-1 block">Correo</label>
                 <input
+                  id="email-nuevo-usuario"
                   required
                   type="email"
                   value={formulario.email}
@@ -749,8 +764,9 @@ function Users() {
               </div>
 
               <div>
-                <label className="text-xs text-[#1F2A24]/50 mb-1 block">Contraseña</label>
+                <label htmlFor="password-nuevo-usuario" className="text-xs text-[#1F2A24]/50 mb-1 block">Contraseña</label>
                 <input
+                  id="password-nuevo-usuario"
                   required
                   type="password"
                   minLength={6}
@@ -793,8 +809,9 @@ function Users() {
               </div>
 
               <div>
-                <label className="text-xs text-[#1F2A24]/50 mb-1 block">Rol</label>
+                <label htmlFor="rol-nuevo-usuario" className="text-xs text-[#1F2A24]/50 mb-1 block">Rol</label>
                 <select
+                  id="rol-nuevo-usuario"
                   value={formulario.rol}
                   onChange={(e) => actualizarCampo('rol', e.target.value)}
                   className="w-full px-3 py-2 rounded-xl text-sm text-[#1F2A24] focus:outline-none capitalize"

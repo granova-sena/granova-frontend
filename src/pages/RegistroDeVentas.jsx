@@ -138,6 +138,7 @@ function RegistroVentas() {
         <h2 className="text-base font-semibold text-admin-heading">Registro de ventas</h2>
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={exportarExcel}
             disabled={exportando}
             className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition disabled:opacity-50"
@@ -145,6 +146,7 @@ function RegistroVentas() {
             ↓ {exportando ? 'Generando...' : `Exportar página ${pagina}`}
           </button>
           <button
+            type="button"
             onClick={() => setMostrarModal(true)}
             className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition"
           >
@@ -217,6 +219,7 @@ function RegistroVentas() {
                         {esPendiente ? (
                           <div>
                             <button
+                              type="button"
                               onClick={() => setMenuAbierto(menuAbierto === v.id ? null : v.id)}
                               className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex items-center gap-1 ${estadoStyle(v.estado)}`}
                             >
@@ -225,6 +228,7 @@ function RegistroVentas() {
                             {menuAbierto === v.id && (
                               <div className="absolute left-5 top-8 bg-white rounded-lg shadow-lg border border-gray-100 py-1 w-36 z-10">
                                 <button
+                                  type="button"
                                   onClick={() => confirmarVenta(v.id)}
                                   disabled={confirmando === v.id}
                                   className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
@@ -256,6 +260,7 @@ function RegistroVentas() {
           <div className="flex items-center gap-1">
             {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
               <button
+                type="button"
                 key={n}
                 onClick={() => setPagina(n)}
                 className={`w-8 h-8 rounded-lg text-sm transition ${

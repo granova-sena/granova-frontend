@@ -111,6 +111,7 @@ function TrazabilidadLotePage() {
 {/* Volver + descargar certificado */}
         <div className="flex items-center justify-between">
           <button
+            type="button"
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-[#9DC9B4] text-sm hover:underline"
           >

@@ -104,6 +104,7 @@ function Inventario() {
           <p className="text-[#5f7268] mt-1 text-sm">Administra los usuarios y sus roles dentro de Granova</p>
         </div>
         <button
+          type="button"
           onClick={() => setShowModal(true)}
           className="btn-primary flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition w-full sm:w-auto"
         >
@@ -168,10 +169,11 @@ function Inventario() {
                   </td>
                   <td className="px-6 py-3.5">
                     <button
+                      type="button"
                       onClick={() => toggleStatus(user.id_usuario)}
                       className="toggle-bg relative w-11 h-6 rounded-full"
                       style={{ background: user.estado === 'activo' ? '#2fe37e' : '#d1d5db' }}
-                    >
+                    > 
                       <span
                         className="toggle-dot absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow"
                         style={{ transform: user.estado === 'activo' ? 'translateX(20px)' : 'translateX(0)' }}
@@ -181,6 +183,7 @@ function Inventario() {
                   <td className="px-6 py-3.5 text-[#5f7268]">{formatFecha(user.fecha_creacion)}</td>
                   <td className="px-6 py-3.5 text-right relative">
                     <button
+                      type="button"
                       onClick={() => setMenuOpenId(menuOpenId === user.id_usuario ? null : user.id_usuario)}
                       className="p-1.5 hover:bg-[#f2f7f2] rounded-lg transition"
                     >
@@ -194,6 +197,7 @@ function Inventario() {
                     {menuOpenId === user.id_usuario && (
                       <div className="fade-in absolute right-6 top-10 bg-white rounded-xl shadow-lg border border-[#e7f0e8] py-1 w-36 z-10 text-left">
                         <button
+                          type="button"
                           onClick={() => deleteUser(user.id_usuario)}
                           className="w-full text-left px-4 py-2 text-sm text-[#A32D2D] hover:bg-red-50 transition"
                         >
@@ -210,8 +214,20 @@ function Inventario() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onClick={() => setShowModal(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="modal-in panel-card rounded-2xl p-6 w-full max-w-md">
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4"
+          role="button"
+          tabIndex={0}
+          aria-label="Cerrar"
+          onClick={() => setShowModal(false)}
+          onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') setShowModal(false) }}
+        >
+          <div
+            role="presentation"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            className="modal-in panel-card rounded-2xl p-6 w-full max-w-md"
+          >
             <h3 className="text-lg font-semibold text-[#11261d] mb-4">Agregar nuevo usuario</h3>
 
             <form onSubmit={crearUsuario}>
@@ -223,8 +239,9 @@ function Inventario() {
 
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className="block text-sm text-[#5f7268] mb-1.5">Nombre</label>
+                  <label htmlFor="nombre-usuario" className="block text-sm text-[#5f7268] mb-1.5">Nombre</label>
                   <input
+                    id="nombre-usuario"
                     type="text"
                     placeholder="Nombre"
                     value={form.nombre}
@@ -233,8 +250,9 @@ function Inventario() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-[#5f7268] mb-1.5">Apellido</label>
+                  <label htmlFor="apellido-usuario" className="block text-sm text-[#5f7268] mb-1.5">Apellido</label>
                   <input
+                    id="apellido-usuario"
                     type="text"
                     placeholder="Apellido"
                     value={form.apellido}
@@ -245,8 +263,9 @@ function Inventario() {
               </div>
 
               <div className="mb-3">
-                <label className="block text-sm text-[#5f7268] mb-1.5">Correo electrónico</label>
+                <label htmlFor="email-usuario" className="block text-sm text-[#5f7268] mb-1.5">Correo electrónico</label>
                 <input
+                  id="email-usuario"
                   type="email"
                   placeholder="correo@ejemplo.com"
                   value={form.email}
@@ -256,8 +275,9 @@ function Inventario() {
               </div>
 
               <div className="mb-3">
-                <label className="block text-sm text-[#5f7268] mb-1.5">Contraseña</label>
+                <label htmlFor="password-usuario" className="block text-sm text-[#5f7268] mb-1.5">Contraseña</label>
                 <input
+                  id="password-usuario"
                   type="password"
                   placeholder="Mínimo 6 caracteres"
                   value={form.contraseña}
@@ -267,8 +287,9 @@ function Inventario() {
               </div>
 
               <div className="mb-5">
-                <label className="block text-sm text-[#5f7268] mb-1.5">Rol</label>
+                <label htmlFor="rol-usuario" className="block text-sm text-[#5f7268] mb-1.5">Rol</label>
                 <select
+                  id="rol-usuario"
                   value={form.rol}
                   onChange={(e) => setForm({ ...form, rol: e.target.value })}
                   className="input-field w-full px-4 py-2.5 rounded-xl text-sm transition"

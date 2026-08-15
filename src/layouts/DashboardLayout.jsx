@@ -399,6 +399,7 @@ function DashboardLayout() {
 
           {/* Modo oscuro */}
           <button
+            type="button"
             onClick={() => setModoOscuro((v) => !v)}
             className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-xl text-sm transition-all duration-200"
             style={{

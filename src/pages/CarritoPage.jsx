@@ -11,7 +11,7 @@ function CarritoPage() {
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
       <div className="max-w-6xl mx-auto px-4 sm:px-8 py-10 sm:py-12">
 
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#9DC9B4] text-sm mb-6 hover:underline">
+        <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#9DC9B4] text-sm mb-6 hover:underline">
           ← Volver
         </button>
 
@@ -56,7 +56,7 @@ function CarritoPage() {
 
               {/* Footer */}
               <div className="px-6 py-4 border-t border-white/10 flex justify-between items-center">
-                <button onClick={() => navigate('/cliente/catalogo')} className="text-[#9DC9B4] text-sm hover:underline">
+                <button type="button" onClick={() => navigate('/cliente/catalogo')} className="text-[#9DC9B4] text-sm hover:underline">
                   + Agregar más productos
                 </button>
                 <span className="text-white/40 text-xl">🛒</span>

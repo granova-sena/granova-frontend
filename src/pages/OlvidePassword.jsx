@@ -6,7 +6,7 @@ import { API_URL } from "../config";
 
 
 
-const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const REGEX_EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{1,24}$/
 
 function OlvidePassword() {
   const navigate = useNavigate()
@@ -85,8 +85,9 @@ function OlvidePassword() {
 
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
-            <label className="block text-sm text-white/70 mb-1.5">Correo electrónico</label>
+            <label htmlFor="email-olvide" className="block text-sm text-white/70 mb-1.5">Correo electrónico</label>
             <input
+              id="email-olvide"
               type="email"
               value={email}
               onChange={handleChange}
@@ -107,9 +108,9 @@ function OlvidePassword() {
           </button>
 
           <p className="text-center text-sm text-white/50">
-            <span className="text-[#5DCAA5] cursor-pointer hover:underline" onClick={() => navigate('/login')}>
+            <button type="button" className="text-[#5DCAA5] cursor-pointer hover:underline bg-transparent border-0 p-0 font-inherit" onClick={() => navigate('/login')}>
               Volver al inicio de sesión
-            </span>
+            </button>
           </p>
         </form>
 

@@ -3,7 +3,6 @@ import { useCarrito } from '../context/CarritoContext'
 import { API_URL } from '../config'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-fetch
 function CotizacionPage() {
   const navigate = useNavigate()
   const { productos, subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, datosCliente } = useCarrito()
@@ -136,7 +135,7 @@ const enviarPorCorreo = async () => {
     <div className="min-h-screen px-4 sm:px-8 py-6" style={{ background: '#0a1a0a' }}>
 
       {/* Volver */}
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#9DC9B4] text-sm mb-6 hover:underline">
+      <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#9DC9B4] text-sm mb-6 hover:underline">
         ← Volver
       </button>
 
@@ -239,16 +238,19 @@ const enviarPorCorreo = async () => {
       {/* Botones */}
       <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-4">
         <button 
+        type="button"
         onClick={enviarPorCorreo}
         className="flex-1 border border-white/15 bg-white/[0.08] backdrop-blur-xl text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/[0.14] transition-colors">
           ✉️ Enviar por correo
         </button>
         <button 
+        type="button"
         onClick={generarPDF}
         className="flex-1 border border-white/15 bg-white/[0.08] backdrop-blur-xl text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/[0.14] transition-colors">
           📄 Descargar PDF
         </button>
         <button
+          type="button"
           onClick={() => navigate('/cliente/configurar-pedido')}
           className="flex-1 bg-[#6FA98C] text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#4F8A70] transition-colors"
         >

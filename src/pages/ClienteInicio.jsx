@@ -98,12 +98,14 @@ function ClienteInicio() {
           </p>
           <div className="flex flex-wrap items-center gap-3 mt-8">
             <button
+              type="button"
               onClick={() => navigate('/cliente/catalogo')}
               className="px-6 sm:px-8 py-3 sm:py-3.5 bg-[#6FA98C] text-white rounded-xl font-medium text-sm hover:bg-[#4F8A70] transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1a0a]"
             >
               Ir al catálogo →
             </button>
             <button
+              type="button"
               onClick={() => navigate('/cliente/promociones')}
               className="px-6 py-3 sm:py-3.5 rounded-xl font-medium text-sm text-white/80 hover:text-white transition"
               style={{ border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.05)' }}
@@ -138,7 +140,7 @@ function ClienteInicio() {
             <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Del catálogo</span>
             <h2 className="text-xl sm:text-2xl font-medium text-white mt-1">Café que podría gustarte</h2>
           </div>
-          <button onClick={() => navigate('/cliente/catalogo')} className="text-sm text-white/60 hover:text-white shrink-0">
+          <button type="button" onClick={() => navigate('/cliente/catalogo')} className="text-sm text-white/60 hover:text-white shrink-0">
             Ver todo →
           </button>
         </div>
@@ -168,7 +170,11 @@ function ClienteInicio() {
             {destacados.map((p, i) => (
               <div
                 key={p.id_producto}
+                role="button"
+                tabIndex={0}
+                aria-label={`Ver ${p.nombre} en el catálogo`}
                 onClick={() => navigate('/cliente/catalogo')}
+                onKeyDown={(e) => { if (e.key === 'Enter') navigate('/cliente/catalogo') }}
                 style={{ ...glass, animationDelay: `${i * 70}ms` }}
                 className="anim-pop group rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.12]"
               >
@@ -207,6 +213,7 @@ function ClienteInicio() {
         <div className="anim-pop rounded-2xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x sm:grid sm:grid-cols-3" style={{ ...glass, borderColor: 'rgba(255,255,255,0.1)' }}>
           {ACCESOS.map((a) => (
             <button
+              type="button"
               key={a.to}
               onClick={() => navigate(a.to)}
               className="w-full text-left px-6 py-5 flex items-center justify-between hover:bg-white/[0.06] transition group"

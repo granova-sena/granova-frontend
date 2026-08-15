@@ -4,7 +4,10 @@ const CarritoContext = createContext()
 
 const productosIniciales = []
 
-const DESCUENTO = 0.06
+// Frente 1 (Jhon): descuento diferenciado por tipo de cliente.
+// Ajustar estos valores según la política comercial de Granova.
+const DESCUENTO_MINORISTA = 0.06
+const DESCUENTO_MAYORISTA = 0.12
 const IVA = 0.19
 
 // ── CONFIG API ────────────────────────────────────────────
@@ -18,6 +21,15 @@ function obtenerIdCliente() {
     return cliente?.id ?? null
   } catch {
     return null
+  }
+}
+
+function obtenerTipoCliente() {
+  try {
+    const cliente = JSON.parse(localStorage.getItem('cliente'))
+    return cliente?.tipo_cliente === 'mayorista' ? 'mayorista' : 'minorista'
+  } catch {
+    return 'minorista'
   }
 }
 
@@ -41,7 +53,9 @@ export function CarritoProvider({ children }) {
         productos: productos.map(p => ({
           id_producto: p.id,
           cantidad: p.cantidad,
-          precio_unitario: p.precio,
+          // El mayorista paga precio con descuento: se envía el valor que paga
+          // para que el total guardado en el pedido coincida con lo cobrado.
+          precio_unitario: esMayorista ? Math.round(p.precio * (1 - DESCUENTO_MAYORISTA)) : p.precio,
         })),
       }
 
@@ -94,6 +108,8 @@ export function CarritoProvider({ children }) {
   }
 
   const subtotal = productos.reduce((acc, p) => acc + p.precio * p.cantidad, 0)
+  const esMayorista = obtenerTipoCliente() === 'mayorista'
+  const DESCUENTO = esMayorista ? DESCUENTO_MAYORISTA : DESCUENTO_MINORISTA
   const descuentoMonto = Math.round(subtotal * DESCUENTO)
   const ivaMonto = Math.round((subtotal - descuentoMonto) * IVA)
   const total = subtotal - descuentoMonto + ivaMonto
@@ -114,6 +130,7 @@ export function CarritoProvider({ children }) {
       total,
       DESCUENTO,
       IVA,
+      esMayorista,
     }}>
       {children}
     </CarritoContext.Provider>

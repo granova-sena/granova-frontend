@@ -170,7 +170,7 @@ function DashboardHome() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1D9E75] opacity-60"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#1D9E75]"></span>
             </span>
-            Clientes recientes
+            <span>Clientes recientes</span>
           </h2>
           <div className="space-y-3">
             {cargando ? (

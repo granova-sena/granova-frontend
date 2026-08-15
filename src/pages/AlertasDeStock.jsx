@@ -69,7 +69,7 @@ function AlertasStock() {
     e.preventDefault()
     setErrorModal(null)
 
-    if (cantidad === '' || isNaN(cantidad) || Number(cantidad) < 0) {
+    if (cantidad === '' || Number.isNaN(Number(cantidad)) || Number(cantidad) < 0) {
       setErrorModal('Ingresa una cantidad válida en kg (puede ser 0).')
       return
     }
@@ -161,6 +161,7 @@ function AlertasStock() {
 
                   {estilo.accionTipo === 'primaria' ? (
                     <button
+                      type="button"
                       onClick={() => abrirModal(a)}
                       className="text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition whitespace-nowrap"
                     >
@@ -168,6 +169,7 @@ function AlertasStock() {
                     </button>
                   ) : (
                     <button
+                      type="button"
                       onClick={() => abrirModal(a)}
                       className="text-sm px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
                     >
@@ -182,8 +184,20 @@ function AlertasStock() {
       </div>
 
       {productoModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onClick={() => setProductoModal(null)}>
-          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl p-6 w-full max-w-sm">
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4"
+          role="button"
+          tabIndex={0}
+          aria-label="Cerrar modal"
+          onClick={() => setProductoModal(null)}
+          onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') setProductoModal(null) }}
+        >
+          <div
+            role="presentation"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl p-6 w-full max-w-sm"
+          >
             <h3 className="text-base font-semibold text-gray-800 mb-1">Restablecer stock de {productoModal.nombre}</h3>
             <p className="text-xs text-gray-400 mb-4">
               Stock actual: {productoModal.stock} kg{productoModal.capacidad > 0 ? ` de ${productoModal.capacidad} kg del lote` : ''}
@@ -196,8 +210,9 @@ function AlertasStock() {
                 </div>
               )}
 
-              <label className="block text-sm text-gray-600 mb-1.5">Nueva cantidad total (kg)</label>
+              <label htmlFor="cantidad-reabastecimiento" className="block text-sm text-gray-600 mb-1.5">Nueva cantidad total (kg)</label>
               <input
+                id="cantidad-reabastecimiento"
                 type="number"
                 min="0"
                 onKeyDown={bloquearNoNumerico}

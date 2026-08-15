@@ -27,19 +27,27 @@
     return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   }
 
-  function normalizarRutaAdmin(ruta) {
-    if (!ruta) return null
-    const limpia = ruta.trim().replace(/\/+$/, '') || '/dashboard'
-
-    const yaEsValida = limpia === '/dashboard' || DESTINOS_ADMIN.some(d => d.ruta === limpia)
-    if (yaEsValida) return limpia
-
-    const texto = quitarAcentos(limpia.toLowerCase())
-    const match = DESTINOS_ADMIN.find(d => d.palabras.some(p => texto.includes(p)))
-    if (match) return match.ruta
-
-    return limpia
+  function quitarSlashFinal(texto) {
+  let resultado = texto
+  while (resultado.endsWith('/')) {
+    resultado = resultado.slice(0, -1)
   }
+  return resultado
+}
+
+function normalizarRutaAdmin(ruta) {
+  if (!ruta) return null
+  const limpia = quitarSlashFinal(ruta.trim()) || '/dashboard'
+
+  const yaEsValida = limpia === '/dashboard' || DESTINOS_ADMIN.some(d => d.ruta === limpia)
+  if (yaEsValida) return limpia
+
+  const texto = quitarAcentos(limpia.toLowerCase())
+  const match = DESTINOS_ADMIN.find(d => d.palabras.some(p => texto.includes(p)))
+  if (match) return match.ruta
+
+  return limpia
+}
 
   function AsistenteWidget() {
     const navigate = useNavigate()

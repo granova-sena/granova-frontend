@@ -97,7 +97,7 @@ function ConfigurarPedidoPage() {
 
   const errores = {
     nombre: form.nombre.trim() === '',
-    correo: !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo),
+    correo: !/^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{1,24}$/.test(form.correo),
     telefono: !/^\d{7,15}$/.test(form.telefono.replace(/\s/g, '')),
     direccion: form.direccion.trim() === '',
     ciudad: form.ciudad.trim() === '',
@@ -134,7 +134,7 @@ function ConfigurarPedidoPage() {
       <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
 
         {/* Volver */}
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#9DC9B4] text-sm mb-6 hover:underline">
+        <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#9DC9B4] text-sm mb-6 hover:underline">
           ← Volver
         </button>
 
@@ -172,55 +172,55 @@ function ConfigurarPedidoPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-white/60">Nombre completo *</label>
-                  <input name="nombre" value={form.nombre} onChange={handleChange}
+                  <label htmlFor="nombre-pedido" className="text-xs text-white/60">Nombre completo *</label>
+                  <input id="nombre-pedido" name="nombre" value={form.nombre} onChange={handleChange}
                     placeholder="Juan Pérez" className={inputClase('nombre')} />
                   {intentoContinuar && errores.nombre &&
                     <span className="text-xs text-[#D85A30]">El nombre es obligatorio</span>}
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-white/60">Correo electrónico *</label>
-                  <input name="correo" value={form.correo} onChange={handleChange}
+                  <label htmlFor="correo-pedido" className="text-xs text-white/60">Correo electrónico *</label>
+                  <input id="correo-pedido" name="correo" value={form.correo} onChange={handleChange}
                     type="email" placeholder="correo@ejemplo.com" className={inputClase('correo')} />
                   {intentoContinuar && errores.correo &&
                     <span className="text-xs text-[#D85A30]">Ingresa un correo válido</span>}
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-white/60">Teléfono *</label>
-                  <input name="telefono" value={form.telefono} onChange={handleChange}
+                  <label htmlFor="telefono-pedido" className="text-xs text-white/60">Teléfono *</label>
+                  <input id="telefono-pedido" name="telefono" value={form.telefono} onChange={handleChange}
                     type="tel" placeholder="300 123 4567" className={inputClase('telefono')} />
                   {intentoContinuar && errores.telefono &&
                     <span className="text-xs text-[#D85A30]">Ingresa un teléfono válido</span>}
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-white/60">Número alternativo</label>
-                  <input name="telefonoAlt" value={form.telefonoAlt} onChange={handleChange}
+                  <label htmlFor="telefono-alt-pedido" className="text-xs text-white/60">Número alternativo</label>
+                  <input id="telefono-alt-pedido" name="telefonoAlt" value={form.telefonoAlt} onChange={handleChange}
                     type="tel" placeholder="300 123 4567"
                     className="border border-white/15 bg-white/[0.06] text-white placeholder-white/30 rounded-lg px-4 py-3 text-sm outline-none focus:border-[#6FA98C]" />
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-white/60">Dirección *</label>
-                  <input name="direccion" value={form.direccion} onChange={handleChange}
+                  <label htmlFor="direccion-pedido" className="text-xs text-white/60">Dirección *</label>
+                  <input id="direccion-pedido" name="direccion" value={form.direccion} onChange={handleChange}
                     type="text" placeholder="Calle 123 # 45-67" className={inputClase('direccion')} />
                   {intentoContinuar && errores.direccion &&
                     <span className="text-xs text-[#D85A30]">La dirección es obligatoria</span>}
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-white/60">Ciudad *</label>
-                  <input name="ciudad" value={form.ciudad} onChange={handleChange}
+                  <label htmlFor="ciudad-pedido" className="text-xs text-white/60">Ciudad *</label>
+                  <input id="ciudad-pedido" name="ciudad" value={form.ciudad} onChange={handleChange}
                     type="text" placeholder="Bogotá" className={inputClase('ciudad')} />
                   {intentoContinuar && errores.ciudad &&
                     <span className="text-xs text-[#D85A30]">La ciudad es obligatoria</span>}
                 </div>
 
                 <div className="col-span-1 sm:col-span-2 flex flex-col gap-1">
-                  <label className="text-xs text-white/60">Observaciones (opcional)</label>
-                  <textarea name="observaciones" value={form.observaciones} onChange={handleChange}
+                  <label htmlFor="observaciones-pedido" className="text-xs text-white/60">Observaciones (opcional)</label>
+                  <textarea id="observaciones-pedido" name="observaciones" value={form.observaciones} onChange={handleChange}
                     placeholder="Ej: Instrucciones de entrega, horario, etc." rows={4}
                     className="border border-white/15 bg-white/[0.06] text-white placeholder-white/30 rounded-lg px-4 py-3 text-sm outline-none focus:border-[#6FA98C] resize-none" />
                 </div>
@@ -236,7 +236,7 @@ function ConfigurarPedidoPage() {
               <p className="text-xs text-white/40 mb-6">Elige la opción que más te convenga.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {metodosPago.map(m => (
-                  <button key={m.id} onClick={() => setMetodoPago(m.id)}
+                  <button type="button" key={m.id} onClick={() => setMetodoPago(m.id)}
                     className={`flex items-start justify-between p-4 rounded-xl border-2 text-left transition-colors
                       ${metodoPago === m.id ? 'border-[#6FA98C] bg-[#6FA98C]/10' : 'border-white/15 bg-white/[0.04] hover:border-[#6FA98C]/50'}`}>
                     <div className="flex items-start gap-3">
@@ -273,6 +273,7 @@ function ConfigurarPedidoPage() {
                     <p className="text-sm text-[#D85A30] text-center">{error}</p>
                   )}
                   <button
+                    type="button"
                     onClick={async () => {
                       setCargando(true)
                       setError(null)
@@ -300,6 +301,7 @@ function ConfigurarPedidoPage() {
                     Tu pedido ha sido recibido. Te enviaremos un correo con los detalles.
                   </p>
                   <button
+                    type="button"
                     onClick={() => navigate('/cliente/pedidos')}
                     className="mt-4 bg-[#6FA98C] text-white text-sm px-10 py-3 rounded-xl hover:bg-[#4F8A70] transition-colors"
                   >
@@ -316,12 +318,14 @@ function ConfigurarPedidoPage() {
         {pasoActual < 2 && (
           <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 mt-6 sm:mt-8">
             <button
+              type="button"
               onClick={pasoActual === 0 ? () => navigate(-1) : pasoAnterior}
               className="w-full sm:w-auto border border-white/15 bg-white/[0.06] text-white/70 text-sm px-6 sm:px-8 py-3 rounded-xl hover:bg-white/10 transition-colors"
             >
               ← Volver
             </button>
             <button
+              type="button"
               onClick={siguientePaso}
               className={`w-full sm:w-auto text-white text-sm px-8 sm:px-16 py-3 rounded-xl transition-colors
                 ${pasoActual === 0 && intentoContinuar && !formularioValido

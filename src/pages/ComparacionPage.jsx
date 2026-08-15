@@ -103,6 +103,7 @@ function ComparacionPage() {
         </div>
 
         <button
+          type="button"
           onClick={() => navigate('/cliente/catalogo')}
           className="mt-6 flex items-center gap-2 text-[#9DC9B4] text-sm hover:underline"
         >

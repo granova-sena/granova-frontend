@@ -133,8 +133,9 @@ function ResetPasswordAdmin() {
 
           {/* Nueva contraseña */}
           <div className="mb-2 relative">
-            <label className="block text-sm text-white/70 mb-1.5">Nueva contraseña</label>
+            <label htmlFor="nueva-password-admin" className="block text-sm text-white/70 mb-1.5">Nueva contraseña</label>
             <input
+              id="nueva-password-admin"
               type={verContraseña ? 'text' : 'password'}
               name="nuevaContraseña"
               value={formData.nuevaContraseña}
@@ -165,8 +166,9 @@ function ResetPasswordAdmin() {
 
           {/* Confirmar contraseña */}
           <div className="mb-6 relative">
-            <label className="block text-sm text-white/70 mb-1.5">Confirmar contraseña</label>
+            <label htmlFor="confirmar-password-admin" className="block text-sm text-white/70 mb-1.5">Confirmar contraseña</label>
             <input
+              id="confirmar-password-admin"
               type={verConfirmar ? 'text' : 'password'}
               name="confirmarContraseña"
               value={formData.confirmarContraseña}

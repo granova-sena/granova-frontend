@@ -95,16 +95,17 @@ function Landing() {
 
           {/* Botones desktop */}
           <div className="hidden md:flex items-center gap-3">
-            <button onClick={() => navigate('/login')} className="text-sm text-white/70 hover:text-white transition px-4 py-2">
+            <button type="button" onClick={() => navigate('/login')} className="text-sm text-white/70 hover:text-white transition px-4 py-2">
               Iniciar sesión
             </button>
-            <button onClick={() => navigate('/register')} className="text-sm bg-[#1D9E75] text-white px-4 py-2 rounded-lg hover:bg-[#0F6E56] transition">
+            <button type="button" onClick={() => navigate('/register')} className="text-sm bg-[#1D9E75] text-white px-4 py-2 rounded-lg hover:bg-[#0F6E56] transition">
               Comenzar gratis
             </button>
           </div>
 
           {/* Menú hamburguesa móvil */}
           <button
+            type="button"
             className="md:hidden text-white/70 hover:text-white transition"
             onClick={() => setMenuAbierto(!menuAbierto)}
           >
@@ -127,10 +128,10 @@ function Landing() {
             <a href="#nosotros" onClick={() => setMenuAbierto(false)} className="text-sm text-white/70 hover:text-[#5DCAA5] transition py-2">Nosotros</a>
             <a href="#proceso" onClick={() => setMenuAbierto(false)} className="text-sm text-white/70 hover:text-[#5DCAA5] transition py-2">Proceso</a>
             <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
-              <button onClick={() => navigate('/login')} className="text-sm text-white/70 hover:text-white transition py-2 text-left">
+              <button type="button" onClick={() => navigate('/login')} className="text-sm text-white/70 hover:text-white transition py-2 text-left">
                 Iniciar sesión
               </button>
-              <button onClick={() => navigate('/register')} className="text-sm bg-[#1D9E75] text-white px-4 py-2.5 rounded-lg hover:bg-[#0F6E56] transition text-center">
+              <button type="button" onClick={() => navigate('/register')} className="text-sm bg-[#1D9E75] text-white px-4 py-2.5 rounded-lg hover:bg-[#0F6E56] transition text-center">
                 Comenzar gratis
               </button>
             </div>
@@ -148,17 +149,18 @@ function Landing() {
             <span className="text-xs text-white/80">Café colombiano de origen</span>
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-white mb-4 sm:mb-6 leading-tight">
-            El mejor café
+            <span>El mejor café</span>
             <span className="block text-[#1D9E75]">directo a ti</span>
           </h1>
           <p className="text-base sm:text-lg text-white/70 mb-8 sm:mb-10 max-w-2xl mx-auto leading-relaxed px-2">
             Conectamos fincas cafeteras colombianas con empresas y hogares que valoran la calidad real. Sin intermediarios, sin compromisos.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 sm:px-0">
-            <button onClick={() => navigate('/register')} className="px-6 sm:px-8 py-3.5 sm:py-4 bg-[#1D9E75] text-white rounded-xl font-medium text-sm hover:bg-[#0F6E56] transition-all duration-300 hover:scale-105">
+            <button type="button" onClick={() => navigate('/register')} className="px-6 sm:px-8 py-3.5 sm:py-4 bg-[#1D9E75] text-white rounded-xl font-medium text-sm hover:bg-[#0F6E56] transition-all duration-300 hover:scale-105">
               Comenzar gratis →
             </button>
             <button
+              type="button"
               onClick={() => document.getElementById('nosotros').scrollIntoView({ behavior: 'smooth' })}
               className="px-6 sm:px-8 py-3.5 sm:py-4 text-white rounded-xl font-medium text-sm transition-all duration-300 hover:bg-white/10"
               style={{ border: '1px solid rgba(255,255,255,0.2)' }}
@@ -252,17 +254,17 @@ function Landing() {
         <div className="absolute inset-0 bg-gradient-to-r from-[#1D9E75]/10 to-transparent"></div>
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center fade-up">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 sm:mb-6">
-            ¿Listo para probar el
+            <span>¿Listo para probar el</span>
             <span className="text-[#1D9E75]"> mejor café</span>?
           </h2>
           <p className="text-white/60 mb-8 sm:mb-10 text-base sm:text-lg max-w-2xl mx-auto">
             Únete a cientos de empresas y hogares que ya disfrutan del café colombiano más puro, directo desde la finca.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 sm:px-0">
-            <button onClick={() => navigate('/register')} className="px-8 sm:px-10 py-3.5 sm:py-4 bg-[#1D9E75] text-white rounded-xl font-medium hover:bg-[#0F6E56] transition-all duration-300 hover:scale-105">
+            <button type="button" onClick={() => navigate('/register')} className="px-8 sm:px-10 py-3.5 sm:py-4 bg-[#1D9E75] text-white rounded-xl font-medium hover:bg-[#0F6E56] transition-all duration-300 hover:scale-105">
               Crear cuenta gratis →
             </button>
-            <button onClick={() => navigate('/login')} className="px-8 sm:px-10 py-3.5 sm:py-4 text-white rounded-xl font-medium transition-all duration-300 hover:bg-white/5" style={{ border: '1px solid rgba(255,255,255,0.2)' }}>
+            <button type="button" onClick={() => navigate('/login')} className="px-8 sm:px-10 py-3.5 sm:py-4 text-white rounded-xl font-medium transition-all duration-300 hover:bg-white/5" style={{ border: '1px solid rgba(255,255,255,0.2)' }}>
               Iniciar sesión
             </button>
           </div>
@@ -298,7 +300,7 @@ function Landing() {
               <p className="text-xs sm:text-sm text-white/50 mb-3">Recibe novedades y promociones exclusivas.</p>
               <div className="flex gap-2">
                 <input type="email" placeholder="tucorreo@ejemplo.com" className="flex-1 px-3 py-2 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }} />
-                <button className="px-3 py-2 bg-[#1D9E75] text-white rounded-lg text-sm hover:bg-[#0F6E56] transition">→</button>
+                <button type="button" className="px-3 py-2 bg-[#1D9E75] text-white rounded-lg text-sm hover:bg-[#0F6E56] transition">→</button>
               </div>
             </div>
           </div>

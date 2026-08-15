@@ -60,6 +60,7 @@ function Promociones() {
           <p className="text-white font-medium mb-1">¿Listo para aprovechar tu 15% de descuento VIP?</p>
           <p className="text-white/50 text-sm mb-5">Se aplica automáticamente al agregar productos al carrito.</p>
           <button
+            type="button"
             onClick={() => navigate('/cliente/catalogo')}
             className="px-6 py-3 bg-white/[0.08] backdrop-blur-xl text-white rounded-xl text-sm font-medium hover:bg-white/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1a0a]"
           >

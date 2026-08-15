@@ -103,6 +103,7 @@ function ReportesVentas() {
         </div>
         <div className="flex flex-wrap gap-2">
           <button
+            type="button"
             onClick={descargarPDF}
             disabled={generandoPdf || cargando}
             className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-[#9d351c] text-white border border-[#832b18] hover:bg-[#8a2f17] transition disabled:opacity-50"
@@ -116,6 +117,7 @@ function ReportesVentas() {
         <span className="text-sm font-medium mr-2 text-admin-heading">Periodo:</span>
         {PERIODOS.map((p) => (
           <button
+            type="button"
             key={p.valor}
             onClick={() => setPeriodoActivo(p.valor)}
             className={`text-sm px-4 py-1.5 rounded-lg transition ${

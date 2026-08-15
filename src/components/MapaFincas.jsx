@@ -228,7 +228,7 @@ function MapaFincas() {
           const { lat, lon} = resultados [0];
 
 
-          setResultadoBusqueda ({lat: parseFloat(lat), lng: parseFloat(lon)});
+          setResultadoBusqueda ({lat: Number.parseFloat(lat), lng: Number.parseFloat(lon)});
           toast.success("Zona encontrada", {id: "success-busqueda-mapa"});
 
 
@@ -291,6 +291,7 @@ console.error('Error en MapaFincas:', error)
         style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}
       >
         <button
+          type="button"
           onClick={solicitarUbicacion}
           disabled={buscandoUbicacion}
           className="w-full sm:w-auto px-4 py-2 bg-[#6FA98C] text-white rounded-lg text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50 disabled:cursor-not-allowed"

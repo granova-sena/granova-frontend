@@ -19,7 +19,7 @@ function OlvidePasswordAdmin() {
       return
     }
 
-    const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    const emailValido = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{1,24}$/.test(email)
     if (!emailValido) {
       toast.error('Ingresa un correo electrónico válido', { id: 'error-olvide-admin' })
       return
@@ -70,8 +70,9 @@ function OlvidePasswordAdmin() {
 
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
-            <label className="block text-sm text-white/70 mb-1.5">Correo electrónico</label>
+            <label htmlFor="email-olvide-admin" className="block text-sm text-white/70 mb-1.5">Correo electrónico</label>
             <input
+              id="email-olvide-admin"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -86,9 +87,9 @@ function OlvidePasswordAdmin() {
           </button>
 
           <p className="text-center text-sm text-white/50">
-            <span className="text-[#5DCAA5] cursor-pointer hover:underline" onClick={() => navigate('/control-interno')}>
+            <button type="button" className="text-[#5DCAA5] cursor-pointer hover:underline bg-transparent border-0 p-0 font-inherit" onClick={() => navigate('/control-interno')}>
               Volver al panel administrativo
-            </span>
+            </button>
           </p>
         </form>
 

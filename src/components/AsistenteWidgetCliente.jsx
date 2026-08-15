@@ -31,7 +31,9 @@ function quitarAcentos(texto) {
 
 function normalizarRuta(ruta) {
   if (!ruta) return null
-  const limpia = ruta.trim().replace(/\/+$/, '') || '/cliente'
+  let limpia = ruta.trim()
+  while (limpia.endsWith('/')) limpia = limpia.slice(0, -1)
+  limpia = limpia || '/cliente'
 
   // Si ya es exactamente una ruta real del cliente, no hace falta tocarla.
   const yaEsValida = limpia === '/cliente' || DESTINOS_CLIENTE.some(d => d.ruta === limpia)
@@ -169,6 +171,7 @@ function AsistenteWidgetCliente() {
               </div>
             </div>
             <button
+              type="button"
               onClick={() => setAbierto(false)}
               className="w-7 h-7 rounded-lg flex items-center justify-center transition relative"
               style={{ color: 'rgba(234,255,242,0.5)' }}
@@ -273,6 +276,7 @@ function AsistenteWidgetCliente() {
 
       {/* Botón flotante */}
       <button
+        type="button"
         onClick={() => {
           const cliente = obtenerClienteSesion()
           if (!cliente) {

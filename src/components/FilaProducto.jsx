@@ -24,6 +24,7 @@ function FilaProducto({ id, imagen, nombre, presentacion, precio }) {
       {/* Cantidad */}
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={() => disminuirCantidad(id)}
           className="text-white/40 hover:text-white text-lg leading-none transition"
         >
@@ -31,12 +32,14 @@ function FilaProducto({ id, imagen, nombre, presentacion, precio }) {
         </button>
         <span className="text-sm text-white w-4 text-center">{cantidad}</span>
         <button
+          type="button"
           onClick={() => aumentarCantidad(id)}
           className="text-white/40 hover:text-white text-lg leading-none transition"
         >
           +
         </button>
         <button
+          type="button"
           onClick={() => eliminarProducto(id)}
           className="ml-2 text-white/40 hover:text-[#D85A30] text-xs transition-colors"
         >

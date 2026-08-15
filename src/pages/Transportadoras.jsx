@@ -42,7 +42,7 @@ function Transportadoras() {
           <h1 className="text-xl font-semibold text-admin-page-title">Transportadoras</h1>
           <p className="text-sm text-admin-page-subtitle">Gestión de empresas logísticas y rendimiento de entregas</p>
         </div>
-        <button className="text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition whitespace-nowrap">
+        <button type="button" className="text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition whitespace-nowrap">
           + Agregar aliada
         </button>
       </div>
