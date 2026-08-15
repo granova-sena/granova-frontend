@@ -2,9 +2,9 @@ import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { API_URL } from "../config";
+import { useCarrito } from '../context/CarritoContext'
 
 const ETIQUETAS_TIPO_PERSONA = { natural: 'Persona natural', juridica: 'Persona jurídica' }
-const ETIQUETAS_TIPO_CLIENTE = { minorista: 'Minorista', mayorista: 'Mayorista' }
 const ETIQUETAS_TIPO_DOCUMENTO = { CC: 'Cédula de ciudadanía (CC)', CE: 'Cédula de extranjería (CE)', NIT: 'NIT', PASAPORTE: 'Pasaporte' }
 
 const IconoUsuario = (props) => (
@@ -19,14 +19,19 @@ const IconoSalir = (props) => (
 
 function MiCuenta() {
   const navigate = useNavigate()
+  const { cliente: clienteContexto, actualizarPerfilCliente } = useCarrito()
 
-  const cliente = (() => {
+  // El contexto trae el perfil sincronizado con el servidor (fuente de verdad);
+  // si quedó vacío (p. ej. el provider montó antes del login), se cae a la
+  // caché de localStorage para no mostrar la cuenta en blanco.
+  const clienteLocal = (() => {
     try {
       return JSON.parse(localStorage.getItem('cliente')) || {}
     } catch {
       return {}
     }
   })()
+  const cliente = (clienteContexto && clienteContexto.nombre) ? clienteContexto : clienteLocal
 
   const [editando, setEditando] = useState(false)
   const [guardando, setGuardando] = useState(false)
@@ -100,11 +105,11 @@ function MiCuenta() {
         return
       }
 
-      const clienteActualizado = { ...cliente, ...datos.data }
-      localStorage.setItem('cliente', JSON.stringify(clienteActualizado))
+      // El contexto refresca la caché y re-renderiza la pantalla al instante
+      // (sin window.location.reload: el barco no necesita hundirse para repararse)
+      actualizarPerfilCliente(datos.data)
       toast.success('Identificación actualizada', { id: 'perfil-identificacion' })
       setEditando(false)
-      window.location.reload()
     } catch (error) {
       console.error('Error actualizando identificación:', error)
       toast.error('No se pudo conectar con el servidor', { id: 'perfil-identificacion' })
@@ -114,12 +119,13 @@ function MiCuenta() {
   }
 
   const tieneDocumento = Boolean(cliente.numero_documento)
+  const tienePremio = cliente.descuento_proxima_compra === true
+  const esJuridica = cliente.tipo_persona === 'juridica'
 
   const campos = [
     { label: 'Nombre completo', valor: [cliente.nombre, cliente.apellido].filter(Boolean).join(' ') || '—' },
     { label: 'Correo electrónico', valor: cliente.email || '—' },
-    { label: 'Tipo de cliente', valor: ETIQUETAS_TIPO_CLIENTE[cliente.tipo_cliente] || '—' },
-    { label: 'Miembro desde', valor: cliente.fecha_creacion ? new Date(cliente.fecha_creacion).toLocaleDateString('es-CO', { year: 'numeric', month: 'long' }) : '—' },
+    { label: 'Miembro desde', valor: cliente.fecha_registro ? new Date(cliente.fecha_registro).toLocaleDateString('es-CO', { day: 'numeric', year: 'numeric', month: 'long' }) : '—' },
   ]
 
   const camposIdentificacion = [
@@ -172,6 +178,37 @@ function MiCuenta() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* DESCUENTOS (EMPRESA / PREMIO) */}
+        <div className={`rounded-2xl p-6 sm:p-8 mb-5 border shadow-sm ${(esJuridica || tienePremio) ? 'bg-[#6FA98C]/15 border-[#6FA98C]/40' : 'bg-white/[0.08] border-white/15'}`}>
+          {esJuridica ? (
+            <>
+              <p className="text-lg font-semibold text-white mb-1">🏢 Tienes 10% de descuento en todos tus pedidos</p>
+              <p className="text-sm text-white/60 leading-relaxed">
+                Por comprar como empresa, el 10% se aplica automáticamente en cada pedido.
+              </p>
+            </>
+          ) : tienePremio ? (
+            <>
+              <p className="text-lg font-semibold text-white mb-1">🎉 ¡Tienes 10% de descuento disponible!</p>
+              <p className="text-sm text-white/60 leading-relaxed">
+                Gracias a tu última compra al por mayor. Se aplicará automáticamente en tu próxima compra.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-semibold text-white mb-1">🔥 Compra al por mayor y gana descuento</p>
+              <p className="text-sm text-white/60 leading-relaxed">
+                Lleva 5 o más productos en un pedido y ganas 10% de descuento para tu próxima compra.
+              </p>
+              {!tieneDocumento && (
+                <p className="text-sm text-[#9DC9B4] mt-3 leading-relaxed">
+                  💡 ¿Compras como empresa? Registra tu NIT en la sección Identificación y obtén 10% en todos tus pedidos.
+                </p>
+              )}
+            </>
+          )}
         </div>
 
         {/* IDENTIFICACIÓN */}

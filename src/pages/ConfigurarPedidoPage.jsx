@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useCarrito } from '../context/CarritoContext'
+import toast from 'react-hot-toast'
+import { API_URL } from "../config";
 
 const pasos = ['Datos y dirección', 'Método de pago', 'Confirmación']
 
@@ -15,7 +17,7 @@ const metodosPago = [
 const camposObligatorios = ['nombre', 'correo', 'telefono', 'direccion', 'ciudad']
 
 function ResumenLateral() {
-  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, productos } = useCarrito()
+  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, productos, esJuridica, tienePremio } = useCarrito()
 
   return (
     <div className="w-full lg:w-72 shrink-0 flex flex-col gap-4">
@@ -29,10 +31,14 @@ function ResumenLateral() {
             <span className="text-white/60">Subtotal</span>
             <span className="text-white">${subtotal.toLocaleString()}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-white/60">Descuento ({(DESCUENTO * 100).toFixed(0)}%)</span>
-            <span className="text-[#9DC9B4]">- ${descuentoMonto.toLocaleString()}</span>
-          </div>
+          {(esJuridica || tienePremio) && (
+            <div className="flex justify-between">
+              <span className="text-white/60">
+                {esJuridica ? '🏢 Descuento empresa' : '🎉 Descuento'} ({(DESCUENTO * 100).toFixed(0)}%)
+              </span>
+              <span className="text-[#9DC9B4]">- ${descuentoMonto.toLocaleString()}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-white/60">IVA ({(IVA * 100).toFixed(0)}%)</span>
             <span className="text-white">${ivaMonto.toLocaleString()}</span>
@@ -73,7 +79,7 @@ function ResumenLateral() {
 
 function ConfigurarPedidoPage() {
   const navigate = useNavigate()
-  const { guardarDatosCliente, confirmarPedido } = useCarrito()
+  const { guardarDatosCliente, confirmarPedido, actualizarPerfilCliente } = useCarrito()
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
   const [idPedido, setIdPedido] = useState(null)
@@ -91,8 +97,102 @@ function ConfigurarPedidoPage() {
     observaciones: '',
   })
 
+  // Facturación (PN/PJ) — como MercadoLibre: solo si el cliente la necesita.
+  // - Si ya guardó su facturación (checkout o Mi Cuenta): se muestra un banner
+  //   compacto permanente, sin formulario (la edición se hace desde Mi Cuenta).
+  // - Si no tiene datos: toggle "¿Necesitas factura?" + formulario opcional.
+  const clienteGuardado = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('cliente')) || {}
+    } catch {
+      return {}
+    }
+  })()
+
+  const tieneFacturacionGuardada = Boolean(clienteGuardado.numero_documento)
+
+  const [necesitaFactura, setNecesitaFactura] = useState(false)
+  const [formFactura, setFormFactura] = useState({
+    tipo_persona: clienteGuardado.tipo_persona || 'natural',
+    tipo_documento: clienteGuardado.tipo_documento || 'CC',
+    numero_documento: clienteGuardado.numero_documento || '',
+    digito_verificacion: clienteGuardado.digito_verificacion || '',
+    razon_social: clienteGuardado.razon_social || '',
+  })
+  const [premioGanado, setPremioGanado] = useState(false)
+
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  const handleCambioFactura = (e) => {
+    const { name, value } = e.target
+    setFormFactura(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'tipo_persona' ? { tipo_documento: value === 'juridica' ? 'NIT' : 'CC' } : {}),
+    }))
+  }
+
+  // Guarda los datos de facturación en el perfil del cliente (para las próximas compras)
+  // y actualiza el estado del carrito al instante (si se identifica como empresa,
+  // el 10% de empresa se refleja en el resumen de inmediato).
+  async function guardarFacturacion() {
+    const clienteGuardado = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('cliente')) || {}
+      } catch {
+        return {}
+      }
+    })()
+
+    if (!clienteGuardado.id) {
+      return { ok: false, mensaje: 'Debes iniciar sesión para facturar' }
+    }
+
+    if (!formFactura.numero_documento.trim()) {
+      return { ok: false, mensaje: 'El número de documento es obligatorio para facturar' }
+    }
+
+    if (formFactura.tipo_persona === 'juridica') {
+      if (!formFactura.razon_social.trim()) {
+        return { ok: false, mensaje: 'La razón social es obligatoria para personas jurídicas' }
+      }
+      if (!formFactura.digito_verificacion.trim()) {
+        return { ok: false, mensaje: 'El dígito de verificación del NIT es obligatorio' }
+      }
+    }
+
+    const token = localStorage.getItem('token')
+
+    try {
+      const respuesta = await fetch(`${API_URL}/api/clientes/${clienteGuardado.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          tipo_persona: formFactura.tipo_persona,
+          tipo_documento: formFactura.tipo_documento,
+          numero_documento: formFactura.numero_documento.trim(),
+          digito_verificacion: formFactura.tipo_persona === 'juridica' ? formFactura.digito_verificacion.trim() : null,
+          razon_social: formFactura.tipo_persona === 'juridica' ? formFactura.razon_social.trim() : null,
+        }),
+      })
+
+      const datos = await respuesta.json()
+
+      if (!respuesta.ok) {
+        return { ok: false, mensaje: datos.mensaje || 'Error guardando los datos de facturación' }
+      }
+
+      actualizarPerfilCliente(datos.data)
+      return { ok: true }
+    } catch (error) {
+      console.error('Error guardando facturación:', error.message)
+      return { ok: false, mensaje: 'No se pudo conectar con el servidor' }
+    }
   }
 
   const errores = {
@@ -225,6 +325,121 @@ function ConfigurarPedidoPage() {
                     className="border border-white/15 bg-white/[0.06] text-white placeholder-white/30 rounded-lg px-4 py-3 text-sm outline-none focus:border-[#6FA98C] resize-none" />
                 </div>
 
+                {/* Facturación */}
+                <div className="col-span-1 sm:col-span-2 flex flex-col gap-3 border-t border-white/10 pt-4">
+                  {tieneFacturacionGuardada ? (
+                    <div className="flex items-start gap-3 rounded-xl px-4 py-3 bg-[#6FA98C]/10 border border-[#6FA98C]/25">
+                      <span className="text-lg">🧾</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white">
+                          Usando tu facturación guardada: <span className="font-semibold">{formFactura.tipo_persona === 'juridica' ? 'Persona jurídica' : 'Persona natural'}</span> · {formFactura.tipo_documento} {formFactura.numero_documento}
+                        </p>
+                        <p className="text-xs text-white/50 mt-1">
+                          ¿Cambió tu información?{' '}
+                          <button
+                            type="button"
+                            onClick={() => navigate('/cliente/cuenta')}
+                            className="text-[#9DC9B4] hover:underline bg-transparent border-0 p-0 cursor-pointer"
+                          >
+                            Edítala en Mi cuenta
+                          </button>
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setNecesitaFactura(!necesitaFactura)}
+                        className="flex items-center gap-2 text-left text-sm text-white/70 hover:text-white transition-colors"
+                      >
+                        <span className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${necesitaFactura ? 'border-[#6FA98C]' : 'border-white/30'}`}>
+                          {necesitaFactura && <span className="w-2 h-2 rounded-full bg-[#6FA98C]" />}
+                        </span>
+                        ¿Necesitas factura? (opcional)
+                      </button>
+
+                      {necesitaFactura && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="flex rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                        {['natural', 'juridica'].map((valor) => (
+                          <button
+                            key={valor}
+                            type="button"
+                            onClick={() => handleCambioFactura({ target: { name: 'tipo_persona', value: valor } })}
+                            className={`flex-1 py-2 text-xs font-medium transition ${formFactura.tipo_persona === valor ? 'bg-[#6FA98C] text-white' : 'text-white/60 hover:text-white'}`}
+                          >
+                            {valor === 'natural' ? 'Persona natural' : 'Persona jurídica'}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label htmlFor="tipo-documento-factura" className="text-xs text-white/60">Tipo de documento</label>
+                        <select
+                          id="tipo-documento-factura"
+                          name="tipo_documento"
+                          value={formFactura.tipo_documento}
+                          onChange={handleCambioFactura}
+                          disabled={formFactura.tipo_persona === 'juridica'}
+                          className="border border-white/15 bg-white/[0.06] text-white rounded-lg px-4 py-3 text-sm outline-none focus:border-[#6FA98C] disabled:opacity-50"
+                        >
+                          {formFactura.tipo_persona === 'juridica' ? (
+                            <option value="NIT">NIT</option>
+                          ) : (
+                            <>
+                              <option value="CC">CC</option>
+                              <option value="CE">CE</option>
+                              <option value="PASAPORTE">Pasaporte</option>
+                            </>
+                          )}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label htmlFor="numero-documento-factura" className="text-xs text-white/60">Número de documento</label>
+                        <input
+                          id="numero-documento-factura"
+                          name="numero_documento"
+                          value={formFactura.numero_documento}
+                          onChange={handleCambioFactura}
+                          placeholder={formFactura.tipo_persona === 'juridica' ? 'Número del NIT' : 'Tu cédula'}
+                          className="border border-white/15 bg-white/[0.06] text-white placeholder-white/30 rounded-lg px-4 py-3 text-sm outline-none focus:border-[#6FA98C]"
+                        />
+                      </div>
+
+                      {formFactura.tipo_persona === 'juridica' && (
+                        <>
+                          <div className="flex flex-col gap-1">
+                            <label htmlFor="razon-social-factura" className="text-xs text-white/60">Razón social</label>
+                            <input
+                              id="razon-social-factura"
+                              name="razon_social"
+                              value={formFactura.razon_social}
+                              onChange={handleCambioFactura}
+                              placeholder="Nombre de la empresa"
+                              className="border border-white/15 bg-white/[0.06] text-white placeholder-white/30 rounded-lg px-4 py-3 text-sm outline-none focus:border-[#6FA98C]"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label htmlFor="digito-verificacion-factura" className="text-xs text-white/60">Dígito de verificación</label>
+                            <input
+                              id="digito-verificacion-factura"
+                              name="digito_verificacion"
+                              value={formFactura.digito_verificacion}
+                              onChange={handleCambioFactura}
+                              placeholder="Último dígito del NIT"
+                              className="border border-white/15 bg-white/[0.06] text-white placeholder-white/30 rounded-lg px-4 py-3 text-sm outline-none focus:border-[#6FA98C]"
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
               </div>
             </div>
           )}
@@ -277,9 +492,27 @@ function ConfigurarPedidoPage() {
                     onClick={async () => {
                       setCargando(true)
                       setError(null)
+
+                      if (necesitaFactura && !tieneFacturacionGuardada) {
+                        const resultadoFactura = await guardarFacturacion()
+                        if (!resultadoFactura.ok) {
+                          setError(resultadoFactura.mensaje)
+                          setCargando(false)
+                          return
+                        }
+                        toast.success('Datos de facturación guardados')
+                      }
+
                       const resultado = await confirmarPedido(form, metodoPago)
                       if (resultado.ok) {
                         setIdPedido(resultado.id_pedido)
+                        if (resultado.descuento_empresa) {
+                          toast.success('🏢 ¡Descuento de empresa aplicado en tu pedido!')
+                        }
+                        if (resultado.descuento_ganado) {
+                          setPremioGanado(true)
+                          toast.success('🎉 ¡Ganaste 10% de descuento en tu próxima compra!')
+                        }
                       } else {
                         setError(resultado.mensaje)
                       }
@@ -300,6 +533,11 @@ function ConfigurarPedidoPage() {
                   <p className="text-sm text-white/50 text-center max-w-xs">
                     Tu pedido ha sido recibido. Te enviaremos un correo con los detalles.
                   </p>
+                  {premioGanado && (
+                    <p className="text-sm text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/20 rounded-lg px-4 py-2 text-center">
+                      🎉 ¡Ganaste 10% de descuento para tu próxima compra!
+                    </p>
+                  )}
                   <button
                     type="button"
                     onClick={() => navigate('/cliente/pedidos')}

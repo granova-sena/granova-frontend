@@ -189,6 +189,7 @@ export function CarritoProvider({ children }) {
       guardarDatosCliente,
       confirmarPedido,
       actualizarPerfilCliente,
+      cliente: clienteActual,
       subtotal,
       descuentoMonto,
       ivaMonto,
