@@ -4,10 +4,12 @@ const CarritoContext = createContext()
 
 const productosIniciales = []
 
-// Frente 1 (Jhon): descuento diferenciado por tipo de cliente.
-// Ajustar estos valores según la política comercial de Granova.
+// Frente 1 (Jhon): descuento diferenciado por tipo de cliente y volumen.
+// Minorista: 6% solo si lleva 5+ unidades en el carrito.
+// Mayorista: 12% siempre. Ajustar valores según política comercial.
 const DESCUENTO_MINORISTA = 0.06
 const DESCUENTO_MAYORISTA = 0.12
+const UNIDADES_MINIMAS_DESCUENTO_MINORISTA = 5
 const IVA = 0.19
 
 // ── CONFIG API ────────────────────────────────────────────
@@ -53,9 +55,9 @@ export function CarritoProvider({ children }) {
         productos: productos.map(p => ({
           id_producto: p.id,
           cantidad: p.cantidad,
-          // El mayorista paga precio con descuento: se envía el valor que paga
-          // para que el total guardado en el pedido coincida con lo cobrado.
-          precio_unitario: esMayorista ? Math.round(p.precio * (1 - DESCUENTO_MAYORISTA)) : p.precio,
+          // Se envía el precio efectivo (con descuento si aplica) para que
+          // el total guardado en el pedido coincida con lo que paga el cliente.
+          precio_unitario: Math.round(p.precio * (1 - DESCUENTO)),
         })),
       }
 
@@ -108,8 +110,14 @@ export function CarritoProvider({ children }) {
   }
 
   const subtotal = productos.reduce((acc, p) => acc + p.precio * p.cantidad, 0)
+  const totalUnidades = productos.reduce((acc, p) => acc + p.cantidad, 0)
   const esMayorista = obtenerTipoCliente() === 'mayorista'
-  const DESCUENTO = esMayorista ? DESCUENTO_MAYORISTA : DESCUENTO_MINORISTA
+  const DESCUENTO = esMayorista
+    ? DESCUENTO_MAYORISTA
+    : (totalUnidades >= UNIDADES_MINIMAS_DESCUENTO_MINORISTA ? DESCUENTO_MINORISTA : 0)
+  const unidadesFaltantes = esMayorista
+    ? 0
+    : Math.max(0, UNIDADES_MINIMAS_DESCUENTO_MINORISTA - totalUnidades)
   const descuentoMonto = Math.round(subtotal * DESCUENTO)
   const ivaMonto = Math.round((subtotal - descuentoMonto) * IVA)
   const total = subtotal - descuentoMonto + ivaMonto
@@ -131,6 +139,8 @@ export function CarritoProvider({ children }) {
       DESCUENTO,
       IVA,
       esMayorista,
+      totalUnidades,
+      unidadesFaltantes,
     }}>
       {children}
     </CarritoContext.Provider>

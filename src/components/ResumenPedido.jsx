@@ -3,7 +3,7 @@ import { useCarrito } from '../context/CarritoContext'
 
 function ResumenPedido() {
   const navigate = useNavigate()
-  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, esMayorista } = useCarrito()
+  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, esMayorista, unidadesFaltantes } = useCarrito()
 
   return (
     <div className="w-80 flex flex-col gap-4">
@@ -20,10 +20,17 @@ function ResumenPedido() {
             <span className="text-sm text-white/60">Subtotal</span>
             <span className="text-sm text-white">${subtotal.toLocaleString()}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-white/60">{esMayorista ? 'Descuento mayorista' : 'Descuento'} {(DESCUENTO * 100).toFixed(0)}%</span>
-            <span className="text-sm text-[#9DC9B4]">- ${descuentoMonto.toLocaleString()}</span>
-          </div>
+          {DESCUENTO > 0 && (
+            <div className="flex justify-between">
+              <span className="text-sm text-white/60">{esMayorista ? 'Descuento mayorista' : 'Descuento'} {(DESCUENTO * 100).toFixed(0)}%</span>
+              <span className="text-sm text-[#9DC9B4]">- ${descuentoMonto.toLocaleString()}</span>
+            </div>
+          )}
+          {unidadesFaltantes > 0 && (
+            <div className="text-xs text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/20 rounded-lg px-3 py-2">
+              🔥 Lleva {unidadesFaltantes} producto{unidadesFaltantes === 1 ? '' : 's'} más y obtén 6% de descuento
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-sm text-white/60">IVA {(IVA * 100).toFixed(0)}%</span>
             <span className="text-sm text-white">${ivaMonto.toLocaleString()}</span>
