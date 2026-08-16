@@ -820,6 +820,8 @@ const SECCIONES = [
 ];
 
 function CatalogoInterno() {
+  const navigate = useNavigate()
+  const { cliente } = useCarrito()
   const [searchParams, setSearchParams] = useSearchParams();
   const seccionParam = searchParams.get("seccion");
   // La URL es la única fuente de verdad de la pestaña activa:
@@ -1169,6 +1171,20 @@ function CatalogoInterno() {
             <>
               {/* PRODUCTO DEL DÍA */}
               {productoDelDia && <ProductoDelDiaBanner producto={productoDelDia} onAgregar={agregar} onVerDetalle={verDetalle} />}
+
+              {/* BANNER B2B (Frente C): captación de empresas */}
+              <div className="rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4" style={{ background: '#0F1D13', border: '1px solid rgba(111,169,140,0.35)' }}>
+                <span className="text-3xl">🏢</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-semibold">¿Compras para tu negocio?</p>
+                  <p className="text-sm text-white/50 mt-1">10% en todos tus pedidos + precios por bulto y descuentos por volumen.</p>
+                </div>
+                {cliente?.tipo_persona === 'juridica' ? (
+                  <span className="shrink-0 text-xs text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/30 rounded-full px-3.5 py-2">🏢 Ya tienes tu 10%</span>
+                ) : (
+                  <button type="button" onClick={() => navigate('/cliente/empresas')} className="shrink-0 h-10 px-5 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">Granova Empresas →</button>
+                )}
+              </div>
 
               {/* RECOMENDADO PARA TI */}
               {recomendaciones.length > 0 && (

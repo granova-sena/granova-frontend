@@ -35,6 +35,7 @@ import ConfigurarPedidoPage from './pages/ConfigurarPedidoPage'
 import EstadoPedidoPage from './pages/EstadoPedidoPage'
 import TrazabilidadLotePage from './pages/TrazabilidadLotePage'
 import ComparacionPage from './pages/ComparacionPage'
+import Empresas from './pages/Empresas'
 
 function App() {
   return (
@@ -89,6 +90,7 @@ function App() {
           <Route path="configurar-pedido" element={<ConfigurarPedidoPage />} />
           <Route path="trazabilidad/:id" element={<TrazabilidadLotePage />} />
           <Route path="comparar" element={<ComparacionPage />} />
+          <Route path="empresas" element={<Empresas />} />
         </Route>
 
         {/* Compatibilidad: cualquier link viejo a /catalogo cae en la vista nueva */}
