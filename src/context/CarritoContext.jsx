@@ -39,6 +39,7 @@ export function CarritoProvider({ children }) {
   const [productos, setProductos] = useState(productosIniciales)
   const [datosCliente, setDatosCliente] = useState(null)
   const [clienteActual, setClienteActual] = useState(() => obtenerCliente())
+  const [descuentosVolumen, setDescuentosVolumen] = useState([])
   // El premio se lee al montar el carrito; después se actualiza con la respuesta
   // de cada pedido (si ganó, el backend devuelve descuento_ganado) o al guardar
   // los datos de facturación (si se identifica como empresa, aplica el 10% fijo).
@@ -154,6 +155,18 @@ export function CarritoProvider({ children }) {
     setDatosCliente(datos)
   }
 
+  // Escalones de descuento por volumen (frente B): el carrito muestra el
+  // MISMO descuento que aplicará el backend. Si el servidor no responde,
+  // se queda vacío y el carrito sigue funcionando con empresa/premio.
+  useEffect(() => {
+    fetch(`${API_URL}/productos/descuentos`)
+      .then(res => res.json())
+      .then(json => {
+        if (json.ok) setDescuentosVolumen(json.data || [])
+      })
+      .catch(() => {})
+  }, [])
+
   // Sincronización del perfil: el servidor es la fuente de verdad.
   // Al abrir la app, si hay sesión, traemos el perfil fresco (fecha_creacion,
   // tipo_persona, premio, etc.) y refrescamos el localStorage — así los usuarios
@@ -184,7 +197,26 @@ export function CarritoProvider({ children }) {
 
   const subtotal = productos.reduce((acc, p) => acc + p.precio * p.cantidad, 0)
   const totalUnidades = productos.reduce((acc, p) => acc + p.cantidad, 0)
-  const DESCUENTO = (esJuridica || tienePremio) ? DESCUENTO_EMPRESA : 0
+  // Kg de café del carrito: ítems con formato usan peso_kg × cantidad;
+  // ítems legacy de café (unidad 'kg') cuentan la cantidad como kg.
+  const totalKgCafe = productos.reduce((acc, p) => {
+    if (p.peso_kg) return acc + p.peso_kg * p.cantidad
+    if (p.unidad === 'kg') return acc + p.cantidad
+    return acc
+  }, 0)
+  const tier = descuentosVolumen.find(t =>
+    totalKgCafe >= Number(t.kg_min) && (t.kg_max === null || totalKgCafe <= Number(t.kg_max))
+  )
+  const volumenPct = tier ? Number(tier.descuento_pct) : 0
+  // EL MAYOR GANA (igual que el backend): volumen vs empresa 10% vs premio 10%
+  const fuentes = [
+    { fuente: 'volumen', pct: volumenPct },
+    { fuente: 'empresa', pct: esJuridica ? DESCUENTO_EMPRESA * 100 : 0 },
+    { fuente: 'premio', pct: tienePremio && !esJuridica ? DESCUENTO_EMPRESA * 100 : 0 },
+  ].filter(f => f.pct > 0).sort((a, b) => b.pct - a.pct)
+  const ganador = fuentes[0] || { fuente: null, pct: 0 }
+  const DESCUENTO = ganador.pct / 100
+  const descuentoFuente = ganador.fuente
   const unidadesFaltantes = esJuridica
     ? 0
     : Math.max(0, UMBRAL_UNIDADES_PREMIO - totalUnidades)
@@ -215,6 +247,10 @@ export function CarritoProvider({ children }) {
       totalUnidades,
       unidadesFaltantes,
       umbralPremio: UMBRAL_UNIDADES_PREMIO,
+      descuentoFuente,
+      descuentoVolumenPct: volumenPct,
+      totalKgCafe,
+      descuentosVolumen,
     }}>
       {children}
     </CarritoContext.Provider>

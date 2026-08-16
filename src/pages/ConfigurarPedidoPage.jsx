@@ -17,7 +17,7 @@ const metodosPago = [
 const camposObligatorios = ['nombre', 'correo', 'telefono', 'direccion', 'ciudad']
 
 function ResumenLateral() {
-  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, productos, esJuridica, tienePremio } = useCarrito()
+  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, productos, descuentoFuente } = useCarrito()
 
   return (
     <div className="w-full lg:w-72 shrink-0 flex flex-col gap-4">
@@ -31,10 +31,10 @@ function ResumenLateral() {
             <span className="text-white/60">Subtotal</span>
             <span className="text-white">${subtotal.toLocaleString()}</span>
           </div>
-          {(esJuridica || tienePremio) && (
+          {descuentoFuente && (
             <div className="flex justify-between">
               <span className="text-white/60">
-                {esJuridica ? '🏢 Descuento empresa' : '🎉 Descuento'} ({(DESCUENTO * 100).toFixed(0)}%)
+                {descuentoFuente === 'volumen' ? '📦 Descuento por volumen' : descuentoFuente === 'empresa' ? '🏢 Descuento empresa' : '🎉 Descuento'} ({(DESCUENTO * 100).toFixed(0)}%)
               </span>
               <span className="text-[#9DC9B4]">- ${descuentoMonto.toLocaleString()}</span>
             </div>

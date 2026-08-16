@@ -304,10 +304,10 @@ class CatalogoErrorBoundary extends Component {
 }
 
 // ── CARRITO LATERAL (sólido, estilo app de compras) ────────
-function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar }) {
+function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar, descuentosVolumen = [] }) {
   useModalBehavior(onClose);
   const navigate = useNavigate();
-  const { sincronizarCarrito } = useCarrito();
+  const { sincronizarCarrito, esJuridica, tienePremio } = useCarrito();
 
   // Bajar cantidad es directo, sin confirmación.
   const disminuir = (id) => {
@@ -316,7 +316,20 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar }) {
   const quitar = (id) => setCarrito(prev => prev.filter(x => x.id !== id));
 
   const subtotal = carrito.reduce((s, x) => s + x.precio * (x.cant || 1), 0);
-  const descuento = Math.round(subtotal * 0.15);
+  // Descuento REAL (el mismo "mayor gana" del backend): volumen vs empresa vs premio.
+  // Nunca más un descuento de mentira en el carrito. 🚫👻
+  const kgTotales = carrito.reduce((s, x) => s + (x.peso_kg ? x.peso_kg * (x.cant || 1) : 0), 0);
+  const tier = descuentosVolumen.find(t =>
+    kgTotales >= Number(t.kg_min) && (t.kg_max === null || kgTotales <= Number(t.kg_max))
+  );
+  const volumenPct = tier ? Number(tier.descuento_pct) : 0;
+  const fuentes = [
+    { fuente: 'volumen', pct: volumenPct },
+    { fuente: 'empresa', pct: esJuridica ? 10 : 0 },
+    { fuente: 'premio', pct: tienePremio && !esJuridica ? 10 : 0 },
+  ].filter(f => f.pct > 0).sort((a, b) => b.pct - a.pct);
+  const ganador = fuentes[0] || { fuente: null, pct: 0 };
+  const descuento = Math.round(subtotal * (ganador.pct / 100));
   const total = subtotal - descuento;
   const totalUnidades = carrito.reduce((s, x) => s + (x.cant || 1), 0);
 
@@ -408,7 +421,14 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar }) {
         {carrito.length > 0 && (
           <div className="px-4 pb-5 pt-4 border-t border-white/10" style={{ background: "#0D1D13" }}>
             <div className="flex justify-between text-sm text-white/50 mb-2"><span>Subtotal</span><span>${subtotal.toLocaleString("es-CO")}</span></div>
-            <div className="flex justify-between text-sm text-[#9DC9B4] mb-2"><span>Descuento VIP 15%</span><span>−${descuento.toLocaleString("es-CO")}</span></div>
+            {ganador.pct > 0 && (
+              <div className="flex justify-between text-sm text-[#9DC9B4] mb-2">
+                <span>
+                  {ganador.fuente === 'volumen' ? '📦 Descuento por volumen' : ganador.fuente === 'empresa' ? '🏢 Descuento empresa' : '🎉 Descuento'} {ganador.pct}%
+                </span>
+                <span>−${descuento.toLocaleString("es-CO")}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm text-white/50 mb-3"><span>Envío</span><span className="text-[#9DC9B4]">Gratis</span></div>
             <div className="flex justify-between text-base font-semibold text-white border-t border-white/10 pt-3 mb-4">
               <span>Total</span><span>${total.toLocaleString("es-CO")}</span>
@@ -1317,8 +1337,8 @@ function CatalogoInterno() {
                       <div className="p-4">
                         <p className="text-xs text-white/40">{primero.origen}</p>
                         <p className="text-base font-semibold text-white mt-1">{primero.nombre}</p>
-                        <p className="text-xl font-semibold text-white mt-2">${primero.precio.toLocaleString("es-CO")}</p>
-                        <p className="text-[10px] text-white/40">por kg · desde 10kg</p>
+                        <p className="text-xl font-semibold text-white mt-2">{primero.formatos.length > 0 ? `Desde $${primero.precioDesde.toLocaleString("es-CO")}` : `$${primero.precio.toLocaleString("es-CO")}`}</p>
+                        <p className="text-[10px] text-white/40">{primero.formatos.length > 0 ? primero.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ") : "por kg"}</p>
                         <div className="flex items-center gap-1.5 mt-2">
                           <span className={`w-2 h-2 rounded-full ${stockColor[primero.stockLabel]}`}></span>
                           <span className={`text-xs ${stockTexto[primero.stockLabel]}`}>{primero.stockLabel} · {primero.stock} kg</span>
@@ -1362,7 +1382,7 @@ function CatalogoInterno() {
       )}
 
       {/* MODALES */}
-      {carritoOpen  && <CarritoDrawer carrito={carrito} setCarrito={setCarrito} onClose={() => setCarritoOpen(false)} onAumentar={aumentarEnCarrito} />}
+      {carritoOpen  && <CarritoDrawer carrito={carrito} setCarrito={setCarrito} onClose={() => setCarritoOpen(false)} onAumentar={aumentarEnCarrito} descuentosVolumen={descuentosVolumen} />}
       {detalle      && <DetalleProducto p={detalle} onClose={() => setDetalle(null)} onAgregar={agregar} esFavorito={favoritos.has(detalle.id)} onToggleFavorito={toggleFavorito} descuentosVolumen={descuentosVolumen} />}
       {confirmPendiente && <ModalConfirmarCantidad data={confirmPendiente} onCancelar={cancelarConfirm} onAceptar={aceptarConfirm} />}
       {mostrarRecomendador && (

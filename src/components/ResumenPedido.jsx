@@ -3,7 +3,7 @@ import { useCarrito } from '../context/CarritoContext'
 
 function ResumenPedido() {
   const navigate = useNavigate()
-  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, esJuridica, tienePremio, unidadesFaltantes } = useCarrito()
+  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, descuentoFuente, unidadesFaltantes, esJuridica } = useCarrito()
 
   return (
     <div className="w-full lg:w-80 flex flex-col gap-4">
@@ -20,15 +20,15 @@ function ResumenPedido() {
             <span className="text-sm text-white/60">Subtotal</span>
             <span className="text-sm text-white">${subtotal.toLocaleString()}</span>
           </div>
-          {(esJuridica || tienePremio) && (
+          {descuentoFuente && (
             <div className="flex justify-between">
               <span className="text-sm text-white/60">
-                {esJuridica ? '🏢 Descuento empresa' : '🎉 Descuento'} {(DESCUENTO * 100).toFixed(0)}%
+                {descuentoFuente === 'volumen' ? '📦 Descuento por volumen' : descuentoFuente === 'empresa' ? '🏢 Descuento empresa' : '🎉 Descuento'} {(DESCUENTO * 100).toFixed(0)}%
               </span>
               <span className="text-sm text-[#9DC9B4]">- ${descuentoMonto.toLocaleString()}</span>
             </div>
           )}
-          {!esJuridica && !tienePremio && unidadesFaltantes > 0 && (
+          {!descuentoFuente && !esJuridica && unidadesFaltantes > 0 && (
             <div className="text-xs text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/20 rounded-lg px-3 py-2">
               🔥 Lleva {unidadesFaltantes} producto{unidadesFaltantes === 1 ? '' : 's'} más y gana 10% en tu próxima compra
             </div>
