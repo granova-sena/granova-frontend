@@ -247,10 +247,15 @@ function MiCuenta() {
             </>
           ) : (
             <>
-              <p className="text-lg font-semibold text-white mb-1">🔥 Compra al por mayor y gana descuento</p>
+              <p className="text-lg font-semibold text-white mb-1">🔥 Compra y gana 10% de descuento</p>
               <p className="text-sm text-white/60 leading-relaxed">
-                Lleva 5 o más productos en un pedido y ganas 10% de descuento para tu próxima compra.
+                Compra 5 productos (en uno o varios pedidos, se van sumando) y ganas 10% de descuento para tu próxima compra.
               </p>
+              {Number(cliente.unidades_acumuladas) > 0 && (
+                <p className="text-sm text-[#9DC9B4] mt-3 leading-relaxed">
+                  🏆 Llevas {Number(cliente.unidades_acumuladas)} de 5 productos acumulados para tu premio.
+                </p>
+              )}
               {!tieneDocumento && (
                 <p className="text-sm text-[#9DC9B4] mt-3 leading-relaxed">
                   💡 ¿Compras como empresa? Registra tu NIT en la sección Identificación y obtén 10% en todos tus pedidos.

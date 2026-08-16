@@ -98,6 +98,7 @@ export function CarritoProvider({ children }) {
       const descuentoGanado = json.data?.descuento_ganado === true
       actualizarPerfilCliente({
         descuento_proxima_compra: descuentoGanado,
+        ...(json.data?.unidades_acumuladas !== undefined ? { unidades_acumuladas: json.data.unidades_acumuladas } : {}),
         ...(json.data?.puntos_totales !== undefined ? { puntos: json.data.puntos_totales } : {}),
       })
 
@@ -108,6 +109,7 @@ export function CarritoProvider({ children }) {
         descuento_fuente: json.data?.descuento_fuente ?? null,
         descuento_empresa: json.data?.descuento_empresa === true,
         descuento_ganado: descuentoGanado,
+        unidades_acumuladas: json.data?.unidades_acumuladas ?? 0,
         puntos_ganados: json.data?.puntos_ganados ?? 0,
         puntos_totales: json.data?.puntos_totales ?? 0,
       }
@@ -217,9 +219,13 @@ export function CarritoProvider({ children }) {
   const ganador = fuentes[0] || { fuente: null, pct: 0 }
   const DESCUENTO = ganador.pct / 100
   const descuentoFuente = ganador.fuente
+  // Premio acumulativo: el contador del cliente + lo que lleva en el carrito
+  // cuentan juntos rumbo a los 5 productos para ganar el 10%.
+  const unidadesAcumuladas = Number(clienteActual?.unidades_acumuladas) || 0
   const unidadesFaltantes = esJuridica
     ? 0
-    : Math.max(0, UMBRAL_UNIDADES_PREMIO - totalUnidades)
+    : Math.max(0, UMBRAL_UNIDADES_PREMIO - (unidadesAcumuladas + totalUnidades))
+  const unidadesRumboPremio = unidadesAcumuladas + totalUnidades
   const descuentoMonto = Math.round(subtotal * DESCUENTO)
   // IVA incluido: el total que se muestra es exactamente el que cobra el backend.
   const total = subtotal - descuentoMonto
@@ -249,6 +255,8 @@ export function CarritoProvider({ children }) {
       descuentoVolumenPct: volumenPct,
       totalKgCafe,
       descuentosVolumen,
+      unidadesAcumuladas,
+      unidadesRumboPremio,
     }}>
       {children}
     </CarritoContext.Provider>

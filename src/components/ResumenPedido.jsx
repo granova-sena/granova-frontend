@@ -3,7 +3,7 @@ import { useCarrito } from '../context/CarritoContext'
 
 function ResumenPedido() {
   const navigate = useNavigate()
-  const { subtotal, descuentoMonto, total, DESCUENTO, descuentoFuente, unidadesFaltantes, esJuridica } = useCarrito()
+  const { subtotal, descuentoMonto, total, DESCUENTO, descuentoFuente, unidadesFaltantes, unidadesRumboPremio, esJuridica } = useCarrito()
 
   return (
     <div className="w-full lg:w-80 flex flex-col gap-4">
@@ -30,7 +30,7 @@ function ResumenPedido() {
           )}
           {!descuentoFuente && !esJuridica && unidadesFaltantes > 0 && (
             <div className="text-xs text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/20 rounded-lg px-3 py-2">
-              🔥 Lleva {unidadesFaltantes} producto{unidadesFaltantes === 1 ? '' : 's'} más y gana 10% en tu próxima compra
+              🏆 Llevas {unidadesRumboPremio} de 5 productos para ganar 10% en tu próxima compra
             </div>
           )}
           <div className="flex justify-between border-t border-white/[0.07] pt-3">

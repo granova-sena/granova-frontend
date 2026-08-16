@@ -528,6 +528,8 @@ function ConfigurarPedidoPage() {
                         if (resultado.descuento_ganado) {
                           setPremioGanado(true)
                           toast.success('🎉 ¡Ganaste 10% de descuento en tu próxima compra!')
+                        } else if (!resultado.descuento_empresa && resultado.unidades_acumuladas > 0) {
+                          toast.success(`🏆 Llevas ${resultado.unidades_acumuladas} de 5 productos para tu premio del 10%`)
                         }
                         if (resultado.puntos_ganados > 0) {
                           setPuntosGanados(resultado.puntos_ganados)
