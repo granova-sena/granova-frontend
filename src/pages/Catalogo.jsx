@@ -452,7 +452,7 @@ function iconoFormato(pesoKg) {
 }
 
 // ── DETALLE PRODUCTO ──────────────────────────────────────
-function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito, descuentosVolumen = [] }) {
+function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito, descuentosVolumen = [], esJuridica = false }) {
   const [formatoSel, setFormatoSel] = useState(() => (p.formatos?.length > 0 ? p.formatos[0].id_formato : null));
   const [cant, setCant] = useState(1);
   useModalBehavior(onClose);
@@ -469,7 +469,13 @@ function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito, 
   const tierActivo = kgTotales !== null
     ? descuentosVolumen.find(t => kgTotales >= Number(t.kg_min) && (t.kg_max === null || kgTotales <= Number(t.kg_max)))
     : null;
-  const precioFinal = tierActivo ? Math.round(precioUnit * (1 - Number(tierActivo.descuento_pct) / 100)) : precioUnit;
+
+  // EL MAYOR GANA (igual que el backend): volumen vs empresa 10%.
+  // El precio mostrado es un estimado — el cobro real lo hace el servidor.
+  const pctVolumen = tierActivo ? Number(tierActivo.descuento_pct) : 0;
+  const pctEmpresa = esJuridica ? 10 : 0;
+  const pctMostrado = Math.max(pctVolumen, pctEmpresa);
+  const precioFinal = pctMostrado > 0 ? Math.round(precioUnit * (1 - pctMostrado / 100)) : precioUnit;
   const etiquetaCant = tieneFormatos ? (formato?.etiqueta || "formato") : p.esMaquina ? "unidades" : "kg";
 
   return (
@@ -521,6 +527,7 @@ function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito, 
               <div className="flex flex-col gap-2">
                 {p.formatos.map(f => {
                   const activo = f.id_formato === formatoSel;
+                  const precioFormatoEmpresa = esJuridica ? Math.round(Number(f.precio) * 0.90) : null;
                   return (
                     <button
                       type="button"
@@ -531,7 +538,14 @@ function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito, 
                       <span className="text-white/80 flex items-center gap-2">
                         <span>{iconoFormato(Number(f.peso_kg))}</span> {f.etiqueta}
                       </span>
-                      <span className={`font-semibold ${activo ? "text-[#9DC9B4]" : "text-white"}`}>${f.precio.toLocaleString("es-CO")}</span>
+                      {esJuridica ? (
+                        <span className="flex items-center gap-2">
+                          <span className="text-white/40 line-through text-xs">${Number(f.precio).toLocaleString("es-CO")}</span>
+                          <span className={`font-semibold ${activo ? "text-[#9DC9B4]" : "text-[#9DC9B4]"}`}>${precioFormatoEmpresa.toLocaleString("es-CO")}</span>
+                        </span>
+                      ) : (
+                        <span className={`font-semibold ${activo ? "text-[#9DC9B4]" : "text-white"}`}>${Number(f.precio).toLocaleString("es-CO")}</span>
+                      )}
                     </button>
                   );
                 })}
@@ -540,7 +554,21 @@ function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito, 
           )}
 
           <div>
-            <p className="text-2xl font-semibold text-white">${precioFinal.toLocaleString("es-CO")}</p>
+            {esJuridica && !p.esMaquina && (
+              <p className="text-xs text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/25 rounded-full px-3 py-1.5 inline-block mb-2">
+                🏢 Tu precio de empresa incluye el 10% de descuento
+              </p>
+            )}
+            <p className="text-2xl font-semibold text-white">
+              {esJuridica && pctMostrado > 0 ? (
+                <>
+                  <span className="text-white/40 line-through text-base mr-2">${precioUnit.toLocaleString("es-CO")}</span>
+                  ${precioFinal.toLocaleString("es-CO")}
+                </>
+              ) : (
+                <>${precioFinal.toLocaleString("es-CO")}</>
+              )}
+            </p>
             <p className="text-xs text-white/40">
               {tieneFormatos
                 ? `por ${etiquetaCant.toLowerCase()} · IVA incluido`
@@ -735,7 +763,7 @@ function CalculadoraRapida({ precio, stock }) {
   );
 }
 
-function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFavorito, onToggleFavorito, seleccionadoComparar, onToggleComparar }) {
+function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFavorito, onToggleFavorito, seleccionadoComparar, onToggleComparar, esJuridica = false }) {
   const [feedback, setFeedback] = useState(false);
 
   const handleAgregar = (e) => {
@@ -790,9 +818,27 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
         <div className="flex items-end justify-between">
           <div>
             {p.formatos.length > 0 ? (
+              esJuridica ? (
+                <>
+                  <p className="text-base font-semibold text-white flex items-center gap-2">
+                    <span className="text-white/35 line-through text-xs">${p.precioDesde.toLocaleString("es-CO")}</span>
+                    <span className="text-[#9DC9B4]">Desde ${Math.round(p.precioDesde * 0.9).toLocaleString("es-CO")}</span>
+                  </p>
+                  <p className="text-[10px] text-white/40">🏢 Precio empresa · {p.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ")}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-base font-semibold text-white">Desde ${p.precioDesde.toLocaleString("es-CO")}</p>
+                  <p className="text-[10px] text-white/40">{p.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ")}</p>
+                </>
+              )
+            ) : esJuridica ? (
               <>
-                <p className="text-base font-semibold text-white">Desde ${p.precioDesde.toLocaleString("es-CO")}</p>
-                <p className="text-[10px] text-white/40">{p.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ")}</p>
+                <p className="text-base font-semibold text-white flex items-center gap-2">
+                  <span className="text-white/35 line-through text-xs">${p.precio.toLocaleString("es-CO")}</span>
+                  <span className="text-[#9DC9B4]">${Math.round(p.precio * 0.9).toLocaleString("es-CO")}</span>
+                </p>
+                <p className="text-[10px] text-white/40">🏢 Precio empresa · por {p.unidad}</p>
               </>
             ) : (
               <>
@@ -842,6 +888,7 @@ const SECCIONES = [
 function CatalogoInterno() {
   const navigate = useNavigate()
   const { cliente } = useCarrito()
+  const esJuridica = cliente?.tipo_persona === 'juridica'
   const [searchParams, setSearchParams] = useSearchParams();
   const seccionParam = searchParams.get("seccion");
   // La URL es la única fuente de verdad de la pestaña activa:
@@ -1228,6 +1275,7 @@ function CatalogoInterno() {
                         onToggleFavorito={toggleFavorito}
                         seleccionadoComparar={seleccionadosComparar.includes(p.id_producto)}
                         onToggleComparar={() => alternarComparar(p.id_producto)}
+                        esJuridica={esJuridica}
                       />
                     ))}
                   </div>
@@ -1281,6 +1329,7 @@ function CatalogoInterno() {
                     esFavorito={favoritos.has(p.id)} onToggleFavorito={toggleFavorito}
                     seleccionadoComparar={seleccionadosComparar.includes(p.id)}
                     onToggleComparar={() => alternarComparar(p.id)}
+                    esJuridica={esJuridica}
                   />
                 ))}
               </div>
@@ -1383,7 +1432,7 @@ function CatalogoInterno() {
 
       {/* MODALES */}
       {carritoOpen  && <CarritoDrawer carrito={carrito} setCarrito={setCarrito} onClose={() => setCarritoOpen(false)} onAumentar={aumentarEnCarrito} descuentosVolumen={descuentosVolumen} />}
-      {detalle      && <DetalleProducto p={detalle} onClose={() => setDetalle(null)} onAgregar={agregar} esFavorito={favoritos.has(detalle.id)} onToggleFavorito={toggleFavorito} descuentosVolumen={descuentosVolumen} />}
+      {detalle      && <DetalleProducto p={detalle} onClose={() => setDetalle(null)} onAgregar={agregar} esFavorito={favoritos.has(detalle.id)} onToggleFavorito={toggleFavorito} descuentosVolumen={descuentosVolumen} esJuridica={esJuridica} />}
       {confirmPendiente && <ModalConfirmarCantidad data={confirmPendiente} onCancelar={cancelarConfirm} onAceptar={aceptarConfirm} />}
       {mostrarRecomendador && (
         <RecomendadorModal
