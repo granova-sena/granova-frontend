@@ -68,6 +68,17 @@ function cruzaUmbral(cantActual, total) {
 function adaptarProducto(p) {
   const stock = Number(p.stock) || 0;
   const esMaquina = (p.categoria_producto || (p.marca && p.modelo) || "") === "maquina";
+  const formatos = (p.formatos || []).map(f => ({
+    id_formato: f.id_formato,
+    etiqueta: f.etiqueta,
+    peso_kg: Number(f.peso_kg) || 0,
+    precio: Number(f.precio) || 0,
+    imagen_url: f.imagen_url || "",
+  }));
+  // "Desde $X" = el formato más barato disponible (gancho de catálogo)
+  const precioDesde = formatos.length > 0
+    ? Math.min(...formatos.map(f => f.precio))
+    : Number(p.precio) || 0;
   return {
     id: p.id_producto,
     nombre: p.nombre,
@@ -80,6 +91,8 @@ function adaptarProducto(p) {
       ? [p.marca, p.modelo].filter(Boolean).join(" · ") || "Máquina de café"
       : [p.tipo_cafe, p.presentacion].filter(Boolean).join(" · ") || "Café Granova",
     precio: Number(p.precio) || 0,
+    precioDesde,
+    formatos,
     stock,
     stockLabel: calcularStockLabel(stock),
     badge: calcularBadge(p),
@@ -378,7 +391,7 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar }) {
                     <IconoBasura />
                   </button>
                 </div>
-                <p className="text-xs text-white/40 mt-1">${p.precio.toLocaleString("es-CO")} <span className="text-white/25">/ {p.unidad}</span></p>
+                <p className="text-xs text-white/40 mt-1">${p.precio.toLocaleString("es-CO")} <span className="text-white/25">/ {p.etiqueta_formato || p.unidad}</span></p>
                 <div className="flex items-center justify-between mt-2.5">
                   <div className="flex items-center bg-[#0B1810] border border-white/10 rounded-lg">
                     <button type="button" onClick={() => disminuir(p.id)} className="w-8 h-8 text-white/60 hover:text-white text-base flex items-center justify-center rounded-l-lg hover:bg-white/[0.06]">−</button>
@@ -411,12 +424,33 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar }) {
   );
 }
 
+// Icono visual por tipo de formato (🛍️ bolsita, ☕ paquete, 📦 bulto)
+function iconoFormato(pesoKg) {
+  if (pesoKg < 1) return "🛍️";
+  if (pesoKg < 10) return "☕";
+  return "📦";
+}
+
 // ── DETALLE PRODUCTO ──────────────────────────────────────
-function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito }) {
+function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito, descuentosVolumen = [] }) {
+  const [formatoSel, setFormatoSel] = useState(() => (p.formatos?.length > 0 ? p.formatos[0].id_formato : null));
   const [cant, setCant] = useState(1);
   useModalBehavior(onClose);
-  const precioVol = !p.esMaquina && cant <= 5 ? p.precio : !p.esMaquina && cant <= 20 ? Math.round(p.precio * 0.91) : !p.esMaquina ? Math.round(p.precio * 0.84) : p.precio;
-  const etiquetaCant = p.esMaquina ? "unidades" : "kg";
+
+  const tieneFormatos = p.formatos && p.formatos.length > 0;
+  const formato = tieneFormatos ? p.formatos.find(f => f.id_formato === formatoSel) : null;
+
+  // Precio unitario: precio del formato elegido, o el precio del producto (máquinas/legacy)
+  const precioUnit = tieneFormatos ? Number(formato?.precio || 0) : p.precio;
+
+  // Escalón por volumen: solo café, usando los kg totales (peso del formato × cantidad)
+  const kgPorUnidad = tieneFormatos ? Number(formato?.peso_kg || 0) : null;
+  const kgTotales = kgPorUnidad !== null ? kgPorUnidad * cant : null;
+  const tierActivo = kgTotales !== null
+    ? descuentosVolumen.find(t => kgTotales >= Number(t.kg_min) && (t.kg_max === null || kgTotales <= Number(t.kg_max)))
+    : null;
+  const precioFinal = tierActivo ? Math.round(precioUnit * (1 - Number(tierActivo.descuento_pct) / 100)) : precioUnit;
+  const etiquetaCant = tieneFormatos ? (formato?.etiqueta || "formato") : p.esMaquina ? "unidades" : "kg";
 
   return (
     <div
@@ -436,7 +470,7 @@ function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito }
       >
         {/* imagen */}
         <div className="sm:w-1/2 h-56 sm:h-auto bg-[#14291B] relative">
-          <ImagenProducto src={p.img} alt={p.nombre} className="w-full h-full object-cover" />
+          <ImagenProducto src={formato?.imagen_url || p.img} alt={p.nombre} className="w-full h-full object-cover" />
           <button type="button" onClick={onClose} className="absolute top-3 right-3 w-8 h-8 bg-black/40 rounded-full flex items-center justify-center text-white/80 shadow hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C]">✕</button>
           <button
             type="button"
@@ -459,26 +493,65 @@ function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito }
               </p>
             )}
           </div>
-          <div>
-            <p className="text-2xl font-semibold text-white">${precioVol.toLocaleString("es-CO")}</p>
-            <p className="text-xs text-white/40">{p.esMaquina ? "por unidad · IVA incluido" : "por kilogramo · IVA incluido"}</p>
-          </div>
-          {!p.esMaquina && (
+
+          {/* Selector de formato (frente A): gramos, kilos, bulto */}
+          {tieneFormatos && (
             <div>
-              <p className="text-sm text-white/50 mb-2">Precios por volumen</p>
-              <div className="grid grid-cols-3 gap-2">
-                {[["1–5 kg", p.precio], ["6–20 kg", Math.round(p.precio*0.91)], ["+20 kg", Math.round(p.precio*0.84)]].map(([label, pr]) => {
-                  const activo = (cant <= 5 && label === "1–5 kg") || (cant > 5 && cant <= 20 && label === "6–20 kg") || (cant > 20 && label === "+20 kg");
+              <p className="text-sm text-white/50 mb-2">Elige tu formato</p>
+              <div className="flex flex-col gap-2">
+                {p.formatos.map(f => {
+                  const activo = f.id_formato === formatoSel;
                   return (
-                    <div key={label} className={`rounded-xl p-2 text-center border ${activo ? "border-[#6FA98C] bg-[#6FA98C]/[0.08]" : "border-white/10"}`}>
-                      <p className="text-xs text-white/40">{label}</p>
-                      <p className="text-sm font-semibold text-white">${pr.toLocaleString("es-CO")}</p>
-                    </div>
+                    <button
+                      type="button"
+                      key={f.id_formato}
+                      onClick={() => setFormatoSel(f.id_formato)}
+                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-sm transition-colors ${activo ? "border-[#6FA98C] bg-[#6FA98C]/[0.08]" : "border-white/10 hover:border-[#6FA98C]/50"}`}
+                    >
+                      <span className="text-white/80 flex items-center gap-2">
+                        <span>{iconoFormato(Number(f.peso_kg))}</span> {f.etiqueta}
+                      </span>
+                      <span className={`font-semibold ${activo ? "text-[#9DC9B4]" : "text-white"}`}>${f.precio.toLocaleString("es-CO")}</span>
+                    </button>
                   );
                 })}
               </div>
             </div>
           )}
+
+          <div>
+            <p className="text-2xl font-semibold text-white">${precioFinal.toLocaleString("es-CO")}</p>
+            <p className="text-xs text-white/40">
+              {tieneFormatos
+                ? `por ${etiquetaCant.toLowerCase()} · IVA incluido`
+                : p.esMaquina ? "por unidad · IVA incluido" : "por kilogramo · IVA incluido"}
+            </p>
+          </div>
+
+          {/* Tabla de precios por volumen (frente B) — escalones reales del servidor */}
+          {!p.esMaquina && kgTotales !== null && descuentosVolumen.length > 0 && (
+            <div>
+              <p className="text-sm text-white/50 mb-2">Precios por volumen</p>
+              <div className={`grid gap-2 ${descuentosVolumen.length <= 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                {descuentosVolumen.map(t => {
+                  const activo = tierActivo?.kg_min === t.kg_min && tierActivo?.kg_max === t.kg_max;
+                  const label = t.kg_max === null ? `+${t.kg_min} kg` : `${t.kg_min}–${t.kg_max} kg`;
+                  return (
+                    <div key={`${t.kg_min}-${t.kg_max}`} className={`rounded-xl p-2 text-center border ${activo ? "border-[#6FA98C] bg-[#6FA98C]/[0.08]" : "border-white/10"}`}>
+                      <p className="text-xs text-white/40">{label}</p>
+                      <p className="text-sm font-semibold text-[#9DC9B4]">-{Number(t.descuento_pct)}%</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-white/40 mt-1.5">
+                {tierActivo
+                  ? `✓ Llevas ${kgTotales} kg: aplica -${Number(tierActivo.descuento_pct)}%`
+                  : `Llevas ${kgTotales} kg (sin escalón de descuento aún)`}
+              </p>
+            </div>
+          )}
+
           <div>
             <p className="text-sm text-white/50 mb-2">Cantidad</p>
             <div className="flex items-center gap-3">
@@ -490,17 +563,27 @@ function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito }
           </div>
           <button
             type="button"
-            onClick={(e) => { onAgregar({ ...p, cant }, e.currentTarget); onClose(); }}
+            onClick={(e) => {
+              onAgregar({
+                ...p,
+                cant,
+                id_formato: formato ? formato.id_formato : null,
+                etiqueta_formato: formato ? formato.etiqueta : "",
+                peso_kg: formato ? formato.peso_kg : null,
+                precio: precioUnit,
+              }, e.currentTarget);
+              onClose();
+            }}
             className="w-full h-12 rounded-xl bg-[#6FA98C] text-white font-semibold flex items-center justify-center gap-2 hover:bg-[#4F8A70] active:scale-95 transition duration-150">
             <IconoCarrito /> Agregar al carrito
           </button>
           <div className="flex items-center gap-2 text-sm">
             <span className={`w-2 h-2 rounded-full ${stockColor[p.stockLabel]}`}></span>
-            <span className="text-white/50">{p.stockLabel} · {p.stock} {etiquetaCant} disponibles</span>
+            <span className="text-white/50">{p.stockLabel} · {p.stock} {p.esMaquina ? "unidades" : "kg"} disponibles</span>
           </div>
           {p.stockLabel === "Stock bajo" && p.disponible && (
             <p className="text-xs text-amber-500 font-medium animate-pulse">
-              ¡Solo {p.stock} {etiquetaCant} disponibles, se está agotando!
+              ¡Solo {p.stock} {p.esMaquina ? "unidades" : "kg"} disponibles, se está agotando!
             </p>
           )}
         </div>
@@ -686,8 +769,17 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
         </div>
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-base font-semibold text-white">${p.precio.toLocaleString("es-CO")}</p>
-            <p className="text-[10px] text-white/40">por {p.unidad}</p>
+            {p.formatos.length > 0 ? (
+              <>
+                <p className="text-base font-semibold text-white">Desde ${p.precioDesde.toLocaleString("es-CO")}</p>
+                <p className="text-[10px] text-white/40">{p.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ")}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-base font-semibold text-white">${p.precio.toLocaleString("es-CO")}</p>
+                <p className="text-[10px] text-white/40">por {p.unidad}</p>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${stockColor[p.stockLabel]}`}></span>
@@ -736,6 +828,7 @@ function CatalogoInterno() {
   const cambiarSeccion = (id) => setSearchParams(id === "cafe" ? {} : { seccion: id }, { replace: true });
 
   const [productos, setProductos] = useState([]);
+  const [descuentosVolumen, setDescuentosVolumen] = useState([]);
   const [seleccionadosComparar, setSeleccionadosComparar] = useState([])
 
   const alternarComparar = (id) => {
@@ -769,7 +862,10 @@ function CatalogoInterno() {
         if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
         const json = await res.json();
         if (!json.ok) throw new Error(json.mensaje || "Error del servidor");
-        if (!cancelado) setProductos(eliminarDuplicados(json.data.map(adaptarProducto)));
+        if (!cancelado) {
+          setProductos(eliminarDuplicados(json.data.map(adaptarProducto)));
+          setDescuentosVolumen(json.descuentosVolumen || []);
+        }
       } catch (err) {
         if (!cancelado) setError(err.message);
       } finally {
@@ -1251,7 +1347,7 @@ function CatalogoInterno() {
 
       {/* MODALES */}
       {carritoOpen  && <CarritoDrawer carrito={carrito} setCarrito={setCarrito} onClose={() => setCarritoOpen(false)} onAumentar={aumentarEnCarrito} />}
-      {detalle      && <DetalleProducto p={detalle} onClose={() => setDetalle(null)} onAgregar={agregar} esFavorito={favoritos.has(detalle.id)} onToggleFavorito={toggleFavorito} />}
+      {detalle      && <DetalleProducto p={detalle} onClose={() => setDetalle(null)} onAgregar={agregar} esFavorito={favoritos.has(detalle.id)} onToggleFavorito={toggleFavorito} descuentosVolumen={descuentosVolumen} />}
       {confirmPendiente && <ModalConfirmarCantidad data={confirmPendiente} onCancelar={cancelarConfirm} onAceptar={aceptarConfirm} />}
       {mostrarRecomendador && (
         <RecomendadorModal

@@ -71,13 +71,14 @@ export function CarritoProvider({ children }) {
         metodo_pago: metodoPago,
         direccion_envio: datosFormulario.direccion,
         ciudad_envio: datosFormulario.ciudad,
-        // Se envía el precio normal: el descuento lo aplica el backend
-        // (nunca se fía del precio que manda el navegador).
-        productos: productos.map(p => ({
-          id_producto: p.id,
-          cantidad: p.cantidad,
-          precio_unitario: p.precio,
-        })),
+        // Se envía el precio normal o el id_formato: el backend es quien
+        // resuelve el precio real (nunca se fía del navegador).
+        productos: productos.map(p => {
+          if (p.id_formato) {
+            return { id_producto: p.id, cantidad: p.cantidad, id_formato: p.id_formato }
+          }
+          return { id_producto: p.id, cantidad: p.cantidad, precio_unitario: p.precio }
+        }),
       }
 
       const res = await fetch(`${API_URL}/api/pedidos`,
@@ -116,6 +117,11 @@ export function CarritoProvider({ children }) {
       cantidad: p.cant || 1,
       img: p.img || '',
       unidad: p.unidad || 'kg',
+      // Frente A (formatos): si el ítem se agregó desde un formato (250g, bulto...),
+      // se conservan esos datos para que el checkout los mande al backend.
+      id_formato: p.id_formato ?? null,
+      etiqueta_formato: p.etiqueta_formato || '',
+      peso_kg: p.peso_kg ?? null,
     }))
     setProductos(productosAdaptados)
   }
