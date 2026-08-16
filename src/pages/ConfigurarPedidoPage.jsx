@@ -119,7 +119,9 @@ function ConfigurarPedidoPage() {
     digito_verificacion: clienteGuardado.digito_verificacion || '',
     razon_social: clienteGuardado.razon_social || '',
   })
+  const [cuponCodigo, setCuponCodigo] = useState('')
   const [premioGanado, setPremioGanado] = useState(false)
+  const [puntosGanados, setPuntosGanados] = useState(0)
 
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -440,6 +442,20 @@ function ConfigurarPedidoPage() {
                   )}
                 </div>
 
+                {/* Cupón de lealtad (Frente D) */}
+                <div className="col-span-1 sm:col-span-2 flex flex-col gap-1 border-t border-white/10 pt-4">
+                  <label htmlFor="cupon-checkout" className="text-xs text-white/60">Cupón de lealtad (opcional)</label>
+                  <input
+                    id="cupon-checkout"
+                    type="text"
+                    value={cuponCodigo}
+                    onChange={e => setCuponCodigo(e.target.value.toUpperCase())}
+                    placeholder="Ej: GRN-ABC123"
+                    className="border border-white/15 bg-white/[0.06] text-white placeholder-white/30 rounded-lg px-4 py-3 text-sm outline-none focus:border-[#6FA98C] uppercase"
+                  />
+                  <p className="text-xs text-white/40 mt-1">🎟️ Canjea puntos en Mi cuenta y aplica tu código aquí</p>
+                </div>
+
               </div>
             </div>
           )}
@@ -503,15 +519,22 @@ function ConfigurarPedidoPage() {
                         toast.success('Datos de facturación guardados')
                       }
 
-                      const resultado = await confirmarPedido(form, metodoPago)
+                      const resultado = await confirmarPedido(form, metodoPago, cuponCodigo)
                       if (resultado.ok) {
                         setIdPedido(resultado.id_pedido)
                         if (resultado.descuento_empresa) {
                           toast.success('🏢 ¡Descuento de empresa aplicado en tu pedido!')
                         }
+                        if (resultado.descuento_fuente === 'cupon') {
+                          toast.success('🎟️ ¡Cupón aplicado en tu pedido!')
+                        }
                         if (resultado.descuento_ganado) {
                           setPremioGanado(true)
                           toast.success('🎉 ¡Ganaste 10% de descuento en tu próxima compra!')
+                        }
+                        if (resultado.puntos_ganados > 0) {
+                          setPuntosGanados(resultado.puntos_ganados)
+                          toast.success(`🎉 ¡Ganaste ${resultado.puntos_ganados} puntos de lealtad!`)
                         }
                       } else {
                         setError(resultado.mensaje)
@@ -536,6 +559,11 @@ function ConfigurarPedidoPage() {
                   {premioGanado && (
                     <p className="text-sm text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/20 rounded-lg px-4 py-2 text-center">
                       🎉 ¡Ganaste 10% de descuento para tu próxima compra!
+                    </p>
+                  )}
+                  {puntosGanados > 0 && (
+                    <p className="text-sm text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/20 rounded-lg px-4 py-2 text-center">
+                      ⭐ ¡Sumaste {puntosGanados} puntos de lealtad! Canjéalos en Mi cuenta.
                     </p>
                   )}
                   <button

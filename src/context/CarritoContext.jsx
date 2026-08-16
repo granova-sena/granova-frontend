@@ -58,7 +58,7 @@ export function CarritoProvider({ children }) {
     }
   }
 
-  const confirmarPedido = async (datosFormulario, metodoPago) => {
+  const confirmarPedido = async (datosFormulario, metodoPago, codigoCupon = '') => {
     try {
       const id_cliente = obtenerIdCliente()
 
@@ -79,6 +79,8 @@ export function CarritoProvider({ children }) {
           }
           return { id_producto: p.id, cantidad: p.cantidad, precio_unitario: p.precio }
         }),
+        // Cupón de lealtad (Frente D): opcional
+        ...(codigoCupon ? { codigo_cupon: codigoCupon.trim() } : {}),
       }
 
       const res = await fetch(`${API_URL}/api/pedidos`,
@@ -91,16 +93,22 @@ export function CarritoProvider({ children }) {
 
       if (!json.ok) throw new Error(json.mensaje)
 
-      // Actualizar el estado local del premio según lo que diga el backend
+      // Actualizar el estado local del premio y los puntos según lo que diga el backend
       const descuentoGanado = json.data?.descuento_ganado === true
-      actualizarPerfilCliente({ descuento_proxima_compra: descuentoGanado })
+      actualizarPerfilCliente({
+        descuento_proxima_compra: descuentoGanado,
+        ...(json.data?.puntos_totales !== undefined ? { puntos: json.data.puntos_totales } : {}),
+      })
 
       return {
         ok: true,
         id_pedido: json.data.id_pedido,
         descuento_aplicado: json.data?.descuento_aplicado ?? 0,
+        descuento_fuente: json.data?.descuento_fuente ?? null,
         descuento_empresa: json.data?.descuento_empresa === true,
         descuento_ganado: descuentoGanado,
+        puntos_ganados: json.data?.puntos_ganados ?? 0,
+        puntos_totales: json.data?.puntos_totales ?? 0,
       }
     } catch (error) {
       console.error('Error confirmando pedido:', error.message)

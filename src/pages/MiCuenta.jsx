@@ -3,6 +3,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { API_URL } from "../config";
 import { useCarrito } from '../context/CarritoContext'
+import { calcularNivel } from '../utils/lealtad'
 
 const ETIQUETAS_TIPO_PERSONA = { natural: 'Persona natural', juridica: 'Persona jurídica' }
 const ETIQUETAS_TIPO_DOCUMENTO = { CC: 'Cédula de ciudadanía (CC)', CE: 'Cédula de extranjería (CE)', NIT: 'NIT', PASAPORTE: 'Pasaporte' }
@@ -122,6 +123,54 @@ function MiCuenta() {
   const tienePremio = cliente.descuento_proxima_compra === true
   const esJuridica = cliente.tipo_persona === 'juridica'
 
+  // Lealtad (Frente D)
+  const puntos = Number(cliente.puntos) || 0
+  const nivel = calcularNivel(puntos)
+  const progresoPct = nivel.siguiente
+    ? Math.min(100, Math.round(((puntos - nivel.rangoMin) / (nivel.siguiente - nivel.rangoMin)) * 100))
+    : 100
+  const puntosFaltantes = nivel.siguiente ? nivel.siguiente - puntos : 0
+  const [canjeando, setCanjeando] = useState(false)
+  const [cuponObtenido, setCuponObtenido] = useState(null)
+
+  async function canjearPuntos(puntosACanjear) {
+    toast.dismiss('perfil-cupon')
+
+    if (puntos < puntosACanjear) {
+      toast.error(`Te faltan ${puntosACanjear - puntos} puntos para este canje`, { id: 'perfil-cupon' })
+      return
+    }
+
+    setCanjeando(true)
+    try {
+      const token = localStorage.getItem('token')
+      const respuesta = await fetch(`${API_URL}/api/cupones/canjear`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ puntos: puntosACanjear }),
+      })
+
+      const datos = await respuesta.json()
+
+      if (!respuesta.ok) {
+        toast.error(datos.mensaje || 'Error al canjear', { id: 'perfil-cupon' })
+        return
+      }
+
+      actualizarPerfilCliente({ puntos: datos.data.puntos_restantes })
+      setCuponObtenido(datos.data)
+      toast.success(`¡Cupón de ${datos.data.descuento_pct}% creado!`, { id: 'perfil-cupon' })
+    } catch (error) {
+      console.error('Error canjeando puntos:', error)
+      toast.error('No se pudo conectar con el servidor', { id: 'perfil-cupon' })
+    } finally {
+      setCanjeando(false)
+    }
+  }
+
   const campos = [
     { label: 'Nombre completo', valor: [cliente.nombre, cliente.apellido].filter(Boolean).join(' ') || '—' },
     { label: 'Correo electrónico', valor: cliente.email || '—' },
@@ -207,6 +256,61 @@ function MiCuenta() {
                   💡 ¿Compras como empresa? Registra tu NIT en la sección Identificación y obtén 10% en todos tus pedidos.
                 </p>
               )}
+            </>
+          )}
+        </div>
+
+        {/* LEALTAD (Frente D): nivel, puntos, progreso y canje */}
+        <div className="rounded-2xl p-6 sm:p-8 mb-5 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{nivel.icono}</span>
+              <div>
+                <p className="text-sm font-semibold text-white">Rango: {nivel.nombre}</p>
+                <p className="text-xs text-white/50">{puntos.toLocaleString('es-CO')} puntos</p>
+              </div>
+            </div>
+            {nivel.siguiente && (
+              <span className="text-xs text-[#9DC9B4]">Te faltan {puntosFaltantes.toLocaleString('es-CO')} pts para el siguiente rango</span>
+            )}
+          </div>
+
+          {/* Barra de progreso */}
+          <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden mb-5">
+            <div className="h-full bg-[#6FA98C] rounded-full transition-all" style={{ width: `${progresoPct}%` }} />
+          </div>
+
+          {cuponObtenido ? (
+            <div className="rounded-xl p-4 bg-[#6FA98C]/15 border border-[#6FA98C]/40">
+              <p className="text-sm font-semibold text-white">🎟️ ¡Tu cupón está listo!</p>
+              <p className="text-xs text-white/60 mt-1">Código: <span className="font-mono font-bold text-[#9DC9B4] text-sm">{cuponObtenido.codigo}</span></p>
+              <p className="text-xs text-white/60 mt-1">Descuento de {Number(cuponObtenido.descuento_pct)}% · válido por {cuponObtenido.vigencia_dias} días · úsalo en el checkout</p>
+            </div>
+          ) : esJuridica ? (
+            <p className="text-sm text-white/50 leading-relaxed">
+              🏢 Tu descuento de empresa (10%) ya supera los cupones de lealtad — tus puntos se siguen acumulando para tu rango.
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-white/50 mb-3">Canjea tus puntos por un cupón de descuento para tu próxima compra:</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => canjearPuntos(500)}
+                  disabled={canjeando || puntos < 500}
+                  className="flex-1 py-3 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  🎟️ 500 pts → Cupón 5%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => canjearPuntos(1000)}
+                  disabled={canjeando || puntos < 1000}
+                  className="flex-1 py-3 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  🎟️ 1.000 pts → Cupón 10%
+                </button>
+              </div>
             </>
           )}
         </div>
