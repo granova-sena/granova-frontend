@@ -960,8 +960,10 @@ function CatalogoInterno() {
       <div className="px-4 sm:px-6 py-3 border-b border-white/[0.07] sticky top-16 z-30" style={{ background: "#0a1a0a" }}>
         <div className="max-w-6xl mx-auto flex items-center gap-3 flex-wrap">
 
-          {/* Pestañas: Café / Máquinas / Favoritos */}
-          <div className="inline-flex p-1 rounded-xl gap-1 bg-[#0F1D13] border border-white/[0.08] shrink-0">
+          {/* Pestañas: Café / Máquinas / Favoritos.
+              En móvil se deslizan horizontalmente (sin scrollbar visible) para
+              que nunca desborden el borde de la pantalla. */}
+          <div className="inline-flex p-1 rounded-xl gap-1 bg-[#0F1D13] border border-white/[0.08] shrink-0 w-full sm:w-auto overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {SECCIONES.map(s => {
               const activo = seccion === s.id;
               const count = s.id === "favoritos" ? numFavoritos : s.id === "maquinas" ? maquinasProductos.length : cafeProductos.length;
@@ -971,7 +973,7 @@ function CatalogoInterno() {
                   type="button"
                   key={s.id}
                   onClick={() => cambiarSeccion(s.id)}
-                  className={`px-3.5 sm:px-4 h-10 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${activo ? "bg-[#6FA98C] text-white shadow" : "text-white/50 hover:text-white hover:bg-white/[0.06]"}`}
+                  className={`px-3.5 sm:px-4 h-10 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shrink-0 whitespace-nowrap ${activo ? "bg-[#6FA98C] text-white shadow" : "text-white/50 hover:text-white hover:bg-white/[0.06]"}`}
                 >
                   {s.id === "favoritos" ? <IconoCorazon lleno={activo} width={14} height={14} /> : <Icono width={14} height={14} />}
                   {s.label}
@@ -983,7 +985,7 @@ function CatalogoInterno() {
 
           {/* Búsqueda + acciones, agrupadas a la derecha */}
           <div className="flex items-center gap-2.5 flex-1 min-w-[220px] justify-end">
-            <div className="flex items-center gap-2 rounded-xl px-3.5 py-2 w-full max-w-xs bg-[#0F1D13] border border-white/[0.08]">
+            <div className="flex items-center gap-2 rounded-xl px-3.5 py-2 w-full max-w-none sm:max-w-xs bg-[#0F1D13] border border-white/[0.08]">
               <IconoBuscar className="text-white/35 shrink-0" />
               <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
                 placeholder={seccion === "maquinas" ? "Buscar cafetera, marca..." : "Buscar por nombre, tipo de café..."}
@@ -1005,27 +1007,29 @@ function CatalogoInterno() {
         </div>
       </div>
 
-      {/* CHIPS DE FILTRO (según sección) */}
+      {/* CHIPS DE FILTRO (según sección).
+          En móvil: una sola fila deslizable horizontalmente (patrón de apps de
+          compras); en escritorio: wrap normal en varias líneas si hace falta. */}
       {seccion !== "favoritos" && (
         <div className="px-4 sm:px-6 py-3 border-b border-white/[0.07]">
-          <div className="max-w-6xl mx-auto flex items-center gap-2 flex-wrap">
+          <div className="max-w-6xl mx-auto flex items-center gap-2 flex-nowrap overflow-x-auto sm:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {chips.map(c => (
               <button
                 type="button"
                 key={c.label}
                 onClick={() => setChip(c.val)}
-                className={`h-8 px-3.5 rounded-full text-xs font-medium border transition-colors ${chipActivo === c.val ? "bg-[#6FA98C] text-white border-[#6FA98C]" : "bg-transparent text-white/55 border-white/15 hover:border-white/40 hover:text-white"}`}
+                className={`h-8 px-3.5 rounded-full text-xs font-medium border transition-colors shrink-0 whitespace-nowrap ${chipActivo === c.val ? "bg-[#6FA98C] text-white border-[#6FA98C]" : "bg-transparent text-white/55 border-white/15 hover:border-white/40 hover:text-white"}`}
               >
                 {c.label}
               </button>
             ))}
-            <span className="w-px h-5 bg-white/10 mx-1 hidden sm:block" />
+            <span className="w-px h-5 bg-white/10 mx-1 hidden sm:block shrink-0" />
             {["En stock", "Stock bajo"].map(d => (
               <button
                 type="button"
                 key={d}
                 onClick={() => setFiltros(f => ({ ...f, disp: f.disp === d ? "" : d }))}
-                className={`h-8 px-3.5 rounded-full text-xs font-medium border transition-colors ${filtros.disp === d ? "bg-[#6FA98C] text-white border-[#6FA98C]" : "bg-transparent text-white/55 border-white/15 hover:border-white/40 hover:text-white"}`}
+                className={`h-8 px-3.5 rounded-full text-xs font-medium border transition-colors shrink-0 whitespace-nowrap ${filtros.disp === d ? "bg-[#6FA98C] text-white border-[#6FA98C]" : "bg-transparent text-white/55 border-white/15 hover:border-white/40 hover:text-white"}`}
               >
                 {d}
               </button>
