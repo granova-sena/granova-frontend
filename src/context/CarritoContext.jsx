@@ -9,9 +9,9 @@ const productosIniciales = []
 // - Persona natural: compra 5+ unidades → gana 10% para la PRÓXIMA compra.
 // - Nadie suma: máximo 10%.
 // El backend es quien aplica el descuento de verdad (el navegador solo muestra).
+// IVA: los precios ya lo incluyen (no se suma en pantalla ni en el backend).
 const DESCUENTO_EMPRESA = 0.10
 const UMBRAL_UNIDADES_PREMIO = 5
-const IVA = 0.19
 
 // ── CONFIG API ────────────────────────────────────────────
 // Sigue la misma convención que el resto del proyecto (sin prefijo /api),
@@ -221,8 +221,8 @@ export function CarritoProvider({ children }) {
     ? 0
     : Math.max(0, UMBRAL_UNIDADES_PREMIO - totalUnidades)
   const descuentoMonto = Math.round(subtotal * DESCUENTO)
-  const ivaMonto = Math.round((subtotal - descuentoMonto) * IVA)
-  const total = subtotal - descuentoMonto + ivaMonto
+  // IVA incluido: el total que se muestra es exactamente el que cobra el backend.
+  const total = subtotal - descuentoMonto
 
   return (
     <CarritoContext.Provider value={{
@@ -238,10 +238,8 @@ export function CarritoProvider({ children }) {
       cliente: clienteActual,
       subtotal,
       descuentoMonto,
-      ivaMonto,
       total,
       DESCUENTO,
-      IVA,
       esJuridica,
       tienePremio,
       totalUnidades,

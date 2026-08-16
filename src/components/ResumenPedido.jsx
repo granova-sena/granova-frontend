@@ -3,7 +3,7 @@ import { useCarrito } from '../context/CarritoContext'
 
 function ResumenPedido() {
   const navigate = useNavigate()
-  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, descuentoFuente, unidadesFaltantes, esJuridica } = useCarrito()
+  const { subtotal, descuentoMonto, total, DESCUENTO, descuentoFuente, unidadesFaltantes, esJuridica } = useCarrito()
 
   return (
     <div className="w-full lg:w-80 flex flex-col gap-4">
@@ -33,14 +33,11 @@ function ResumenPedido() {
               🔥 Lleva {unidadesFaltantes} producto{unidadesFaltantes === 1 ? '' : 's'} más y gana 10% en tu próxima compra
             </div>
           )}
-          <div className="flex justify-between">
-            <span className="text-sm text-white/60">IVA {(IVA * 100).toFixed(0)}%</span>
-            <span className="text-sm text-white">${ivaMonto.toLocaleString()}</span>
-          </div>
           <div className="flex justify-between border-t border-white/[0.07] pt-3">
             <span className="text-sm font-semibold text-white">TOTAL</span>
             <span className="text-sm font-semibold text-white">${total.toLocaleString()}</span>
           </div>
+          <p className="text-[11px] text-white/40">Todos los precios incluyen IVA</p>
         </div>
       </div>
 
