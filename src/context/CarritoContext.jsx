@@ -44,8 +44,39 @@ export function CarritoProvider({ children }) {
   // de cada pedido (si ganó, el backend devuelve descuento_ganado) o al guardar
   // los datos de facturación (si se identifica como empresa, aplica el 10% fijo).
   const [tienePremio, setTienePremio] = useState(() => obtenerCliente()?.descuento_proxima_compra === true)
+  // Cupón validado en el checkout: solo informa (el backend lo aplica al confirmar).
+  const [cuponValidado, setCuponValidado] = useState(null)
 
   const esJuridica = clienteActual?.tipo_persona === 'juridica'
+
+  // Valida el cupón contra el backend SIN consumirlo. Si es válido, se guarda
+  // en el estado para mostrarlo al instante en los resúmenes.
+  const validarCupon = async (codigo) => {
+    if (!codigo?.trim()) {
+      return { ok: false, mensaje: 'Escribe el código del cupón' }
+    }
+    const token = localStorage.getItem('token')
+    if (!token) {
+      return { ok: false, mensaje: 'Debes iniciar sesión para usar un cupón' }
+    }
+    try {
+      const res = await fetch(`${API_URL}/api/cupones/validar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ codigo: codigo.trim() }),
+      })
+      const json = await res.json()
+      if (!json.ok) {
+        setCuponValidado(null)
+        return { ok: false, mensaje: json.mensaje || 'Cupón inválido' }
+      }
+      setCuponValidado({ codigo: json.data.codigo, pct: Number(json.data.descuento_pct) })
+      return { ok: true, pct: Number(json.data.descuento_pct) }
+    } catch (error) {
+      console.error('Error validando cupón:', error.message)
+      return { ok: false, mensaje: 'No se pudo conectar con el servidor' }
+    }
+  }
 
   // Actualiza el perfil del cliente en el localStorage y en el estado del carrito
   // para que los descuentos reaccionen al instante (sin recargar ni re-login).
@@ -101,6 +132,9 @@ export function CarritoProvider({ children }) {
         ...(json.data?.unidades_acumuladas !== undefined ? { unidades_acumuladas: json.data.unidades_acumuladas } : {}),
         ...(json.data?.puntos_totales !== undefined ? { puntos: json.data.puntos_totales } : {}),
       })
+      // El pedido ya se confirmó: el cupón queda descartado del estado
+      // (si el backend lo usó, se marcó usado; si no, el cliente puede revalidarlo).
+      setCuponValidado(null)
 
       return {
         ok: true,
@@ -210,11 +244,12 @@ export function CarritoProvider({ children }) {
     totalKgCafe >= Number(t.kg_min) && (t.kg_max === null || totalKgCafe <= Number(t.kg_max))
   )
   const volumenPct = tier ? Number(tier.descuento_pct) : 0
-  // EL MAYOR GANA (igual que el backend): volumen vs empresa 10% vs premio 10%
+  // EL MAYOR GANA (igual que el backend): volumen vs empresa 10% vs premio 10% vs cupón
   const fuentes = [
     { fuente: 'volumen', pct: volumenPct },
     { fuente: 'empresa', pct: esJuridica ? DESCUENTO_EMPRESA * 100 : 0 },
     { fuente: 'premio', pct: tienePremio && !esJuridica ? DESCUENTO_EMPRESA * 100 : 0 },
+    { fuente: 'cupon', pct: cuponValidado ? cuponValidado.pct : 0 },
   ].filter(f => f.pct > 0).sort((a, b) => b.pct - a.pct)
   const ganador = fuentes[0] || { fuente: null, pct: 0 }
   const DESCUENTO = ganador.pct / 100
@@ -241,6 +276,8 @@ export function CarritoProvider({ children }) {
       guardarDatosCliente,
       confirmarPedido,
       actualizarPerfilCliente,
+      validarCupon,
+      cuponValidado,
       cliente: clienteActual,
       subtotal,
       descuentoMonto,

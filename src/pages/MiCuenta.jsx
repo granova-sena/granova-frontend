@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { API_URL } from "../config";
 import { useCarrito } from '../context/CarritoContext'
@@ -132,6 +132,34 @@ function MiCuenta() {
   const puntosFaltantes = nivel.siguiente ? nivel.siguiente - puntos : 0
   const [canjeando, setCanjeando] = useState(false)
   const [cuponObtenido, setCuponObtenido] = useState(null)
+  const [cupones, setCupones] = useState([])
+
+  // Los cupones viven en la BD: aunque el cliente cierre sesión y vuelva,
+  // sus cupones activos siguen apareciendo aquí. 🎟️
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    const id = cliente?.id
+    if (!token || !id) return
+
+    fetch(`${API_URL}/api/cupones`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(json => {
+        if (json.ok) setCupones(json.data || [])
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carga una vez al entrar
+  }, [])
+
+  async function copiarCodigo(codigo) {
+    try {
+      await navigator.clipboard.writeText(codigo)
+      toast.success(`Código ${codigo} copiado`)
+    } catch {
+      toast.error('No se pudo copiar el código')
+    }
+  }
 
   async function canjearPuntos(puntosACanjear) {
     toast.dismiss('perfil-cupon')
@@ -162,6 +190,11 @@ function MiCuenta() {
 
       actualizarPerfilCliente({ puntos: datos.data.puntos_restantes })
       setCuponObtenido(datos.data)
+      // El cupón nuevo entra directo a la lista de cupones activos
+      setCupones(prev => [
+        { codigo: datos.data.codigo, descuento_pct: Number(datos.data.descuento_pct) },
+        ...prev,
+      ])
       toast.success(`¡Cupón de ${datos.data.descuento_pct}% creado!`, { id: 'perfil-cupon' })
     } catch (error) {
       console.error('Error canjeando puntos:', error)
@@ -317,6 +350,37 @@ function MiCuenta() {
                 </button>
               </div>
             </>
+          )}
+        </div>
+
+        {/* MIS CUPONES ACTIVOS (persisten en la BD) */}
+        <div className="rounded-2xl p-6 sm:p-8 mb-5 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-xl">🎟️</span>
+            <p className="text-sm font-semibold text-white">Mis cupones activos</p>
+          </div>
+          {cupones.length === 0 ? (
+            <p className="text-sm text-white/50 leading-relaxed">
+              Aún no tienes cupones. Canjea tus puntos arriba y tu cupón quedará guardado aquí para siempre.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {cupones.map(c => (
+                <div key={c.codigo} className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 bg-[#6FA98C]/10 border border-[#6FA98C]/25">
+                  <div className="min-w-0">
+                    <p className="text-sm font-mono font-bold text-[#9DC9B4]">{c.codigo}</p>
+                    <p className="text-xs text-white/50 mt-0.5">Descuento de {Number(c.descuento_pct)}% · úsalo en el checkout</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copiarCodigo(c.codigo)}
+                    className="shrink-0 px-3.5 py-2 rounded-lg text-xs font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition"
+                  >
+                    Copiar
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

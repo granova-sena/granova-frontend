@@ -34,7 +34,7 @@ function ResumenLateral() {
           {descuentoFuente && (
             <div className="flex justify-between">
               <span className="text-white/60">
-                {descuentoFuente === 'volumen' ? '📦 Descuento por volumen' : descuentoFuente === 'empresa' ? '🏢 Descuento empresa' : '🎉 Descuento'} ({(DESCUENTO * 100).toFixed(0)}%)
+                {descuentoFuente === 'volumen' ? '📦 Descuento por volumen' : descuentoFuente === 'empresa' ? '🏢 Descuento empresa' : descuentoFuente === 'cupon' ? '🎟️ Cupón' : '🎉 Descuento'} ({(DESCUENTO * 100).toFixed(0)}%)
               </span>
               <span className="text-[#9DC9B4]">- ${descuentoMonto.toLocaleString()}</span>
             </div>
@@ -76,7 +76,7 @@ function ResumenLateral() {
 
 function ConfigurarPedidoPage() {
   const navigate = useNavigate()
-  const { guardarDatosCliente, confirmarPedido, actualizarPerfilCliente } = useCarrito()
+  const { guardarDatosCliente, confirmarPedido, actualizarPerfilCliente, validarCupon, cuponValidado } = useCarrito()
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
   const [idPedido, setIdPedido] = useState(null)
@@ -131,6 +131,24 @@ function ConfigurarPedidoPage() {
       [name]: value,
       ...(name === 'tipo_persona' ? { tipo_documento: value === 'juridica' ? 'NIT' : 'CC' } : {}),
     }))
+  }
+
+  // Valida el cupón al instante (sin consumirlo): el descuento aparece de una
+  // en el resumen lateral, y el backend lo aplica de verdad al confirmar.
+  async function aplicarCupon() {
+    toast.dismiss('cupon-checkout-toast')
+
+    if (!cuponCodigo.trim()) {
+      toast.error('Escribe el código del cupón', { id: 'cupon-checkout-toast' })
+      return
+    }
+
+    const resultado = await validarCupon(cuponCodigo)
+    if (resultado.ok) {
+      toast.success(`🎟️ Cupón de ${resultado.pct}% aplicado`, { id: 'cupon-checkout-toast' })
+    } else {
+      toast.error(resultado.mensaje, { id: 'cupon-checkout-toast' })
+    }
   }
 
   // Guarda los datos de facturación en el perfil del cliente (para las próximas compras)
@@ -442,14 +460,29 @@ function ConfigurarPedidoPage() {
                 {/* Cupón de lealtad (Frente D) */}
                 <div className="col-span-1 sm:col-span-2 flex flex-col gap-1 border-t border-white/10 pt-4">
                   <label htmlFor="cupon-checkout" className="text-xs text-white/60">Cupón de lealtad (opcional)</label>
-                  <input
-                    id="cupon-checkout"
-                    type="text"
-                    value={cuponCodigo}
-                    onChange={e => setCuponCodigo(e.target.value.toUpperCase())}
-                    placeholder="Ej: GRN-ABC123"
-                    className="border border-white/15 bg-white/[0.06] text-white placeholder-white/30 rounded-lg px-4 py-3 text-sm outline-none focus:border-[#6FA98C] uppercase"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      id="cupon-checkout"
+                      type="text"
+                      value={cuponCodigo}
+                      onChange={e => setCuponCodigo(e.target.value.toUpperCase())}
+                      onKeyDown={e => { if (e.key === 'Enter') aplicarCupon() }}
+                      placeholder="Ej: GRN-ABC123"
+                      className="flex-1 border border-white/15 bg-white/[0.06] text-white placeholder-white/30 rounded-lg px-4 py-3 text-sm outline-none focus:border-[#6FA98C] uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={aplicarCupon}
+                      className="h-[42px] px-4 rounded-lg bg-[#0F1D13] border border-white/15 text-[#9DC9B4] text-sm font-medium hover:bg-[#14291B] transition shrink-0"
+                    >
+                      Aplicar
+                    </button>
+                  </div>
+                  {cuponValidado && (
+                    <p className="text-xs text-[#9DC9B4] mt-1">
+                      🎟️ Cupón válido: {cuponValidado.pct}% de descuento aplicado en tu resumen
+                    </p>
+                  )}
                   <p className="text-xs text-white/40 mt-1">🎟️ Canjea puntos en Mi cuenta y aplica tu código aquí</p>
                 </div>
 
