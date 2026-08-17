@@ -79,6 +79,14 @@ function adaptarProducto(p) {
   const precioDesde = formatos.length > 0
     ? Math.min(...formatos.map(f => f.precio))
     : Number(p.precio) || 0;
+  // Promoción real (tabla promociones): llega desde el backend si está activa
+  const promo = p.promo
+    ? {
+        descuento_pct: Number(p.promo.descuento_pct) || 0,
+        nombre: p.promo.nombre || "",
+        fecha_fin: p.promo.fecha_fin || null,
+      }
+    : null;
   return {
     id: p.id_producto,
     nombre: p.nombre,
@@ -93,6 +101,10 @@ function adaptarProducto(p) {
     precio: Number(p.precio) || 0,
     precioDesde,
     formatos,
+    promo,
+    promoPct: promo ? promo.descuento_pct : 0,
+    promoNombre: promo ? promo.nombre : "",
+    promoFin: promo ? promo.fecha_fin : null,
     stock,
     stockLabel: calcularStockLabel(stock),
     badge: calcularBadge(p),
@@ -470,11 +482,13 @@ function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito, 
     ? descuentosVolumen.find(t => kgTotales >= Number(t.kg_min) && (t.kg_max === null || kgTotales <= Number(t.kg_max)))
     : null;
 
-  // EL MAYOR GANA (igual que el backend): volumen vs empresa 10%.
+  // EL MAYOR GANA (igual que el backend): volumen vs empresa 10% vs promoción.
   // El precio mostrado es un estimado — el cobro real lo hace el servidor.
   const pctVolumen = tierActivo ? Number(tierActivo.descuento_pct) : 0;
   const pctEmpresa = esJuridica ? 10 : 0;
-  const pctMostrado = Math.max(pctVolumen, pctEmpresa);
+  const pctPromo = p.promoPct || 0;
+  const pctMostrado = Math.max(pctVolumen, pctEmpresa, pctPromo);
+  const promoGana = pctPromo > 0 && pctPromo >= pctMostrado;
   const precioFinal = pctMostrado > 0 ? Math.round(precioUnit * (1 - pctMostrado / 100)) : precioUnit;
   const etiquetaCant = tieneFormatos ? (formato?.etiqueta || "formato") : p.esMaquina ? "unidades" : "kg";
 
@@ -554,13 +568,18 @@ function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito, 
           )}
 
           <div>
-            {esJuridica && !p.esMaquina && (
+            {promoGana && (
+              <p className="text-xs text-[#D85A30] bg-[#D85A30]/10 border border-[#D85A30]/25 rounded-full px-3 py-1.5 inline-block mb-2">
+                🏷️ {p.promoNombre || "Oferta"} · -{pctPromo}%{p.promoFin ? ` · hasta el ${new Date(p.promoFin).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}` : ""}
+              </p>
+            )}
+            {esJuridica && !p.esMaquina && !promoGana && (
               <p className="text-xs text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/25 rounded-full px-3 py-1.5 inline-block mb-2">
                 🏢 Tu precio de empresa incluye el 10% de descuento
               </p>
             )}
             <p className="text-2xl font-semibold text-white">
-              {esJuridica && pctMostrado > 0 ? (
+              {pctMostrado > 0 ? (
                 <>
                   <span className="text-white/40 line-through text-base mr-2">${precioUnit.toLocaleString("es-CO")}</span>
                   ${precioFinal.toLocaleString("es-CO")}
@@ -784,11 +803,15 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
         onKeyDown={(e) => { if (e.key === "Enter") onVerDetalle(p); }}
       >
         <ImagenProducto src={p.img} alt={p.nombre} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-105" />
-        {p.badge && (
+        {p.promoPct > 0 ? (
+          <span className="absolute top-3 left-3 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[#D85A30] text-white">
+            Oferta -{p.promoPct}%
+          </span>
+        ) : p.badge ? (
           <span className={`absolute top-3 left-3 text-[10px] font-semibold px-2.5 py-1 rounded-full ${badgeColor[p.badge] || "bg-white/15 text-white"}`}>
             {p.badge}
           </span>
-        )}
+        ) : null}
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onToggleFavorito(p.id); }}
@@ -817,35 +840,42 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
         </div>
         <div className="flex items-end justify-between">
           <div>
-            {p.formatos.length > 0 ? (
-              esJuridica ? (
+            {(() => {
+              // El mayor entre promo y empresa (10%) decide el precio de la card
+              const pctMostrar = Math.max(p.promoPct || 0, esJuridica ? 10 : 0);
+              const promoGana = (p.promoPct || 0) >= (esJuridica ? 10 : 0) && p.promoPct > 0;
+              const base = p.formatos.length > 0 ? p.precioDesde : p.precio;
+              const precioCard = pctMostrar > 0 ? Math.round(base * (1 - pctMostrar / 100)) : base;
+              const leyendaFormatos = p.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ");
+              return (
                 <>
-                  <p className="text-base font-semibold text-white flex items-center gap-2">
-                    <span className="text-white/35 line-through text-xs">${p.precioDesde.toLocaleString("es-CO")}</span>
-                    <span className="text-[#9DC9B4]">Desde ${Math.round(p.precioDesde * 0.9).toLocaleString("es-CO")}</span>
-                  </p>
-                  <p className="text-[10px] text-white/40">🏢 Precio empresa · {p.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ")}</p>
+                  {pctMostrar > 0 ? (
+                    <>
+                      <p className="text-base font-semibold text-white flex items-center gap-2">
+                        <span className="text-white/35 line-through text-xs">${base.toLocaleString("es-CO")}</span>
+                        <span className={promoGana ? "text-[#D85A30]" : "text-[#9DC9B4]"}>
+                          {p.formatos.length > 0 ? `Desde $${precioCard.toLocaleString("es-CO")}` : `$${precioCard.toLocaleString("es-CO")}`}
+                        </span>
+                      </p>
+                      <p className="text-[10px] text-white/40">
+                        {promoGana
+                          ? `🏷️ Oferta -${pctMostrar}% · ${p.formatos.length > 0 ? leyendaFormatos : `por ${p.unidad}`}`
+                          : `🏢 Precio empresa · ${p.formatos.length > 0 ? leyendaFormatos : `por ${p.unidad}`}`}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-base font-semibold text-white">
+                        {p.formatos.length > 0 ? `Desde $${p.precioDesde.toLocaleString("es-CO")}` : `$${p.precio.toLocaleString("es-CO")}`}
+                      </p>
+                      <p className="text-[10px] text-white/40">
+                        {p.formatos.length > 0 ? leyendaFormatos : `por ${p.unidad}`}
+                      </p>
+                    </>
+                  )}
                 </>
-              ) : (
-                <>
-                  <p className="text-base font-semibold text-white">Desde ${p.precioDesde.toLocaleString("es-CO")}</p>
-                  <p className="text-[10px] text-white/40">{p.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ")}</p>
-                </>
-              )
-            ) : esJuridica ? (
-              <>
-                <p className="text-base font-semibold text-white flex items-center gap-2">
-                  <span className="text-white/35 line-through text-xs">${p.precio.toLocaleString("es-CO")}</span>
-                  <span className="text-[#9DC9B4]">${Math.round(p.precio * 0.9).toLocaleString("es-CO")}</span>
-                </p>
-                <p className="text-[10px] text-white/40">🏢 Precio empresa · por {p.unidad}</p>
-              </>
-            ) : (
-              <>
-                <p className="text-base font-semibold text-white">${p.precio.toLocaleString("es-CO")}</p>
-                <p className="text-[10px] text-white/40">por {p.unidad}</p>
-              </>
-            )}
+              );
+            })()}
           </div>
           <div className="flex items-center gap-1.5">
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${stockColor[p.stockLabel]}`}></span>

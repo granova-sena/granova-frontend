@@ -167,6 +167,8 @@ export function CarritoProvider({ children }) {
       id_formato: p.id_formato ?? null,
       etiqueta_formato: p.etiqueta_formato || '',
       peso_kg: p.peso_kg ?? null,
+      // Promoción real: el % activo del producto (para mostrarlo en los resúmenes)
+      promo_pct: p.promoPct ?? null,
     }))
     setProductos(productosAdaptados)
   }
@@ -244,12 +246,15 @@ export function CarritoProvider({ children }) {
     totalKgCafe >= Number(t.kg_min) && (t.kg_max === null || totalKgCafe <= Number(t.kg_max))
   )
   const volumenPct = tier ? Number(tier.descuento_pct) : 0
-  // EL MAYOR GANA (igual que el backend): volumen vs empresa 10% vs premio 10% vs cupón
+  // Promoción real: el mayor % activo entre los productos del carrito
+  const promoPct = productos.reduce((max, p) => Math.max(max, p.promo_pct || 0), 0)
+  // EL MAYOR GANA (igual que el backend): volumen vs empresa 10% vs premio 10% vs cupón vs promoción
   const fuentes = [
     { fuente: 'volumen', pct: volumenPct },
     { fuente: 'empresa', pct: esJuridica ? DESCUENTO_EMPRESA * 100 : 0 },
     { fuente: 'premio', pct: tienePremio && !esJuridica ? DESCUENTO_EMPRESA * 100 : 0 },
     { fuente: 'cupon', pct: cuponValidado ? cuponValidado.pct : 0 },
+    { fuente: 'promo', pct: promoPct },
   ].filter(f => f.pct > 0).sort((a, b) => b.pct - a.pct)
   const ganador = fuentes[0] || { fuente: null, pct: 0 }
   const DESCUENTO = ganador.pct / 100

@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { API_URL } from "../config";
 
 const IconoEnvio = (props) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" {...props}><path d="M3 7h11v10H3V7zm11 3h4l3 3v4h-7v-7z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><circle cx="7" cy="18" r="1.6" stroke="currentColor" strokeWidth="1.6" /><circle cx="17" cy="18" r="1.6" stroke="currentColor" strokeWidth="1.6" /></svg>
@@ -27,6 +29,18 @@ const BENEFICIOS = [
 
 function Promociones() {
   const navigate = useNavigate()
+  const [promos, setPromos] = useState([])
+
+  // Campañas activas: vienen de la BD (tabla promociones). Lo que se anuncia
+  // aquí, de verdad está activo — cero promociones fantasma. 🚫👻
+  useEffect(() => {
+    fetch(`${API_URL}/api/promociones`)
+      .then(res => res.json())
+      .then(json => {
+        if (json.ok) setPromos(json.data || [])
+      })
+      .catch(() => {})
+  }, [])
 
   return (
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
@@ -36,6 +50,36 @@ function Promociones() {
         <p className="text-white/50 text-sm mb-8 sm:mb-10 max-w-xl">
           Estas son las ventajas reales que tienes como cliente Granova. Todo descuento que ves aquí, el sistema lo aplica.
         </p>
+
+        {/* CAMPAÑAS ACTIVAS (tabla promociones) */}
+        {promos.length > 0 && (
+          <div className="mb-10">
+            <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Campañas activas</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              {promos.map(promo => {
+                const fin = new Date(promo.fecha_fin)
+                return (
+                  <div key={promo.id_promocion} className="p-6 rounded-2xl bg-white/[0.08] backdrop-blur-xl border border-[#D85A30]/30 shadow-sm">
+                    <div className="flex items-start justify-between mb-3">
+                      <p className="text-white font-semibold text-sm">🏷️ {promo.nombre}</p>
+                      <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-[#D85A30] text-white shrink-0">-{Number(promo.descuento_pct)}%</span>
+                    </div>
+                    <p className="text-xs text-white/50 leading-relaxed">
+                      Válida hasta el {fin.toLocaleDateString("es-CO", { day: "numeric", month: "long" })}
+                    </p>
+                    {Array.isArray(promo.productos) && promo.productos.length > 0 && (
+                      <p className="text-xs text-[#9DC9B4] mt-2 leading-relaxed">
+                        Aplica en: {promo.productos.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Beneficios permanentes</span>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {BENEFICIOS.map((b) => {

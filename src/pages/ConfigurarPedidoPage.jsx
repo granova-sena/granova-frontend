@@ -34,7 +34,7 @@ function ResumenLateral() {
           {descuentoFuente && (
             <div className="flex justify-between">
               <span className="text-white/60">
-                {descuentoFuente === 'volumen' ? '📦 Descuento por volumen' : descuentoFuente === 'empresa' ? '🏢 Descuento empresa' : descuentoFuente === 'cupon' ? '🎟️ Cupón' : '🎉 Descuento'} ({(DESCUENTO * 100).toFixed(0)}%)
+                {descuentoFuente === 'volumen' ? '📦 Descuento por volumen' : descuentoFuente === 'empresa' ? '🏢 Descuento empresa' : descuentoFuente === 'cupon' ? '🎟️ Cupón' : descuentoFuente === 'promo' ? '🏷️ Promoción' : '🎉 Descuento'} ({(DESCUENTO * 100).toFixed(0)}%)
               </span>
               <span className="text-[#9DC9B4]">- ${descuentoMonto.toLocaleString()}</span>
             </div>
