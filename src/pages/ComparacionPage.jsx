@@ -1,6 +1,7 @@
 import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { API_URL } from "../config";
+import { SkeletonTable } from '../components/ui/Skeleton';
 
 function ComparacionPage() {
   const navigate = useNavigate()
@@ -34,8 +35,12 @@ function ComparacionPage() {
   }, [ids])
 
   if (cargando) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1a0a' }}>
-      <p className="text-white/50 text-sm">Cargando comparación...</p>
+    <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
+      <div className="max-w-4xl mx-auto px-4 sm:px-8 py-10 text-white">
+        <div className="h-8 skeleton rounded w-48 mb-2" />
+        <div className="h-3 skeleton rounded w-32 mb-8" />
+        <SkeletonTable rows={4} cols={3} />
+      </div>
     </div>
   )
 

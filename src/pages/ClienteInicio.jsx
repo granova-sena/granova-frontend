@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import registerBg from '../assets/register-bg.mp4'
 import ImagenProducto from '../components/ImagenProducto'
 import MapaFincas from '../components/MapaFincas'
+import { SkeletonCard } from '../components/ui/Skeleton'
 
 import { API_URL } from "../config";
 
@@ -156,13 +157,7 @@ function ClienteInicio() {
         {cargando && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-2xl overflow-hidden" style={glass}>
-                <div className="h-48 bg-white/5 animate-pulse"></div>
-                <div className="p-4 flex flex-col gap-2.5">
-                  <div className="h-3.5 w-3/4 rounded bg-white/10 animate-pulse"></div>
-                  <div className="h-4 w-20 rounded bg-white/10 animate-pulse"></div>
-                </div>
-              </div>
+              <SkeletonCard key={i} imageAspect="h-48" hasButton={false} />
             ))}
           </div>
         )}

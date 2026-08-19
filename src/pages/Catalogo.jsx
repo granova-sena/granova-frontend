@@ -4,6 +4,9 @@ import { useModalBehavior } from "../hooks/useModalBehavior";
 import { useCarrito } from "../context/CarritoContext";
 import { API_URL as BASE_API_URL } from "../config";
 import RecomendadorModal from "../components/RecomendadorModal";
+import CaruselGenerico from "../components/CaruselGenerico";
+import ProductoCardMini from "../components/ProductoCardMini";
+import { SkeletonCard } from "../components/ui/Skeleton";
 
 
 // ── CONFIG API ────────────────────────────────────────────
@@ -945,6 +948,7 @@ function CatalogoInterno() {
   const [detalle, setDetalle] = useState(null);
   const [carrito, setCarrito] = useState([]);
   const [tabDestacados, setTabDestacados] = useState("masVendidos");
+  const [tabCarousel, setTabCarousel] = useState("ofertas");
   const [confirmPendiente, setConfirmPendiente] = useState(null);
 
   // ── Nuevas funcionalidades ──
@@ -1095,6 +1099,14 @@ function CatalogoInterno() {
   const promociones = cafeProductos.filter(p => p.badge === "Oferta");
   const totalCarrito = carrito.reduce((s, x) => s + (x.cant || 1), 0);
 
+  // ── Carruseles ──
+  const carouselPromos = cafeProductos.filter(p => p.promoPct > 0).slice(0, 10);
+  const carouselPopulares = [...cafeProductos].sort((a, b) => b.stock - a.stock).slice(0, 8);
+  const carouselNuevos = cafeProductos.filter(p => {
+    if (!p.badge || p.badge !== "Nuevo") return false;
+    return true;
+  }).slice(0, 8);
+
   const numFavoritos = productos.filter(p => favoritos.has(p.id)).length;
   const favoritosDisponibles = productos.filter(p => favoritos.has(p.id) && p.disponible).length;
 
@@ -1239,15 +1251,7 @@ function CatalogoInterno() {
           <div className="h-4 w-40 rounded skeleton mb-6"></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="rounded-2xl overflow-hidden bg-[#0F1D13] border border-white/[0.08]">
-                <div className="aspect-[4/3] skeleton"></div>
-                <div className="p-4 flex flex-col gap-2.5">
-                  <div className="h-2.5 w-16 rounded skeleton"></div>
-                  <div className="h-3.5 w-3/4 rounded skeleton"></div>
-                  <div className="h-4 w-20 rounded skeleton mt-1"></div>
-                  <div className="h-9 w-full rounded-xl skeleton mt-1"></div>
-                </div>
-              </div>
+              <SkeletonCard key={i} />
             ))}
           </div>
         </div>
@@ -1262,6 +1266,60 @@ function CatalogoInterno() {
 
       {!cargando && !error && (
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-10">
+
+          {/* ── CARRUSEL CON PESTAÑAS (solo café) ── */}
+          {seccion === "cafe" && (() => {
+            const tabsCarousel = [
+              { id: "ofertas",   label: "Ofertas",   emoji: "🏷️", items: carouselPromos },
+              { id: "populares", label: "Populares", emoji: "🔥", items: carouselPopulares },
+              { id: "nuevos",    label: "Nuevos",    emoji: "🆕", items: carouselNuevos },
+            ].filter(t => t.items.length > 0);
+
+            if (tabsCarousel.length === 0) return null;
+
+            const tabActiva = tabsCarousel.find(t => t.id === tabCarousel) || tabsCarousel[0];
+
+            return (
+              <div>
+                {/* Pestañas */}
+                <div className="flex items-center gap-2 mb-4">
+                  {tabsCarousel.map(t => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setTabCarousel(t.id)}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
+                        tabActiva.id === t.id
+                          ? "bg-[#6FA98C] text-white"
+                          : "bg-white/[0.06] text-white/50 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {t.emoji} {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Carrusel */}
+                <CaruselGenerico
+                  titulo={tabActiva.label}
+                  subtitulo={
+                    tabActiva.id === "ofertas" ? "Los mejores descuentos de esta semana"
+                    : tabActiva.id === "populares" ? "Los cafés que todos están pidiendo"
+                    : "Los nuevos lotes que acabamos de recibir"
+                  }
+                  emoji={tabActiva.emoji}
+                >
+                  {tabActiva.items.map(p => (
+                    <ProductoCardMini
+                      key={`${tabActiva.id}-${p.id}`}
+                      p={p}
+                      onVerDetalle={verDetalle}
+                    />
+                  ))}
+                </CaruselGenerico>
+              </div>
+            );
+          })()}
 
           {/* ── SECCIÓN CAFÉ ── */}
           {seccion === "cafe" && (
