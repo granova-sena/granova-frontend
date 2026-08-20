@@ -1283,12 +1283,23 @@ function CatalogoInterno() {
 
           {/* Búsqueda + acciones, agrupadas a la derecha */}
           <div className="flex items-center gap-2.5 flex-1 min-w-[220px] justify-end">
+            {/* Input de búsqueda local — en mobile abre Spotlight */}
             <div className="flex items-center gap-2 rounded-xl px-3.5 py-2 w-full max-w-none sm:max-w-xs bg-[#0F1D13] border border-white/[0.08]">
-              <IconoBuscar className="text-white/35 shrink-0" />
+              <button type="button" onClick={() => setSpotlightOpen(true)} className="text-white/35 hover:text-white/60 transition shrink-0" aria-label="Abrir búsqueda avanzada">
+                <IconoBuscar className="shrink-0" />
+              </button>
               <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
                 placeholder={seccion === "maquinas" ? "Buscar cafetera, marca..." : "Buscar por nombre, tipo de café..."}
-                className="flex-1 min-w-0 text-sm outline-none bg-transparent text-white placeholder-white/35" />
+                className="flex-1 min-w-0 text-sm outline-none bg-transparent text-white placeholder-white/35 sm:hidden" readOnly onClick={() => setSpotlightOpen(true)} />
+              <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                placeholder={seccion === "maquinas" ? "Buscar cafetera, marca..." : "Buscar por nombre, tipo de café..."}
+                className="flex-1 min-w-0 text-sm outline-none bg-transparent text-white placeholder-white/35 hidden sm:block" />
             </div>
+            {/* Chip Ctrl+K — solo desktop */}
+            <button type="button" onClick={() => setSpotlightOpen(true)}
+              className="h-10 px-3 rounded-xl bg-[#0F1D13] text-white/30 text-[11px] font-medium border border-white/[0.08] hover:border-white/20 hover:text-white/50 shrink-0 transition hidden md:flex items-center gap-1.5">
+              <span>Ctrl</span><kbd className="text-[9px] bg-white/[0.06] px-1 py-0.5 rounded">K</kbd>
+            </button>
             {seccion === "cafe" && (
               <button type="button" onClick={() => setMostrarRecomendador(true)}
                 className="relative h-10 px-4 rounded-xl bg-[#0F1D13] text-[#9DC9B4] text-sm font-medium items-center gap-2 border border-[#6FA98C]/25 hover:bg-[#14291B] shrink-0 transition hidden md:flex">
