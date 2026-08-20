@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Component } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, Component } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useModalBehavior } from "../hooks/useModalBehavior";
 import { useCarrito } from "../context/CarritoContext";
@@ -7,6 +7,7 @@ import RecomendadorModal from "../components/RecomendadorModal";
 import CaruselGenerico from "../components/CaruselGenerico";
 import ProductoCardMini from "../components/ProductoCardMini";
 import { SkeletonCard } from "../components/ui/Skeleton";
+import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
 
 
 // ── CONFIG API ────────────────────────────────────────────
@@ -787,6 +788,27 @@ function CalculadoraRapida({ precio, stock }) {
 
 function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFavorito, onToggleFavorito, seleccionadoComparar, onToggleComparar, esJuridica = false }) {
   const [feedback, setFeedback] = useState(false);
+  const cardRef = useRef(null);
+
+  // Parallax 3D mouse tracking
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [6, -6]), { stiffness: 300, damping: 30 });
+  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-6, 6]), { stiffness: 300, damping: 30 });
+
+  const handleMouseMove = useCallback((e) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    mouseX.set(x);
+    mouseY.set(y);
+  }, [mouseX, mouseY]);
+
+  const handleMouseLeave = useCallback(() => {
+    mouseX.set(0);
+    mouseY.set(0);
+  }, [mouseX, mouseY]);
 
   const handleAgregar = (e) => {
     if (!p.disponible) return;
@@ -796,7 +818,15 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
   };
 
   return (
-    <div className={`relative rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col ${seleccionadoComparar ? "border border-[#6FA98C]/70" : "border border-white/[0.08]"} bg-[#0F1D13]`}>
+    <motion.div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{ rotateX, rotateY, transformPerspective: 800 }}
+      whileHover={{ y: -6, boxShadow: "0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(111,169,140,0.15)" }}
+      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      className={`relative rounded-2xl overflow-hidden flex flex-col ${seleccionadoComparar ? "border border-[#6FA98C]/70 shadow-[0_0_20px_rgba(111,169,140,0.15)]" : "border border-white/[0.08]"} bg-[#0F1D13]`}
+    >
       <div
         className="relative aspect-[4/3] bg-[#14291B] cursor-pointer overflow-hidden group/img"
         role="button"
@@ -805,36 +835,50 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
         onClick={() => onVerDetalle(p)}
         onKeyDown={(e) => { if (e.key === "Enter") onVerDetalle(p); }}
       >
-        <ImagenProducto src={p.img} alt={p.nombre} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-105" />
+        <ImagenProducto src={p.img} alt={p.nombre} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" />
         {p.promoPct > 0 ? (
-          <span className="absolute top-3 left-3 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[#D85A30] text-white">
+          <motion.span
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="absolute top-3 left-3 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[#D85A30] text-white shadow-lg shadow-[#D85A30]/25"
+          >
             Oferta -{p.promoPct}%
-          </span>
+          </motion.span>
         ) : p.badge ? (
           <span className={`absolute top-3 left-3 text-[10px] font-semibold px-2.5 py-1 rounded-full ${badgeColor[p.badge] || "bg-white/15 text-white"}`}>
             {p.badge}
           </span>
         ) : null}
-        <button
+        <motion.button
           type="button"
           onClick={(e) => { e.stopPropagation(); onToggleFavorito(p.id); }}
-          className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center shadow transition ${esFavorito ? "bg-[#D85A30] text-white" : "bg-black/45 text-white/80 hover:text-white"}`}
+          className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center shadow-lg"
+          whileTap={{ scale: 0.8 }}
+          animate={esFavorito ? { scale: [1, 1.3, 1], backgroundColor: "#D85A30" } : { scale: 1, backgroundColor: "rgba(0,0,0,0.45)" }}
+          transition={{ type: "spring", stiffness: 400, damping: 15 }}
           aria-label={esFavorito ? "Quitar de favoritos" : "Agregar a favoritos"}
           title="Favorito"
         >
           <IconoCorazon lleno={esFavorito} />
-        </button>
-        {cantidadEnCarrito > 0 && (
-          <span className="absolute bottom-3 right-3 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-black/50 text-white">
-            En el carrito · {cantidadEnCarrito}
-          </span>
-        )}
+        </motion.button>
+        <AnimatePresence>
+          {cantidadEnCarrito > 0 && (
+            <motion.span
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              className="absolute bottom-3 right-3 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[#6FA98C] text-white shadow-lg shadow-[#6FA98C]/30"
+            >
+              En el carrito · {cantidadEnCarrito}
+            </motion.span>
+          )}
+        </AnimatePresence>
       </div>
       <div className="p-4 flex flex-col gap-2 flex-1">
         <div>
           <p className="text-xs text-white/40">{p.origen}</p>
           <p
-            className="text-sm font-medium text-white mt-0.5 leading-snug cursor-pointer hover:text-[#9DC9B4] transition"
+            className="text-sm font-medium text-white mt-0.5 leading-snug cursor-pointer hover:text-[#9DC9B4] transition-colors duration-200"
             role="button"
             tabIndex={0}
             onClick={() => onVerDetalle(p)}
@@ -844,7 +888,6 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
         <div className="flex items-end justify-between">
           <div>
             {(() => {
-              // El mayor entre promo y empresa (10%) decide el precio de la card
               const pctMostrar = Math.max(p.promoPct || 0, esJuridica ? 10 : 0);
               const promoGana = (p.promoPct || 0) >= (esJuridica ? 10 : 0) && p.promoPct > 0;
               const base = p.formatos.length > 0 ? p.precioDesde : p.precio;
@@ -856,9 +899,12 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
                     <>
                       <p className="text-base font-semibold text-white flex items-center gap-2">
                         <span className="text-white/35 line-through text-xs">${base.toLocaleString("es-CO")}</span>
-                        <span className={promoGana ? "text-[#D85A30]" : "text-[#9DC9B4]"}>
+                        <motion.span
+                          className={promoGana ? "text-[#D85A30]" : "text-[#9DC9B4]"}
+                          whileHover={{ textShadow: promoGana ? "0 0 8px rgba(216,90,48,0.5)" : "0 0 8px rgba(157,201,180,0.5)" }}
+                        >
                           {p.formatos.length > 0 ? `Desde $${precioCard.toLocaleString("es-CO")}` : `$${precioCard.toLocaleString("es-CO")}`}
-                        </span>
+                        </motion.span>
                       </p>
                       <p className="text-[10px] text-white/40">
                         {promoGana
@@ -887,9 +933,13 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
         </div>
 
         {p.stockLabel === "Stock bajo" && p.disponible && (
-          <p className="text-[11px] text-amber-500 font-medium animate-pulse">
+          <motion.p
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="text-[11px] text-amber-500 font-medium"
+          >
             ¡Solo {p.stock} {p.unidad === "kg" ? "kg" : "unidades"} disponibles!
-          </p>
+          </motion.p>
         )}
 
         {p.esMaquina && p.garantia && (
@@ -903,11 +953,39 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
           <input type="checkbox" checked={seleccionadoComparar} onChange={onToggleComparar} className="w-3.5 h-3.5 accent-[#6FA98C]" />
           <span>Comparar</span>
         </label>
-        <button type="button" onClick={handleAgregar} disabled={!p.disponible} className={`mt-1 h-9 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed transition active:scale-95 duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1D13] ${feedback ? "bg-[#4F8A70] text-white" : "bg-[#6FA98C] text-white hover:bg-[#4F8A70]"}`}>
-          {feedback ? "✓ Agregado" : <><IconoCarrito width={14} height={14} /> Agregar</>}
-        </button>
+        <motion.button
+          type="button"
+          onClick={handleAgregar}
+          disabled={!p.disponible}
+          whileTap={{ scale: 0.95 }}
+          animate={feedback ? { backgroundColor: "#4F8A70" } : { backgroundColor: "#6FA98C" }}
+          className={`mt-1 h-9 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1D13]`}
+        >
+          <AnimatePresence mode="wait">
+            {feedback ? (
+              <motion.span
+                key="added"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+              >
+                ✓ Agregado
+              </motion.span>
+            ) : (
+              <motion.span
+                key="add"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="flex items-center gap-1.5"
+              >
+                <IconoCarrito width={14} height={14} /> Agregar
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
