@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { API_URL } from "../config";
+import FadeIn from '../components/ui/FadeIn';
 
 const IconoEnvio = (props) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" {...props}><path d="M3 7h11v10H3V7zm11 3h4l3 3v4h-7v-7z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><circle cx="7" cy="18" r="1.6" stroke="currentColor" strokeWidth="1.6" /><circle cx="17" cy="18" r="1.6" stroke="currentColor" strokeWidth="1.6" /></svg>
@@ -53,69 +54,75 @@ function Promociones() {
 
         {/* CAMPAÑAS ACTIVAS (tabla promociones) */}
         {promos.length > 0 && (
-          <div className="mb-10">
-            <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Campañas activas</span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-              {promos.map(promo => {
-                const fin = new Date(promo.fecha_fin)
-                return (
-                  <div key={promo.id_promocion} className="p-6 rounded-2xl bg-white/[0.08] backdrop-blur-xl border border-[#D85A30]/30 shadow-sm">
-                    <div className="flex items-start justify-between mb-3">
-                      <p className="text-white font-semibold text-sm">🏷️ {promo.nombre}</p>
-                      <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-[#D85A30] text-white shrink-0">-{Number(promo.descuento_pct)}%</span>
-                    </div>
-                    <p className="text-xs text-white/50 leading-relaxed">
-                      Válida hasta el {fin.toLocaleDateString("es-CO", { day: "numeric", month: "long" })}
-                    </p>
-                    {Array.isArray(promo.productos) && promo.productos.length > 0 && (
-                      <p className="text-xs text-[#9DC9B4] mt-2 leading-relaxed">
-                        Aplica en: {promo.productos.join(", ")}
+          <FadeIn>
+            <div className="mb-10">
+              <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Campañas activas</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                {promos.map(promo => {
+                  const fin = new Date(promo.fecha_fin)
+                  return (
+                    <div key={promo.id_promocion} className="p-6 rounded-2xl bg-white/[0.08] backdrop-blur-xl border border-[#D85A30]/30 shadow-sm">
+                      <div className="flex items-start justify-between mb-3">
+                        <p className="text-white font-semibold text-sm">🏷️ {promo.nombre}</p>
+                        <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-[#D85A30] text-white shrink-0">-{Number(promo.descuento_pct)}%</span>
+                      </div>
+                      <p className="text-xs text-white/50 leading-relaxed">
+                        Válida hasta el {fin.toLocaleDateString("es-CO", { day: "numeric", month: "long" })}
                       </p>
-                    )}
-                  </div>
-                )
-              })}
+                      {Array.isArray(promo.productos) && promo.productos.length > 0 && (
+                        <p className="text-xs text-[#9DC9B4] mt-2 leading-relaxed">
+                          Aplica en: {promo.productos.join(", ")}
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
+          </FadeIn>
         )}
 
         <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Beneficios permanentes</span>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {BENEFICIOS.map((b) => {
-            const Icono = b.icono
-            const activo = b.estado === 'Activo'
-            return (
-              <div
-                key={b.titulo}
-                className={`p-6 rounded-2xl bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm transition ${activo ? '' : 'opacity-60'}`}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${activo ? 'bg-[#6FA98C]/10 text-[#9DC9B4]' : 'bg-white/10 text-white/40'}`}>
-                    <Icono />
+        <FadeIn>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {BENEFICIOS.map((b) => {
+              const Icono = b.icono
+              const activo = b.estado === 'Activo'
+              return (
+                <div
+                  key={b.titulo}
+                  className={`p-6 rounded-2xl bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm transition ${activo ? '' : 'opacity-60'}`}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${activo ? 'bg-[#6FA98C]/10 text-[#9DC9B4]' : 'bg-white/10 text-white/40'}`}>
+                      <Icono />
+                    </div>
+                    <span className={`text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0 ${activo ? 'text-[#9DC9B4] bg-[#6FA98C]/10' : 'text-white/45 bg-white/10'}`}>
+                      {b.estado}
+                    </span>
                   </div>
-                  <span className={`text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0 ${activo ? 'text-[#9DC9B4] bg-[#6FA98C]/10' : 'text-white/45 bg-white/10'}`}>
-                    {b.estado}
-                  </span>
+                  <p className="text-white font-semibold text-sm mb-1.5">{b.titulo}</p>
+                  <p className="text-white/50 text-xs leading-relaxed">{b.descripcion}</p>
                 </div>
-                <p className="text-white font-semibold text-sm mb-1.5">{b.titulo}</p>
-                <p className="text-white/50 text-xs leading-relaxed">{b.descripcion}</p>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        </FadeIn>
 
-        <div className="mt-6 p-6 sm:p-8 rounded-2xl text-center bg-[#6FA98C]">
-          <p className="text-white font-medium mb-1">¿Listo para aprovechar tus descuentos?</p>
-          <p className="text-white/50 text-sm mb-5">Elige tu formato, compra al por mayor o canjea tus puntos — el mejor descuento se aplica solo.</p>
-          <button
-            type="button"
-            onClick={() => navigate('/cliente/catalogo')}
-            className="px-6 py-3 bg-white/[0.08] backdrop-blur-xl text-white rounded-xl text-sm font-medium hover:bg-white/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1a0a]"
-          >
-            Ir al catálogo
-          </button>
-        </div>
+        <FadeIn>
+          <div className="mt-6 p-6 sm:p-8 rounded-2xl text-center bg-[#6FA98C]">
+            <p className="text-white font-medium mb-1">¿Listo para aprovechar tus descuentos?</p>
+            <p className="text-white/50 text-sm mb-5">Elige tu formato, compra al por mayor o canjea tus puntos — el mejor descuento se aplica solo.</p>
+            <button
+              type="button"
+              onClick={() => navigate('/cliente/catalogo')}
+              className="px-6 py-3 bg-white/[0.08] backdrop-blur-xl text-white rounded-xl text-sm font-medium hover:bg-white/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1a0a]"
+            >
+              Ir al catálogo
+            </button>
+          </div>
+        </FadeIn>
       </div>
     </div>
   )

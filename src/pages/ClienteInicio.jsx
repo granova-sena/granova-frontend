@@ -4,6 +4,7 @@ import registerBg from '../assets/register-bg.mp4'
 import ImagenProducto from '../components/ImagenProducto'
 import MapaFincas from '../components/MapaFincas'
 import { SkeletonCard } from '../components/ui/Skeleton'
+import FadeIn from '../components/ui/FadeIn'
 
 import { API_URL } from "../config";
 
@@ -128,31 +129,34 @@ function ClienteInicio() {
       {/* FRANJA DE VALORES */}
       <section className="border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4">
-          {VALORES.map((v) => (
-            <div key={v.titulo} className="flex items-start gap-3">
-              <div className="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-[#9DC9B4]" style={{ background: 'rgba(111,169,140,0.15)' }}>
-                {v.icono}
+          {VALORES.map((v, i) => (
+            <FadeIn key={v.titulo} delay={i * 0.1}>
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-[#9DC9B4]" style={{ background: 'rgba(111,169,140,0.15)' }}>
+                  {v.icono}
+                </div>
+                <div>
+                  <p className="text-white text-sm font-medium">{v.titulo}</p>
+                  <p className="text-white/45 text-xs mt-0.5 leading-relaxed">{v.descripcion}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-white text-sm font-medium">{v.titulo}</p>
-                <p className="text-white/45 text-xs mt-0.5 leading-relaxed">{v.descripcion}</p>
-              </div>
-            </div>
+            </FadeIn>
           ))}
         </div>
       </section>
 
       {/* DESTACADOS DEL CATÁLOGO */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Del catálogo</span>
-            <h2 className="text-xl sm:text-2xl font-medium text-white mt-1">Café y máquinas para ti</h2>
+      <FadeIn>
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Del catálogo</span>
+              <h2 className="text-xl sm:text-2xl font-medium text-white mt-1">Café y máquinas para ti</h2>
+            </div>
+            <button type="button" onClick={() => navigate('/cliente/catalogo')} className="text-sm text-white/60 hover:text-white shrink-0">
+              Ver todo →
+            </button>
           </div>
-          <button type="button" onClick={() => navigate('/cliente/catalogo')} className="text-sm text-white/60 hover:text-white shrink-0">
-            Ver todo →
-          </button>
-        </div>
 
         {cargando && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -202,36 +206,41 @@ function ClienteInicio() {
           </div>
         )}
       </section>
+      </FadeIn>
 
       {/* FINCAS CERCANAS */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20">
-        <div className="mb-6">
-          <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Origen</span>
-          <h2 className="text-xl sm:text-2xl font-medium text-white mt-1">Fincas cafeteras cerca de ti</h2>
-          <p className="text-white/45 text-sm mt-1">Conoce de dónde viene tu café antes de comprarlo.</p>
-        </div>
-        <div className="anim-pop rounded-2xl overflow-hidden" style={glass}>
-          <MapaFincas />
-        </div>
-      </section>
+      <FadeIn>
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20">
+          <div className="mb-6">
+            <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Origen</span>
+            <h2 className="text-xl sm:text-2xl font-medium text-white mt-1">Fincas cafeteras cerca de ti</h2>
+            <p className="text-white/45 text-sm mt-1">Conoce de dónde viene tu café antes de comprarlo.</p>
+          </div>
+          <div className="anim-pop rounded-2xl overflow-hidden" style={glass}>
+            <MapaFincas />
+          </div>
+        </section>
+      </FadeIn>
 
       {/* ACCESOS SECUNDARIOS */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
-        <div className="anim-pop rounded-2xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x sm:grid sm:grid-cols-3" style={{ ...glass, borderColor: 'rgba(255,255,255,0.1)' }}>
-          {ACCESOS.map((a) => (
-            <button
-              type="button"
-              key={a.to}
-              onClick={() => navigate(a.to)}
-              className="w-full text-left px-6 py-5 flex items-center justify-between hover:bg-white/[0.06] transition group"
-              style={{ borderColor: 'rgba(255,255,255,0.1)' }}
-            >
-              <span className="text-sm font-medium text-white">{a.titulo}</span>
-              <span className="text-white/30 group-hover:text-[#9DC9B4] group-hover:translate-x-0.5 transition-all">→</span>
-            </button>
-          ))}
-        </div>
-      </section>
+      <FadeIn>
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
+          <div className="anim-pop rounded-2xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x sm:grid sm:grid-cols-3" style={{ ...glass, borderColor: 'rgba(255,255,255,0.1)' }}>
+            {ACCESOS.map((a) => (
+              <button
+                type="button"
+                key={a.to}
+                onClick={() => navigate(a.to)}
+                className="w-full text-left px-6 py-5 flex items-center justify-between hover:bg-white/[0.06] transition group"
+                style={{ borderColor: 'rgba(255,255,255,0.1)' }}
+              >
+                <span className="text-sm font-medium text-white">{a.titulo}</span>
+                <span className="text-white/30 group-hover:text-[#9DC9B4] group-hover:translate-x-0.5 transition-all">→</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      </FadeIn>
     </div>
   )
 }

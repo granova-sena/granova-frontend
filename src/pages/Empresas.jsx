@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { API_URL as BASE_API_URL } from "../config";
 import { useCarrito } from '../context/CarritoContext'
+import FadeIn from '../components/ui/FadeIn'
 
 const API_URL = `${BASE_API_URL}/productos`
 
@@ -74,40 +75,45 @@ function Empresas() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
 
         {/* HERO */}
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Granova Empresas</span>
-          <h1 className="text-3xl sm:text-4xl font-semibold mt-3 tracking-tight">Tu café al por mayor, sin papeleo</h1>
-          <p className="text-white/50 text-sm sm:text-base mt-4 leading-relaxed">
-            Si compras para tu negocio, Granova te premia desde el primer pedido: 10% siempre,
-            precios por bulto y descuentos que crecen con tu volumen.
-          </p>
-          {esJuridica ? (
-            <p className="inline-block mt-5 text-sm text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/30 rounded-full px-4 py-2">
-              🏢 Ya estás registrado como empresa: tienes 10% en todos tus pedidos
+        <FadeIn>
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Granova Empresas</span>
+            <h1 className="text-3xl sm:text-4xl font-semibold mt-3 tracking-tight">Tu café al por mayor, sin papeleo</h1>
+            <p className="text-white/50 text-sm sm:text-base mt-4 leading-relaxed">
+              Si compras para tu negocio, Granova te premia desde el primer pedido: 10% siempre,
+              precios por bulto y descuentos que crecen con tu volumen.
             </p>
-          ) : (
-            <button
-              type="button"
-              onClick={() => navigate('/cliente/cuenta')}
-              className="mt-6 h-12 px-8 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition"
-            >
-              Registra tu NIT y obtén tu 10% →
-            </button>
-          )}
-        </div>
+            {esJuridica ? (
+              <p className="inline-block mt-5 text-sm text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/30 rounded-full px-4 py-2">
+                🏢 Ya estás registrado como empresa: tienes 10% en todos tus pedidos
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate('/cliente/cuenta')}
+                className="mt-6 h-12 px-8 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition"
+              >
+                Registra tu NIT y obtén tu 10% →
+              </button>
+            )}
+          </div>
+        </FadeIn>
 
         {/* BENEFICIOS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-14">
-          {BENEFICIOS.map(b => (
-            <div key={b.titulo} className="rounded-2xl p-5" style={{ background: '#0F1D13', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <span className="text-2xl">{b.icono}</span>
-              <p className="text-sm font-semibold text-white mt-3">{b.titulo}</p>
-              <p className="text-xs text-white/50 mt-1.5 leading-relaxed">{b.texto}</p>
-            </div>
-          ))}
-        </div>
+        <FadeIn>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-14">
+            {BENEFICIOS.map(b => (
+              <div key={b.titulo} className="rounded-2xl p-5" style={{ background: '#0F1D13', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <span className="text-2xl">{b.icono}</span>
+                <p className="text-sm font-semibold text-white mt-3">{b.titulo}</p>
+                <p className="text-xs text-white/50 mt-1.5 leading-relaxed">{b.texto}</p>
+              </div>
+            ))}
+          </div>
+        </FadeIn>
 
         {/* CALCULADORA DE AHORRO */}
+        <FadeIn>
         <div className="rounded-2xl overflow-hidden" style={{ background: '#0F1D13', border: '1px solid rgba(111,169,140,0.35)' }}>
           <div className="px-6 py-4 border-b border-white/10">
             <h2 className="text-lg font-semibold text-white">Calcula tu ahorro</h2>
@@ -206,18 +212,21 @@ function Empresas() {
             </div>
           )}
         </div>
+        </FadeIn>
 
         {/* CTA FINAL */}
-        <div className="text-center mt-12">
-          <button
-            type="button"
-            onClick={() => navigate('/cliente/catalogo')}
-            className="h-12 px-10 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition"
-          >
-            Ir al catálogo
-          </button>
-          <p className="text-xs text-white/40 mt-4">¿Dudas? Escríbenos y coordinamos tu pedido empresarial.</p>
-        </div>
+        <FadeIn>
+          <div className="text-center mt-12">
+            <button
+              type="button"
+              onClick={() => navigate('/cliente/catalogo')}
+              className="h-12 px-10 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition"
+            >
+              Ir al catálogo
+            </button>
+            <p className="text-xs text-white/40 mt-4">¿Dudas? Escríbenos y coordinamos tu pedido empresarial.</p>
+          </div>
+        </FadeIn>
       </div>
     </div>
   )

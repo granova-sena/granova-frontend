@@ -4,6 +4,7 @@ import { API_URL } from "../config";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { SkeletonRow } from '../components/ui/Skeleton';
+import FadeIn from '../components/ui/FadeIn';
 
 const descargarFactura = async (id_pedido) => {
   try {
@@ -206,6 +207,7 @@ function MisPedidos() {
         )}
 
         {!cargando && !error && pedidos.length > 0 && (
+        <FadeIn>
         <div className="rounded-2xl overflow-hidden bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm divide-y divide-white/10">
           {pedidos.map((p) => (
             <div key={p.id_pedido} className="flex items-center justify-between px-5 sm:px-6 py-4 hover:bg-white/[0.06] transition">
@@ -244,8 +246,10 @@ function MisPedidos() {
             </div>
           ))}
         </div>
+        </FadeIn>
       )}
 
+        <FadeIn>
         <div className="mt-6 rounded-2xl p-6 sm:p-8 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
           <p className="text-sm font-semibold text-white mb-6">Así se ve un pedido en camino</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
@@ -261,6 +265,7 @@ function MisPedidos() {
             ))}
           </div>
         </div>
+        </FadeIn>
       </div>
     </div>
   )
