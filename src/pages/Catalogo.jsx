@@ -239,8 +239,6 @@ function volarAlCarrito(elementoOrigen) {
       requestAnimationFrame(frame);
     } else {
       bola.remove();
-      cartEl.classList.add("cart-bounce");
-      setTimeout(() => cartEl.classList.remove("cart-bounce"), 500);
     }
   }
 
@@ -1283,12 +1281,30 @@ function CatalogoInterno() {
                 ✨ ¿No sabes qué elegir?
               </button>
             )}
-            <button type="button" id="icono-carrito-header" onClick={() => setCarritoOpen(true)} className="relative h-10 w-10 rounded-xl flex items-center justify-center shrink-0 bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition" aria-label="Carrito">
+            <motion.button
+              type="button"
+              id="icono-carrito-header"
+              onClick={() => setCarritoOpen(true)}
+              whileTap={{ scale: 0.9 }}
+              className="relative h-10 w-10 rounded-xl flex items-center justify-center shrink-0 bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition"
+              aria-label="Carrito"
+            >
               <IconoCarrito />
-              {totalCarrito > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-[#D85A30] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#0a1a0a]">{totalCarrito}</span>
-              )}
-            </button>
+              <AnimatePresence>
+                {totalCarrito > 0 && (
+                  <motion.span
+                    key={totalCarrito}
+                    initial={{ scale: 0, y: 5 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                    className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-[#D85A30] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#0a1a0a] shadow-lg shadow-[#D85A30]/30"
+                  >
+                    {totalCarrito}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.button>
           </div>
         </div>
       </div>
