@@ -9,6 +9,7 @@ import ProductoCardMini from "../components/ProductoCardMini";
 import { SkeletonCard } from "../components/ui/Skeleton";
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
 import FadeIn from "../components/ui/FadeIn";
+import SpotlightSearch from "../components/SpotlightSearch";
 
 
 // ── CONFIG API ────────────────────────────────────────────
@@ -1032,6 +1033,19 @@ function CatalogoInterno() {
   const [favoritos, setFavoritos] = useState(() => cargarFavoritos());
   const [vistos, setVistos] = useState(() => cargarVistos());
 
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
+
+  useEffect(() => {
+    function manejarSpotlight(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setSpotlightOpen(prev => !prev);
+      }
+    }
+    document.addEventListener("keydown", manejarSpotlight);
+    return () => document.removeEventListener("keydown", manejarSpotlight);
+  }, []);
+
   useEffect(() => {
     let cancelado = false;
     async function cargarProductos() {
@@ -1633,6 +1647,14 @@ function CatalogoInterno() {
           onRecomendaciones={(datos) => setRecomendaciones(datos)}
         />
       )}
+
+      <SpotlightSearch
+        abierto={spotlightOpen}
+        onCerrar={() => setSpotlightOpen(false)}
+        productos={productos}
+        onVerDetalle={verDetalle}
+        onAgregar={agregar}
+      />
     </div>
   );
 }
