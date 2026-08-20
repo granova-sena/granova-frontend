@@ -8,6 +8,7 @@ import CaruselGenerico from "../components/CaruselGenerico";
 import ProductoCardMini from "../components/ProductoCardMini";
 import { SkeletonCard } from "../components/ui/Skeleton";
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
+import FadeIn from "../components/ui/FadeIn";
 
 
 // ── CONFIG API ────────────────────────────────────────────
@@ -1346,6 +1347,7 @@ function CatalogoInterno() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-10">
 
           {/* ── CARRUSEL CON PESTAÑAS (solo café) ── */}
+          <FadeIn>
           {seccion === "cafe" && (() => {
             const tabsCarousel = [
               { id: "ofertas",   label: "Ofertas",   emoji: "🏷️", items: carouselPromos },
@@ -1398,14 +1400,16 @@ function CatalogoInterno() {
               </div>
             );
           })()}
+          </FadeIn>
 
           {/* ── SECCIÓN CAFÉ ── */}
           {seccion === "cafe" && (
             <>
               {/* PRODUCTO DEL DÍA */}
-              {productoDelDia && <ProductoDelDiaBanner producto={productoDelDia} onAgregar={agregar} onVerDetalle={verDetalle} />}
+              {productoDelDia && <FadeIn><ProductoDelDiaBanner producto={productoDelDia} onAgregar={agregar} onVerDetalle={verDetalle} /></FadeIn>}
 
               {/* BANNER B2B (Frente C): captación de empresas */}
+              <FadeIn>
               <div className="rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4" style={{ background: '#0F1D13', border: '1px solid rgba(111,169,140,0.35)' }}>
                 <span className="text-3xl">🏢</span>
                 <div className="flex-1 min-w-0">
@@ -1418,9 +1422,11 @@ function CatalogoInterno() {
                   <button type="button" onClick={() => navigate('/cliente/empresas')} className="shrink-0 h-10 px-5 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">Granova Empresas →</button>
                 )}
               </div>
+              </FadeIn>
 
               {/* RECOMENDADO PARA TI */}
               {recomendaciones.length > 0 && (
+                <FadeIn>
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <div>
@@ -1446,11 +1452,13 @@ function CatalogoInterno() {
                     ))}
                   </div>
                 </div>
+                </FadeIn>
               )}
             </>
           )}
 
           {/* VISTOS RECIENTEMENTE */}
+          <FadeIn>
           {productosVistos.length > 0 && (
             <div>
               <h2 className="text-lg font-semibold text-white mb-3">Vistos recientemente</h2>
@@ -1477,8 +1485,10 @@ function CatalogoInterno() {
               </div>
             </div>
           )}
+          </FadeIn>
 
           {/* GRID DE LA SECCIÓN */}
+          <FadeIn>
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-white">
@@ -1516,6 +1526,7 @@ function CatalogoInterno() {
               </div>
             )}
           </div>
+          </FadeIn>
 
           {/* SECCIÓN DESTACADOS (solo café) */}
           {seccion === "cafe" && (
