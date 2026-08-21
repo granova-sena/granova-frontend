@@ -5,6 +5,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { SkeletonRow } from '../components/ui/Skeleton';
 import FadeIn from '../components/ui/FadeIn';
+import OrderStepper from '../components/ui/OrderStepper';
 
 const descargarFactura = async (id_pedido) => {
   try {
@@ -90,13 +91,6 @@ const descargarFactura = async (id_pedido) => {
     alert('❌ No se pudo generar la factura')
   }
 }
-
-const PASOS = [
-  { titulo: 'Pedido confirmado', desc: 'Recibimos tu compra' },
-  { titulo: 'En preparación', desc: 'Tostamos y empacamos' },
-  { titulo: 'En camino', desc: 'Sale hacia tu ciudad' },
-  { titulo: 'Entregado', desc: 'Café en tu puerta' },
-]
 
 const estadoTexto = {
   pendiente: 'text-white/50',
@@ -223,6 +217,9 @@ function MisPedidos() {
               </button>
 
               <div className="flex items-center gap-4">
+                <div className="hidden sm:block">
+                  <OrderStepper estado={p.estado} compacto />
+                </div>
                 <div className="text-right">
                   <p className={`text-xs font-medium ${estadoTexto[p.estado] || 'text-white/50'}`}>
                     {estadoLabel[p.estado] || p.estado}
@@ -251,19 +248,8 @@ function MisPedidos() {
 
         <FadeIn>
         <div className="mt-6 rounded-2xl p-6 sm:p-8 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
-          <p className="text-sm font-semibold text-white mb-6">Así se ve un pedido en camino</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-            {PASOS.map((paso, i) => (
-              <div key={paso.titulo} className="relative">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-6 h-6 rounded-full bg-white/10 text-white/40 text-[11px] font-semibold flex items-center justify-center shrink-0">{i + 1}</span>
-                  {i < PASOS.length - 1 && <span className="hidden sm:block flex-1 h-px bg-white/10"></span>}
-                </div>
-                <p className="text-xs font-medium text-white/70">{paso.titulo}</p>
-                <p className="text-[11px] text-white/35 mt-0.5">{paso.desc}</p>
-              </div>
-            ))}
-          </div>
+          <p className="text-sm font-semibold text-white mb-6">Así se ve el seguimiento de tu pedido</p>
+          <OrderStepper estado="enviado" />
         </div>
         </FadeIn>
       </div>

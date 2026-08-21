@@ -2,15 +2,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { API_URL } from "../config";
 import FormularioResena from '../components/FormularioResena'
-
-
-const estadosPedido = [
-  { id: 'pendiente', label: 'Pendiente', icono: '🕐' },
-  { id: 'confirmado', label: 'Confirmado', icono: '✓' },
-  { id: 'en_proceso', label: 'En preparación', icono: '📦' },
-  { id: 'enviado', label: 'Enviado', icono: '🚚' },
-  { id: 'entregado', label: 'Entregado', icono: '🏠' },
-]
+import OrderStepper from '../components/ui/OrderStepper'
 
 function EstadoPedidoPage() {
   const navigate = useNavigate()
@@ -52,8 +44,6 @@ function EstadoPedidoPage() {
     </div>
   )
 
-  const indexActual = estadosPedido.findIndex(e => e.id === pedido.estado)
-
   const formatearFecha = (fecha) =>
     new Date(fecha).toLocaleDateString('es-CO', {
       day: 'numeric', month: 'long', year: 'numeric'
@@ -84,40 +74,7 @@ function EstadoPedidoPage() {
 
         {/* Timeline */}
         <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl p-6 sm:p-8 mb-6">
-          <div className="flex items-start justify-between overflow-x-auto">
-            {estadosPedido.map((e, i) => (
-              <div key={e.id} className="flex items-start flex-1 min-w-[80px]">
-                <div className="flex flex-col items-center flex-1">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 z-10
-                                        ${i < indexActual
-                      ? 'bg-[#6FA98C] border-[#6FA98C] text-white'
-                      : i === indexActual
-                      ? 'bg-[#6FA98C] border-[#6FA98C] text-white animate-pulse ring-4 ring-[#6FA98C]/30'
-                      : 'bg-transparent border-white/20 text- white/40'
-                    }`}>
-                    {e.icono}
-                  </div>
-                  <p className={`text-xs mt-2 text-center font-medium
-                    ${i <= indexActual ? 'text-white' : 'text-white/40'}`}>
-                    {e.label}
-                  </p>
-                  {i === 0 && (
-                    <p className="text-[10px] text-white/30">
-                      {formatearFecha(pedido.fecha_pedido)}
-                    </p>
-                  )}
-                  {i > indexActual && (
-                    <p className="text-[10px] text-white/30">Pendiente</p>
-                  )}
-                </div>
-                {i < estadosPedido.length - 1 && (
-                  <div className={`h-px w-full mt-5 mx-1
-                    ${i < indexActual ? 'bg-[#6FA98C]' : 'bg-white/15'}`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
+          <OrderStepper estado={pedido.estado} fechaPedido={formatearFecha(pedido.fecha_pedido)} />
         </div>
 
         {/* Cards info */}
