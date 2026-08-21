@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { API_URL } from "../config";
 import { useCarrito } from '../context/CarritoContext'
 import { calcularNivel } from '../utils/lealtad'
+import LoyaltyRing from '../components/ui/LoyaltyRing'
 
 const ETIQUETAS_TIPO_PERSONA = { natural: 'Persona natural', juridica: 'Persona jurídica' }
 const ETIQUETAS_TIPO_DOCUMENTO = { CC: 'Cédula de ciudadanía (CC)', CE: 'Cédula de extranjería (CE)', NIT: 'NIT', PASAPORTE: 'Pasaporte' }
@@ -300,25 +301,19 @@ function MiCuenta() {
 
         {/* LEALTAD (Frente D): nivel, puntos, progreso y canje */}
         <div className="rounded-2xl p-6 sm:p-8 mb-5 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">{nivel.icono}</span>
-              <div>
-                <p className="text-sm font-semibold text-white">Rango: {nivel.nombre}</p>
-                <p className="text-xs text-white/50">{puntos.toLocaleString('es-CO')} puntos</p>
-              </div>
-            </div>
-            {nivel.siguiente && (
-              <span className="text-xs text-[#9DC9B4]">Te faltan {puntosFaltantes.toLocaleString('es-CO')} pts para el siguiente rango</span>
-            )}
-          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-8">
+            {/* Anillo de lealtad */}
+            <LoyaltyRing
+              puntos={puntos}
+              nivel={nivel}
+              progresoPct={progresoPct}
+              puntosFaltantes={puntosFaltantes}
+              size={160}
+            />
 
-          {/* Barra de progreso */}
-          <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden mb-5">
-            <div className="h-full bg-[#6FA98C] rounded-full transition-all" style={{ width: `${progresoPct}%` }} />
-          </div>
-
-          {cuponObtenido ? (
+            {/* Panel de canje */}
+            <div className="flex-1 w-full">
+            {cuponObtenido ? (
             <div className="rounded-xl p-4 bg-[#6FA98C]/15 border border-[#6FA98C]/40">
               <p className="text-sm font-semibold text-white">🎟️ ¡Tu cupón está listo!</p>
               <p className="text-xs text-white/60 mt-1">Código: <span className="font-mono font-bold text-[#9DC9B4] text-sm">{cuponObtenido.codigo}</span></p>
@@ -346,11 +341,13 @@ function MiCuenta() {
                   disabled={canjeando || puntos < 1000}
                   className="flex-1 py-3 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  🎟️ 1.000 pts → Cupón 10%
+                   🎟️ 1.000 pts → Cupón 10%
                 </button>
               </div>
             </>
           )}
+            </div>
+          </div>
         </div>
 
         {/* MIS CUPONES ACTIVOS (persisten en la BD) */}

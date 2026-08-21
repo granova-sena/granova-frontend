@@ -6,6 +6,7 @@ import MapaFincas from '../components/MapaFincas'
 import { SkeletonCard } from '../components/ui/Skeleton'
 import FadeIn from '../components/ui/FadeIn'
 import AuroraBackground from '../components/AuroraBackground'
+import { calcularNivel } from '../utils/lealtad'
 
 import { API_URL } from "../config";
 
@@ -62,6 +63,9 @@ function ClienteInicio() {
     }
   })()
 
+  const puntos = Number(cliente.puntos) || 0
+  const nivel = calcularNivel(puntos)
+
   useEffect(() => {
     let cancelado = false
     async function cargar() {
@@ -101,6 +105,12 @@ function ClienteInicio() {
           <div className="flex items-center gap-2 mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-[#6FA98C]"></span>
             <span className="text-xs text-white/60 uppercase tracking-wide">{saludoSegunHora()}</span>
+            {cliente.nombre && puntos > 0 && (
+              <span className="ml-2 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-white/60">
+                <span>{nivel.icono}</span>
+                <span>{puntos.toLocaleString('es-CO')} pts</span>
+              </span>
+            )}
           </div>
           <h1 className="text-3xl sm:text-5xl font-medium leading-tight tracking-tight text-white max-w-xl">
             {cliente.nombre ? <>Hola, {cliente.nombre} ☕</> : 'Bienvenido a Granova'}
