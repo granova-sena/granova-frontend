@@ -15,6 +15,14 @@ function colorParaPedido(id) {
   return coloresProducto[id % coloresProducto.length]
 }
 
+function esAdmin() {
+  try {
+    return JSON.parse(localStorage.getItem('usuario'))?.rol === 'admin'
+  } catch {
+    return false
+  }
+}
+
 const LIMITE = 10
 const MAX_MOTIVO = 500
 
@@ -194,6 +202,7 @@ function GestionPedidos() {
                 <th className="py-3 px-5 font-medium">Pedido</th>
                 <th className="py-3 px-5 font-medium">Cliente</th>
                 <th className="py-3 px-5 font-medium">Producto</th>
+                <th className="py-3 px-5 font-medium">Finca / Lote</th>
                 <th className="py-3 px-5 font-medium">Cantidad</th>
                 <th className="py-3 px-5 font-medium">Total</th>
                 <th className="py-3 px-5 font-medium">Estado</th>
@@ -226,6 +235,9 @@ function GestionPedidos() {
                         <span className="text-gray-600">{p.producto}</span>
                       </div>
                     </td>
+                    <td className="py-3 px-5 text-xs text-gray-500">
+                      {p.finca ? <>{p.finca}{p.lote && <><br />Lote {p.lote}</>}</> : '—'}
+                    </td>
                     <td className="py-3 px-5 text-gray-600">{p.cantidad} kg</td>
                     <td className="py-3 px-5 text-gray-800 font-medium">{formatMoney(p.total)}</td>
                     <td className="py-3 px-5">
@@ -234,7 +246,9 @@ function GestionPedidos() {
                       </span>
                     </td>
                     <td className="py-3 px-5">
-                      {p.estado === 'Pendiente' ? (
+                      {esAdmin() ? (
+                        <span className="text-xs text-gray-400">Solo lectura</span>
+                      ) : p.estado === 'Pendiente' ? (
                         <div className="flex items-center gap-2">
                           <button
                             type="button"

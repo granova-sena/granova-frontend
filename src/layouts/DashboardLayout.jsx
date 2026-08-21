@@ -34,12 +34,12 @@ function DashboardLayout() {
     },
     {
       target: '.menu-dashboard',
-      content: 'Aquí ves el resumen general del negocio: usuarios, pedidos, inventario, todo de un vistazo.',
+      content: 'Aquí ves el resumen general del negocio: ingresos, costos y qué tan rentable va todo.',
       placement: 'right',
     },
     {
       target: '.menu-usuarios',
-      content: 'Gestiona los usuarios del sistema — puedes ver, editar y administrar roles.',
+      content: 'Aquí administras los empleados que operan el sistema.',
       placement: 'right',
     },
     {
@@ -47,18 +47,6 @@ function DashboardLayout() {
       content: 'Aquí está todo lo de Ventas: registro de ventas y reportes. Haz clic para desplegar las opciones.',
       placement: 'right',
       abrirGrupo: 'ventas',
-    },
-    {
-      target: '.grupo-pedidos',
-      content: 'En Pedidos gestionas las órdenes, los envíos y las transportadoras que trabajan con Granova.',
-      placement: 'right',
-      abrirGrupo: 'pedidos',
-    },
-    {
-      target: '.grupo-inventario',
-      content: 'Y en Inventario controlas el stock disponible y las alertas de productos por agotarse.',
-      placement: 'right',
-      abrirGrupo: 'inventario',
     },
     {
       target: '.boton-cerrar-sesion',
@@ -106,8 +94,8 @@ function DashboardLayout() {
           <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
         </svg>
       ),
-      label: 'Usuarios',
-      path: '/dashboard/usuarios',
+      label: 'Empleados',
+      path: '/dashboard/empleados',
       clase: 'menu-usuarios',
     },
   ]
@@ -124,37 +112,6 @@ function DashboardLayout() {
       items: [
         { label: 'Registro de ventas', path: '/dashboard/ventas' },
         { label: 'Reportes', path: '/dashboard/reportes' },
-      ],
-    },
-    {
-      id: 'pedidos',
-      titulo: 'Pedidos',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path d="M21 8l-9-5-9 5 9 5 9-5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-          <path d="M3 8v8l9 5 9-5V8" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-          <path d="M12 13v8" stroke="currentColor" strokeWidth="2"/>
-        </svg>
-      ),
-      items: [
-        { label: 'Gestión de pedidos', path: '/dashboard/pedidos' },
-        { label: 'Envíos', path: '/dashboard/envios' },
-        { label: 'Transportadoras', path: '/dashboard/transportadoras' },
-      ],
-    },
-    {
-      id: 'inventario',
-      titulo: 'Inventario',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path d="M3 9h14v6a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V9z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-          <path d="M17 9h2a3 3 0 0 1 0 6h-2" stroke="currentColor" strokeWidth="2"/>
-          <path d="M6 2v3M10 2v3M14 2v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        </svg>
-      ),
-      items: [
-        { label: 'Control de stock', path: '/dashboard/inventario' },
-        { label: 'Alertas de stock', path: '/dashboard/inventario/alertas' },
       ],
     },
   ]

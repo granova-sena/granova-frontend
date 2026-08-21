@@ -12,6 +12,14 @@ function estadoStyle(estado) {
   return 'bg-gray-100 text-gray-600'
 }
 
+function esAdmin() {
+  try {
+    return JSON.parse(localStorage.getItem('usuario'))?.rol === 'admin'
+  } catch {
+    return false
+  }
+}
+
 const LIMITE = 10
 
 function RegistroVentas() {
@@ -145,13 +153,15 @@ function RegistroVentas() {
           >
             ↓ {exportando ? 'Generando...' : `Exportar página ${pagina}`}
           </button>
-          <button
-            type="button"
-            onClick={() => setMostrarModal(true)}
-            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition"
-          >
-            + Nueva venta
-          </button>
+          {!esAdmin() && (
+            <button
+              type="button"
+              onClick={() => setMostrarModal(true)}
+              className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition"
+            >
+              + Nueva venta
+            </button>
+          )}
         </div>
       </div>
 
@@ -180,6 +190,7 @@ function RegistroVentas() {
                 <th className="py-3 px-5 font-medium">Factura</th>
                 <th className="py-3 px-5 font-medium">Cliente</th>
                 <th className="py-3 px-5 font-medium">Producto</th>
+                <th className="py-3 px-5 font-medium">Finca / Lote</th>
                 <th className="py-3 px-5 font-medium">Cantidad</th>
                 <th className="py-3 px-5 font-medium">Total</th>
                 <th className="py-3 px-5 font-medium">Estado</th>
@@ -213,6 +224,9 @@ function RegistroVentas() {
                         </div>
                       </td>
                       <td className="py-3 px-5 text-gray-600">{v.producto}</td>
+                      <td className="py-3 px-5 text-xs text-gray-500">
+                        {v.finca ? <>{v.finca}{v.lote && <><br />Lote {v.lote}</>}</> : '—'}
+                      </td>
                       <td className="py-3 px-5 text-gray-600">{v.cantidad} {v.esMaquina ? 'unidades' : 'kg'}</td>
                       <td className="py-3 px-5 text-gray-800 font-medium">{formatMoney(v.total)}</td>
                       <td className="py-3 px-5 relative">

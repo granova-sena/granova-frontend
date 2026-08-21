@@ -5,11 +5,9 @@ import logo from '../assets/logo.png'
 import registerBg from '../assets/register-bg.mp4'
 import toast from 'react-hot-toast'
 import { API_URL, FRONTEND_URL } from "../config";
-import { useCarrito } from '../context/CarritoContext'
 
 function Login() {
   const navigate = useNavigate()
-  const { actualizarPerfilCliente } = useCarrito()
   const [loading, setLoading] = useState(false)
   const [verContraseña, setVerContraseña] = useState(false)
   const loginEnCurso = useRef(false)
@@ -79,9 +77,6 @@ function Login() {
         'cliente',
         JSON.stringify(datos.cliente)
       )
-      // Refresca el contexto del carrito para que "Mi cuenta" y los
-      // descuentos reflejen el login al instante (sin recargar la página).
-      actualizarPerfilCliente(datos.cliente)
 
       navigate('/cliente')
 
@@ -129,20 +124,8 @@ function Login() {
       }
 
       if (token && cliente) {
-        // El popup manda el cliente como texto JSON; lo normalizamos a objeto
-        // para guardarlo siempre en el mismo formato y refrescar el contexto.
-        let clienteObj = cliente
-        if (typeof cliente === 'string') {
-          try {
-            clienteObj = JSON.parse(cliente)
-          } catch {
-            clienteObj = {}
-          }
-        }
-
         localStorage.setItem('token', token)
-        localStorage.setItem('cliente', JSON.stringify(clienteObj))
-        actualizarPerfilCliente(clienteObj)
+        localStorage.setItem('cliente', cliente)
 
         window.removeEventListener(
           'message',

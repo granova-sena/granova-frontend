@@ -29,9 +29,11 @@ function FormularioResena({ id_detalle, producto_nombre, onCerrar, onEnviado }) 
     try {
       const res = await fetch(`${API_URL}/resenas`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
         body: JSON.stringify({
-          id_cliente: obtenerIdCliente(),
           id_detalle,
           calificacion,
           comentario
