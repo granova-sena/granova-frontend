@@ -2,7 +2,16 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { API_URL } from "../config";
 const CarritoContext = createContext()
 
-const productosIniciales = []
+const STORAGE_KEY = 'granova_carrito'
+
+function cargarCarrito() {
+  try {
+    const guardado = localStorage.getItem(STORAGE_KEY)
+    return guardado ? JSON.parse(guardado) : []
+  } catch {
+    return []
+  }
+}
 
 // Frente 1 (Jhon): reglas de descuento.
 // - Empresa (tipo_persona = 'juridica'): 10% fijo en todos sus pedidos.
@@ -36,7 +45,7 @@ function obtenerCliente() {
 }
 
 export function CarritoProvider({ children }) {
-  const [productos, setProductos] = useState(productosIniciales)
+  const [productos, setProductos] = useState(cargarCarrito)
   const [datosCliente, setDatosCliente] = useState(null)
   const [clienteActual, setClienteActual] = useState(() => obtenerCliente())
   const [descuentosVolumen, setDescuentosVolumen] = useState([])
@@ -132,8 +141,9 @@ export function CarritoProvider({ children }) {
         ...(json.data?.unidades_acumuladas !== undefined ? { unidades_acumuladas: json.data.unidades_acumuladas } : {}),
         ...(json.data?.puntos_totales !== undefined ? { puntos: json.data.puntos_totales } : {}),
       })
-      // El pedido ya se confirmó: el cupón queda descartado del estado
-      // (si el backend lo usó, se marcó usado; si no, el cliente puede revalidarlo).
+      // El pedido ya se confirmó: limpiar carrito del localStorage y del estado
+      localStorage.removeItem(STORAGE_KEY)
+      setProductos([])
       setCuponValidado(null)
 
       return {
@@ -204,6 +214,11 @@ export function CarritoProvider({ children }) {
       })
       .catch(() => {})
   }, [])
+
+  // Persistir carrito en localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(productos))
+  }, [productos])
 
   // Sincronización del perfil: el servidor es la fuente de verdad.
   // Al abrir la app, si hay sesión, traemos el perfil fresco (fecha_creacion,
