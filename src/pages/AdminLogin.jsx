@@ -51,7 +51,7 @@ function AdminLogin() {
 
       localStorage.setItem('token', datos.token)
       localStorage.setItem('usuario', JSON.stringify(datos.usuario))
-      navigate('/dashboard')
+      navigate(datos.usuario.rol === 'empleado' ? '/panel-empleado' : '/dashboard')
     } catch (error) {
       console.error('Error en AdminLogin:', error)
       toast.error('No se pudo conectar con el servidor', { id: 'error-admin' })

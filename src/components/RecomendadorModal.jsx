@@ -59,12 +59,17 @@ function RecomendadorModal({ onClose, onRecomendaciones }) {
         // Guardar preferencias en la base de datos
         await fetch(`${API_URL}/api/preferencias`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id_cliente, ...nuevasRespuestas })
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({ ...nuevasRespuestas })
         })
 
         // Obtener recomendaciones
-        const res = await fetch(`${API_URL}/api/preferencias/${id_cliente}/recomendaciones`)
+        const res = await fetch(`${API_URL}/api/preferencias/${id_cliente}/recomendaciones`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        })
         const json = await res.json()
         if (json.ok) onRecomendaciones(json.data)
       }

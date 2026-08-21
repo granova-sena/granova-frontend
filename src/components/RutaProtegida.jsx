@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
-function RutaProtegida({ children }) {
+function RutaProtegida({ children, rolesPermitidos = ["admin"] }) {
 
     const token = localStorage.getItem("token");
 
@@ -14,7 +14,7 @@ function RutaProtegida({ children }) {
 
         const decodificado = jwtDecode(token);
 
-        if(decodificado.rol !== "admin") {
+        if (!rolesPermitidos.includes(decodificado.rol)) {
             return <Navigate to="/" replace />
         }
 

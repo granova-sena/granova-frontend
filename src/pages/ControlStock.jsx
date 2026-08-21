@@ -4,6 +4,14 @@ import api from '../services/api'
 import { formatMoney } from '../utils/format'
 import ProductoModal from '../components/ProductoModal'
 
+function esAdmin() {
+  try {
+    return JSON.parse(localStorage.getItem('usuario'))?.rol === 'admin'
+  } catch {
+    return false
+  }
+}
+
 const estadoStyles = {
   Disponible: 'bg-green-100 text-green-700',
   'Stock bajo': 'bg-amber-100 text-amber-700',
@@ -173,13 +181,15 @@ function ControlStock() {
           >
             ↓ {exportando ? 'Generando...' : 'Exportar'}
           </button>
-          <button
-            type="button"
-            onClick={() => abrirModal(null)}
-            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition"
-          >
-            + Nuevo producto
-          </button>
+          {!esAdmin() && (
+            <button
+              type="button"
+              onClick={() => abrirModal(null)}
+              className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition"
+            >
+              + Nuevo producto
+            </button>
+          )}
         </div>
       </div>
 
@@ -276,17 +286,19 @@ function ControlStock() {
                       </span>
                     </td>
                     <td className="py-3 px-5">
-                          <button
-                        type="button"
-                        onClick={() => abrirModal(p)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition"
-                        title="Editar producto"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                          <path d="M12 20h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </button>
+                      {!esAdmin() && (
+                        <button
+                          type="button"
+                          onClick={() => abrirModal(p)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition"
+                          title="Editar producto"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 20h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

@@ -27,18 +27,18 @@ function CarritoPage() {
 
           {/* Columna izquierda */}
           <div className="flex-1">
-            <div className="rounded-xl overflow-hidden bg-[#0F1D13] border border-white/[0.08]">
+            <div className="rounded-xl overflow-hidden bg-white/[0.08] backdrop-blur-xl border border-white/15">
 
               {/* Encabezado */}
-              <div className="grid grid-cols-[1fr_auto_auto] sm:grid-cols-3 gap-3 px-4 sm:px-6 py-4 border-b border-white/[0.07]" style={{ background: '#0D1D13' }}>
+              <div className="grid grid-cols-3 px-6 py-4 border-b border-white/10">
                 <span className="text-xs font-semibold text-white/40 uppercase">Producto</span>
                 <span className="text-xs font-semibold text-white/40 uppercase">Precio</span>
-                <span className="text-xs font-semibold text-white/40 uppercase justify-self-end">Cantidad</span>
+                <span className="text-xs font-semibold text-white/40 uppercase">Cantidad</span>
               </div>
 
               {/* Productos desde el Context */}
               {productos.length === 0 ? (
-                <div className="px-6 py-12 text-center text-sm text-white/40">
+                <div className="px-6 py-10 text-center text-sm text-white/40">
                   No hay productos en el carrito.
                 </div>
               ) : (
@@ -46,17 +46,16 @@ function CarritoPage() {
                   <FilaProducto
                     key={p.id}
                     id={p.id}
-                    imagen={p.img}
+                    imagen="https://placehold.co/60x60/1a2e1a/FFFFFF?text=C"
                     nombre={p.nombre}
                     presentacion={p.presentacion}
                     precio={p.precio}
-                    unidad={p.unidad}
                   />
                 ))
               )}
 
               {/* Footer */}
-              <div className="px-4 sm:px-6 py-4 border-t border-white/[0.07] flex justify-between items-center" style={{ background: '#0D1D13' }}>
+              <div className="px-6 py-4 border-t border-white/10 flex justify-between items-center">
                 <button type="button" onClick={() => navigate('/cliente/catalogo')} className="text-[#9DC9B4] text-sm hover:underline">
                   + Agregar más productos
                 </button>

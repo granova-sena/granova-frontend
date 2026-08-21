@@ -9,4 +9,15 @@ const api = axios.create({
   baseURL: `${API_URL}/api`,
 })
 
+// Manda el token en TODAS las peticiones automáticamente, para no
+// tener que acordarse de agregarlo a mano en cada archivo (así se nos
+// olvidó una vez y el Dashboard quedó dando error de autenticación).
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
 export default api

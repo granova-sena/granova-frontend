@@ -7,8 +7,11 @@ import RutaProtegida from './components/RutaProtegida'
 import RutaProtegidaCliente from './components/RutaProtegidaCliente'
 import NotFound from './pages/NotFound'
 import DashboardLayout from './layouts/DashboardLayout'
+import EmpleadoLayout from './layouts/EmpleadoLayout'
+import ControlEmpleado from './pages/ControlEmpleado'
+import ControlLotes from './pages/ControlLotes'
 import DashboardHome from './pages/DashboardHome'
-import Users from './pages/Users'
+import Empleados from './pages/Empleados'
 import { Toaster } from 'react-hot-toast'
 import ResetPassword from './pages/Reset-Password'
 import OlvidePassword from './pages/OlvidePassword'
@@ -96,13 +99,24 @@ function App() {
         {/* Compatibilidad: cualquier link viejo a /catalogo cae en la vista nueva */}
         <Route path="/catalogo" element={<Navigate to="/cliente/catalogo" replace />} />
 
+        <Route path="/panel-empleado" element={
+          <RutaProtegida rolesPermitidos={["empleado"]}>
+            <EmpleadoLayout />
+          </RutaProtegida>
+        }>
+          <Route index element={<ControlEmpleado />} />
+          <Route path="lotes" element={<ControlLotes />} />
+          <Route path="pedidos" element={<GestionPedidos />} />
+          <Route path="ventas" element={<RegistroDeVentas />} />
+        </Route>
+
         <Route path="/dashboard" element={
-          <RutaProtegida>
+          <RutaProtegida rolesPermitidos={["admin"]}>
             <DashboardLayout />
           </RutaProtegida>
         }>
           <Route index element={<DashboardHome />} />
-          <Route path="usuarios" element={<Users />} />
+          <Route path="empleados" element={<Empleados />} />
 
           {/* Ventas */}
           <Route path="ventas" element={<RegistroDeVentas />} />

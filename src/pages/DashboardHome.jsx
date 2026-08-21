@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { formatMoney } from '../utils/format'
 
 function DashboardHome() {
+  const navigate = useNavigate()
   const [usuario, setUsuario] = useState(null)
   const [hora, setHora] = useState(new Date())
 
@@ -11,6 +13,7 @@ function DashboardHome() {
   const [inventarioResumen, setInventarioResumen] = useState(null)
   const [totalLotes, setTotalLotes] = useState(null)
   const [cargando, setCargando] = useState(true)
+  const [alertasEmpleados, setAlertasEmpleados] = useState([])
 
   useEffect(() => {
     const data = localStorage.getItem('usuario')
@@ -21,16 +24,19 @@ function DashboardHome() {
   }, [])
 
   useEffect(() => {
+    const auth = { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
     Promise.allSettled([
-      api.get('/dashboard'),
-      api.get('/pedidos/resumen'),
-      api.get('/inventario/resumen'),
-      api.get('/inventario/lotes'),
-    ]).then(([dashboardRes, pedidosRes, inventarioRes, lotesRes]) => {
+      api.get('/dashboard', auth),
+      api.get('/pedidos/resumen', auth),
+      api.get('/inventario/resumen', auth),
+      api.get('/inventario/lotes', auth),
+      api.get('/empleados/alertas', auth),
+    ]).then(([dashboardRes, pedidosRes, inventarioRes, lotesRes, alertasRes]) => {
       if (dashboardRes.status === 'fulfilled') setResumen(dashboardRes.value.data)
       if (pedidosRes.status === 'fulfilled') setPedidosResumen(pedidosRes.value.data)
       if (inventarioRes.status === 'fulfilled') setInventarioResumen(inventarioRes.value.data)
       if (lotesRes.status === 'fulfilled') setTotalLotes(lotesRes.value.data.lotes?.length ?? 0)
+      if (alertasRes.status === 'fulfilled') setAlertasEmpleados(alertasRes.value.data.alertas || [])
       setCargando(false)
     })
   }, [])
@@ -98,12 +104,35 @@ function DashboardHome() {
     },
   ]
 
-  const clientesRecientes = resumen?.ok ? resumen.clientesRecientes : []
+  const r = resumen?.ok ? resumen.rentabilidad : null
   const ventasMensuales = resumen?.ok ? resumen.ventasMensuales : []
   const maxVenta = Math.max(...ventasMensuales.map(v => v.total), 1)
 
   return (
     <div className="min-h-full">
+
+      {/* Alerta: empleados con 3+ reportes acumulados */}
+      {alertasEmpleados.length > 0 && (
+        <div className="rounded-2xl p-4 mb-4 bg-red-50 border border-red-200 flex flex-col gap-2">
+          {alertasEmpleados.map((a) => (
+            <button
+              key={a.id_usuario}
+              onClick={() => navigate('/dashboard/empleados')}
+              className="flex items-start gap-3 text-left"
+            >
+              <span className="text-red-500 mt-0.5">⚠</span>
+              <div>
+                <p className="text-sm font-medium text-red-700">
+                  {a.nombre} {a.apellido} llegó a {a.reportes} reportes
+                </p>
+                {a.ultimo_motivo && (
+                  <p className="text-xs text-red-500/80 mt-0.5">Último motivo: "{a.ultimo_motivo}"</p>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Header de bienvenida */}
       <div
@@ -163,35 +192,50 @@ function DashboardHome() {
       {/* Sección inferior */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-        {/* Clientes recientes (antes "Actividad reciente") */}
+        {/* Rentabilidad del mes (antes "Clientes recientes") */}
         <div className="rounded-2xl p-6" style={glass}>
-          <h2 className="text-[#1F2A24] font-medium mb-4 flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1D9E75] opacity-60"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#1D9E75]"></span>
-            </span>
-            <span>Clientes recientes</span>
-          </h2>
-          <div className="space-y-3">
-            {cargando ? (
-              <p className="text-sm text-[#1F2A24]/40">Cargando...</p>
-            ) : clientesRecientes.length === 0 ? (
-              <p className="text-sm text-[#1F2A24]/40">Aún no hay pedidos registrados.</p>
-            ) : (
-              clientesRecientes.map((c, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: '#1D9E75' }}></div>
-                  <div className="flex-1 flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm text-[#1F2A24]/70">{c.nombre}</p>
-                      <p className="text-xs text-[#1F2A24]/35 mt-0.5">{c.producto || 'Sin producto'} · {c.estado}</p>
-                    </div>
-                    <p className="text-sm font-medium text-[#1F2A24]/70 whitespace-nowrap">{formatMoney(c.total)}</p>
-                  </div>
-                </div>
-              ))
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[#1F2A24] font-medium">Rentabilidad del mes</h2>
+            {!cargando && r && (
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                r.rentable ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
+              }`}>
+                {r.rentable ? 'Rentable' : 'No rentable'}
+              </span>
             )}
           </div>
+
+          {cargando ? (
+            <p className="text-sm text-[#1F2A24]/40">Cargando...</p>
+          ) : !r || r.ingresos === 0 ? (
+            <p className="text-sm text-[#1F2A24]/40">Aún no hay ventas este mes para calcular rentabilidad.</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#1F2A24]/50">Ingresos</span>
+                <span className="text-[#1F2A24] font-medium">{formatMoney(r.ingresos)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#1F2A24]/50">Costo de lo vendido</span>
+                <span className="text-[#1F2A24] font-medium">- {formatMoney(r.costoVendido)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#1F2A24]/50">Producto perdido ({r.kgPerdidos} kg)</span>
+                <span className="text-[#1F2A24] font-medium">- {formatMoney(r.valorPerdido)}</span>
+              </div>
+              <div className="h-px bg-[#1F2A24]/10 my-2"></div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#1F2A24] font-medium">Ganancia neta</span>
+                <span className={`font-semibold ${r.gananciaNeta >= 0 ? 'text-[#1D9E75]' : 'text-red-500'}`}>
+                  {formatMoney(r.gananciaNeta)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[#1F2A24]/40">Margen sobre ingresos</span>
+                <span className="text-[#1F2A24]/60">{r.margenPct}%</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Ventas mensuales (antes "Estado del sistema") */}

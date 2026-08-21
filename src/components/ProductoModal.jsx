@@ -9,10 +9,13 @@ const formVacio = {
   nombre: '',
   tipo_cafe: '',
   presentacion: '',
+  id_presentacion: '',
   marca: '',
   modelo: '',
   garantia_meses: '',
   precio: '',
+  precio_mayorista: '',
+  costo_unitario: '',
   stock: '',
   descripcion: '',
   imagen_url: '',
@@ -26,12 +29,13 @@ function bloquearNoNumerico(e) {
   }
 }
 
-function ProductoModal({ producto, onClose, onGuardado }) {
+function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
   const [modo, setModo] = useState('individual') // 'individual' | 'excel'
 
   const [lotes, setLotes] = useState([])
   const [categorias, setCategorias] = useState([])
   const [marcas, setMarcas] = useState([])
+  const [presentaciones, setPresentaciones] = useState([])
   const [cargandoLotes, setCargandoLotes] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [cargandoProducto, setCargandoProducto] = useState(false)
@@ -56,11 +60,12 @@ function ProductoModal({ producto, onClose, onGuardado }) {
     api.get('/inventario/lotes').then(res => setLotes(res.data.lotes)).catch(() => {}).finally(() => setCargandoLotes(false))
     api.get('/inventario/categorias').then(res => setCategorias(res.data.categorias)).catch(() => {})
     api.get('/inventario/marcas').then(res => setMarcas(res.data.marcas)).catch(() => {})
+    api.get('/inventario/presentaciones').then(res => setPresentaciones(res.data.presentaciones.filter(p => p.activo))).catch(() => {})
   }, [])
 
   useEffect(() => {
     if (!producto) {
-      setForm(formVacio)
+      setForm(loteInicial ? { ...formVacio, id_lote: loteInicial } : formVacio)
       setError(null)
       return
     }
@@ -75,10 +80,13 @@ function ProductoModal({ producto, onClose, onGuardado }) {
           nombre: data.nombre || '',
           tipo_cafe: data.tipo_cafe || '',
           presentacion: data.presentacion || '',
+          id_presentacion: data.id_presentacion || '',
           marca: data.marca || '',
           modelo: data.modelo || '',
           garantia_meses: data.garantia_meses != null ? String(data.garantia_meses) : '',
           precio: data.precio != null ? String(data.precio) : '',
+          precio_mayorista: data.precio_mayorista != null ? String(data.precio_mayorista) : '',
+          costo_unitario: data.costo_unitario != null ? String(data.costo_unitario) : '',
           stock: data.stock != null ? String(data.stock) : '',
           descripcion: data.descripcion || '',
           imagen_url: data.imagen_url || data.imagen || '',
@@ -164,6 +172,8 @@ function ProductoModal({ producto, onClose, onGuardado }) {
       const payload = {
         ...form,
         precio: Number(form.precio),
+        precio_mayorista: form.precio_mayorista ? Number(form.precio_mayorista) : null,
+        costo_unitario: form.costo_unitario ? Number(form.costo_unitario) : 0,
         stock: Number(form.stock),
         garantia_meses: form.garantia_meses ? Number(form.garantia_meses) : null,
       }
@@ -448,14 +458,21 @@ function ProductoModal({ producto, onClose, onGuardado }) {
                   </div>
                   <div>
                     <label htmlFor="presentacion-cafe" className="block text-sm text-gray-600 mb-1">Presentación *</label>
-                    <input
+                    <select
                       id="presentacion-cafe"
-                      type="text"
-                      value={form.presentacion}
-                      onChange={(e) => cambiarCampo('presentacion', e.target.value)}
+                      value={form.id_presentacion}
+                      onChange={(e) => {
+                        const pres = presentaciones.find((p) => String(p.id_presentacion) === e.target.value)
+                        cambiarCampo('id_presentacion', e.target.value)
+                        cambiarCampo('presentacion', pres ? pres.nombre : '')
+                      }}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
-                      placeholder="Ej: Libra (500g)"
-                    />
+                    >
+                      <option value="">Selecciona una presentación</option>
+                      {presentaciones.map((p) => (
+                        <option key={p.id_presentacion} value={p.id_presentacion}>{p.nombre}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </>
@@ -492,6 +509,34 @@ function ProductoModal({ producto, onClose, onGuardado }) {
                   </div>
                 )}
               </div>
+              <div>
+                <label htmlFor="costo-producto" className="block text-sm text-gray-600 mb-1">Costo {esMaquina ? '' : 'por kg'}</label>
+                <input
+                  id="costo-producto"
+                  type="number"
+                  min="0"
+                  value={form.costo_unitario}
+                  onChange={(e) => cambiarCampo('costo_unitario', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75] transition"
+                  placeholder="Lo que costó comprarlo"
+                />
+                <p className="text-xs text-gray-400 mt-1">Se usa para calcular la ganancia real en el dashboard.</p>
+              </div>
+              {!esMaquina && (
+                <div>
+                  <label htmlFor="precio-mayorista-producto" className="block text-sm text-gray-600 mb-1">Precio mayorista (empresas)</label>
+                  <input
+                    id="precio-mayorista-producto"
+                    type="number"
+                    min="0"
+                    value={form.precio_mayorista}
+                    onChange={(e) => cambiarCampo('precio_mayorista', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75] transition"
+                    placeholder="Lo que le cobras a Mercacentro, etc."
+                  />
+                  <p className="text-xs text-gray-400 mt-1">El precio público no puede quedar por debajo del margen mínimo sobre este valor.</p>
+                </div>
+              )}
               <div>
                 <label htmlFor="stock-producto" className="block text-sm text-gray-600 mb-1">Stock {esMaquina ? '(unidades)' : 'inicial (kg)'} *</label>
                 <input

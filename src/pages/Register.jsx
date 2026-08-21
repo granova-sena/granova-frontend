@@ -36,7 +36,18 @@ const IconoOjo = ({ ver }) => ver ? (
 function Register() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
-  const [formData, setFormData] = useState({ nombreCompleto: '', email: '', contraseña: '', confirmarContraseña: '' })
+  const [formData, setFormData] = useState({
+    nombreCompleto: '',
+    email: '',
+    contraseña: '',
+    confirmarContraseña: '',
+    tipoPersona: 'natural',
+    tipoDocumento: 'CC',
+    numeroDocumento: '',
+    digitoVerificacion: '',
+    razonSocial: '',
+    tipoCliente: 'minorista',
+  })
   const [cargando, setCargando] = useState(false)
   const [verificandoEmail, setVerificandoEmail] = useState(false)
   const [verContraseña, setVerContraseña] = useState(false)
@@ -67,6 +78,11 @@ function Register() {
   function handleChange(e) {
     const { name, value } = e.target
     setFormData({ ...formData, [name]: value })
+
+    if (name === 'tipoPersona') {
+      // Al cambiar a jurídica forzamos NIT; al volver a natural, CC por defecto
+      setFormData(prev => ({ ...prev, tipoPersona: value, tipoDocumento: value === 'juridica' ? 'NIT' : 'CC' }))
+    }
 
     if (name === 'contraseña') {
       setReglasContraseña(evaluarReglasContraseña(value))
@@ -140,6 +156,28 @@ function Register() {
     }
   }
 
+  function handleSiguientePaso2() {
+    toast.dismiss('error-register')
+
+    if (!formData.numeroDocumento.trim()) {
+      toast.error('El número de documento es obligatorio', { id: 'error-register' })
+      return
+    }
+
+    if (formData.tipoPersona === 'juridica') {
+      if (!formData.razonSocial.trim()) {
+        toast.error('La razón social es obligatoria para personas jurídicas', { id: 'error-register' })
+        return
+      }
+      if (!formData.digitoVerificacion.trim()) {
+        toast.error('El dígito de verificación del NIT es obligatorio', { id: 'error-register' })
+        return
+      }
+    }
+
+    setStep(3)
+  }
+
   async function handleRegister() {
     toast.dismiss('error-register')
 
@@ -172,6 +210,12 @@ function Register() {
           apellido,
           email: formData.email,
           contraseña: formData.contraseña,
+          tipo_persona: formData.tipoPersona,
+          tipo_documento: formData.tipoDocumento,
+          numero_documento: formData.numeroDocumento.trim(),
+          digito_verificacion: formData.tipoPersona === 'juridica' ? formData.digitoVerificacion.trim() : null,
+          razon_social: formData.tipoPersona === 'juridica' ? formData.razonSocial.trim() : null,
+          tipo_cliente: formData.tipoCliente,
         }),
       })
 
@@ -183,7 +227,7 @@ function Register() {
       }
 
       toast.success('¡Cuenta creada exitosamente! 🎉')
-      setStep(3)
+      setStep(4)
     } catch (error) {
       console.error('Error en Register:', error)
       toast.error('No se pudo conectar con el servidor', { id: 'error-register' })
@@ -223,12 +267,12 @@ function Register() {
 
         {/* Indicador de pasos */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4].map((s) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${step >= s ? 'bg-[#6FA98C] text-white' : 'bg-white/10 text-white/40'}`}>
                 {s}
               </div>
-              {s < 3 && <div className={`w-8 h-px transition-all ${step > s ? 'bg-[#6FA98C]' : 'bg-white/20'}`}></div>}
+              {s < 4 && <div className={`w-8 h-px transition-all ${step > s ? 'bg-[#6FA98C]' : 'bg-white/20'}`}></div>}
             </div>
           ))}
         </div>
@@ -280,6 +324,128 @@ function Register() {
 
         {/* Paso 2 */}
         {step === 2 && (
+          <div>
+            <h2 className="text-xl font-medium text-white mb-1">Identificación</h2>
+            <p className="text-xs text-white/60 mb-4">Para tu factura y tu descuento</p>
+
+            {/* Selector persona natural / jurídica */}
+            <div className="flex rounded-xl overflow-hidden mb-4" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}>
+              {['natural', 'juridica'].map((valor) => (
+                <button
+                  key={valor}
+                  type="button"
+                  onClick={() => handleChange({ target: { name: 'tipoPersona', value: valor } })}
+                  className={`flex-1 py-2 text-xs font-medium transition ${formData.tipoPersona === valor ? 'bg-[#6FA98C] text-white' : 'text-white/60 hover:text-white'}`}
+                >
+                  {valor === 'natural' ? 'Persona natural' : 'Persona jurídica'}
+                </button>
+              ))}
+            </div>
+
+            {/* Tipo de documento + número en una sola fila */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label htmlFor="tipo-documento-register" className="block text-xs text-white/60 mb-1">Tipo de documento</label>
+                <select
+                  id="tipo-documento-register"
+                  name="tipoDocumento"
+                  value={formData.tipoDocumento}
+                  onChange={handleChange}
+                  disabled={formData.tipoPersona === 'juridica'}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm text-white focus:outline-none transition disabled:opacity-50 appearance-none"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+                >
+                  {formData.tipoPersona === 'juridica' ? (
+                    <option value="NIT">NIT</option>
+                  ) : (
+                    <>
+                      <option value="CC">CC</option>
+                      <option value="CE">CE</option>
+                      <option value="PASAPORTE">Pasaporte</option>
+                    </>
+                  )}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="numero-documento-register" className="block text-xs text-white/60 mb-1">Número</label>
+                <input
+                  id="numero-documento-register"
+                  type="text"
+                  name="numeroDocumento"
+                  value={formData.numeroDocumento}
+                  onChange={handleChange}
+                  placeholder={formData.tipoPersona === 'juridica' ? 'Número del NIT' : 'Tu cédula'}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none transition"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+                />
+              </div>
+            </div>
+
+            {/* Campos condicionales para persona jurídica (sin recargar la página) */}
+            {formData.tipoPersona === 'juridica' && (
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label htmlFor="razon-social-register" className="block text-xs text-white/60 mb-1">Razón social</label>
+                  <input
+                    id="razon-social-register"
+                    type="text"
+                    name="razonSocial"
+                    value={formData.razonSocial}
+                    onChange={handleChange}
+                    placeholder="Nombre de la empresa"
+                    className="w-full px-3 py-2.5 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none transition"
+                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="digito-verificacion-register" className="block text-xs text-white/60 mb-1">Dígito de verificación</label>
+                  <input
+                    id="digito-verificacion-register"
+                    type="text"
+                    name="digitoVerificacion"
+                    value={formData.digitoVerificacion}
+                    onChange={handleChange}
+                    placeholder="Último dígito del NIT"
+                    className="w-full px-3 py-2.5 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none transition"
+                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Tipo de cliente */}
+            <div className="mb-5">
+              <label className="block text-xs text-white/60 mb-1">Tipo de cliente</label>
+              <div className="flex rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                {[
+                  { valor: 'minorista', etiqueta: 'Minorista' },
+                  { valor: 'mayorista', etiqueta: 'Mayorista · -12%' },
+                ].map((opcion) => (
+                  <button
+                    key={opcion.valor}
+                    type="button"
+                    onClick={() => handleChange({ target: { name: 'tipoCliente', value: opcion.valor } })}
+                    className={`flex-1 py-2 text-xs font-medium transition ${formData.tipoCliente === opcion.valor ? 'bg-[#6FA98C] text-white' : 'text-white/60 hover:text-white'}`}
+                  >
+                    {opcion.etiqueta}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl text-sm text-white/70 hover:bg-white/10 transition" style={{ border: '1px solid rgba(255,255,255,0.15)' }}>
+                Atrás
+              </button>
+              <button type="button" onClick={handleSiguientePaso2} className="flex-1 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition">
+                Continuar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Paso 3 */}
+        {step === 3 && (
           <div>
             <h2 className="text-2xl font-medium text-white mb-1">Crea tu acceso</h2>
             <p className="text-sm text-white/60 mb-6">Elige una contraseña segura</p>
@@ -358,7 +524,7 @@ function Register() {
             )}
 
             <div className="flex gap-3">
-              <button type="button" onClick={() => setStep(1)} disabled={cargando} className="flex-1 py-3 rounded-xl text-sm text-white/70 hover:bg-white/10 transition disabled:opacity-50" style={{ border: '1px solid rgba(255,255,255,0.15)' }}>
+              <button type="button" onClick={() => setStep(2)} disabled={cargando} className="flex-1 py-3 rounded-xl text-sm text-white/70 hover:bg-white/10 transition disabled:opacity-50" style={{ border: '1px solid rgba(255,255,255,0.15)' }}>
                 Atrás
               </button>
               <button type="button" onClick={handleRegister} disabled={cargando || !puedeContinuarPaso2} className="flex-1 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50">
@@ -368,8 +534,8 @@ function Register() {
           </div>
         )}
 
-        {/* Paso 3 */}
-        {step === 3 && (
+        {/* Paso 4 */}
+        {step === 4 && (
           <div className="text-center">
             <div className="w-16 h-16 bg-[#6FA98C] rounded-full flex items-center justify-center mx-auto mb-4">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
@@ -386,7 +552,7 @@ function Register() {
           </div>
         )}
 
-        {step !== 3 && (
+        {step !== 4 && (
           <p className="text-center text-sm text-white/50 mt-6">
             ¿Ya tienes cuenta?{' '}
             <button type="button" className="text-[#9DC9B4] cursor-pointer hover:underline bg-transparent border-0 p-0 font-inherit" onClick={() => navigate('/login')}>
