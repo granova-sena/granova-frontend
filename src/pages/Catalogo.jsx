@@ -10,6 +10,7 @@ import { SkeletonCard } from "../components/ui/Skeleton";
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
 import FadeIn from "../components/ui/FadeIn";
 import SpotlightSearch from "../components/SpotlightSearch";
+import MagneticChip from "../components/MagneticChip";
 
 
 // ── CONFIG API ────────────────────────────────────────────
@@ -1341,25 +1342,23 @@ function CatalogoInterno() {
         <div className="px-4 sm:px-6 py-3 border-b border-white/[0.07]">
           <div className="max-w-6xl mx-auto flex items-center gap-2 flex-nowrap overflow-x-auto sm:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {chips.map(c => (
-              <button
-                type="button"
+              <MagneticChip
                 key={c.label}
+                activo={chipActivo === c.val}
                 onClick={() => setChip(c.val)}
-                className={`h-8 px-3.5 rounded-full text-xs font-medium border transition-colors shrink-0 whitespace-nowrap ${chipActivo === c.val ? "bg-[#6FA98C] text-white border-[#6FA98C]" : "bg-transparent text-white/55 border-white/15 hover:border-white/40 hover:text-white"}`}
               >
                 {c.label}
-              </button>
+              </MagneticChip>
             ))}
             <span className="w-px h-5 bg-white/10 mx-1 hidden sm:block shrink-0" />
             {["En stock", "Stock bajo"].map(d => (
-              <button
-                type="button"
+              <MagneticChip
                 key={d}
+                activo={filtros.disp === d}
                 onClick={() => setFiltros(f => ({ ...f, disp: f.disp === d ? "" : d }))}
-                className={`h-8 px-3.5 rounded-full text-xs font-medium border transition-colors shrink-0 whitespace-nowrap ${filtros.disp === d ? "bg-[#6FA98C] text-white border-[#6FA98C]" : "bg-transparent text-white/55 border-white/15 hover:border-white/40 hover:text-white"}`}
               >
                 {d}
-              </button>
+              </MagneticChip>
             ))}
           </div>
         </div>
