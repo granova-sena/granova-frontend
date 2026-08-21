@@ -5,6 +5,7 @@ import ImagenProducto from '../components/ImagenProducto'
 import MapaFincas from '../components/MapaFincas'
 import { SkeletonCard } from '../components/ui/Skeleton'
 import FadeIn from '../components/ui/FadeIn'
+import AuroraBackground from '../components/AuroraBackground'
 
 import { API_URL } from "../config";
 
@@ -92,6 +93,7 @@ function ClienteInicio() {
       {/* HERO DE BIENVENIDA */}
       <section className="relative overflow-hidden min-h-[520px] flex items-end">
         <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" src={registerBg} />
+        <AuroraBackground />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a1a0a] via-[#0a1a0a]/60 to-[#0a1a0a]/20"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-[#0a1a0a]/50 via-transparent to-transparent"></div>
 
