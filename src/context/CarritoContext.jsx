@@ -197,6 +197,8 @@ export function CarritoProvider({ children }) {
     localStorage.setItem('cliente', JSON.stringify({ ...obtenerCliente(), ...datos }))
   }
 
+  const [cuponValidado, setCuponValidado] = useState(null)
+
   // ── Totales: per-item "mayor gana" + cupón + IVA extraído ──
   const totalUnidades = productos.reduce((acc, p) => acc + Number(p.cantidad || 0), 0)
   const esMayorista = obtenerTipoCliente() === 'mayorista'
@@ -236,8 +238,6 @@ export function CarritoProvider({ children }) {
   }, 0))
 
   const total = subtotal
-
-  const [cuponValidado, setCuponValidado] = useState(null)
 
   const validarCupon = async (codigo) => {
     const token = localStorage.getItem('token')
