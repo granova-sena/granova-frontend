@@ -208,7 +208,7 @@ function MiCuenta() {
   const campos = [
     { label: 'Nombre completo', valor: [cliente.nombre, cliente.apellido].filter(Boolean).join(' ') || '—' },
     { label: 'Correo electrónico', valor: cliente.email || '—' },
-    { label: 'Miembro desde', valor: cliente.fecha_registro ? new Date(cliente.fecha_registro).toLocaleDateString('es-CO', { day: 'numeric', year: 'numeric', month: 'long' }) : '—' },
+    { label: 'Miembro desde', valor: cliente.fecha_creacion ? new Date(cliente.fecha_creacion).toLocaleDateString('es-CO', { day: 'numeric', year: 'numeric', month: 'long' }) : '—' },
   ]
 
   const camposIdentificacion = [

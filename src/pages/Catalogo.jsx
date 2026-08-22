@@ -999,7 +999,7 @@ const SECCIONES = [
 
 function CatalogoInterno() {
   const navigate = useNavigate()
-  const { cliente } = useCarrito()
+  const { cliente, sincronizarCarrito } = useCarrito()
   const esJuridica = cliente?.tipo_persona === 'juridica'
   const [searchParams, setSearchParams] = useSearchParams();
   const seccionParam = searchParams.get("seccion");
@@ -1026,6 +1026,8 @@ function CatalogoInterno() {
   const [carritoOpen, setCarritoOpen] = useState(false);
   const [detalle, setDetalle] = useState(null);
   const [carrito, setCarrito] = useState([]);
+  // Sincronizar carrito local con el contexto para persistir en localStorage
+  useEffect(() => { sincronizarCarrito(carrito); }, [carrito]);
   const [tabDestacados, setTabDestacados] = useState("masVendidos");
   const [tabCarousel, setTabCarousel] = useState("ofertas");
   const [confirmPendiente, setConfirmPendiente] = useState(null);
