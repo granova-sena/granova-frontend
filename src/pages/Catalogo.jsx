@@ -999,7 +999,7 @@ const SECCIONES = [
 
 function CatalogoInterno() {
   const navigate = useNavigate()
-  const { cliente, sincronizarCarrito } = useCarrito()
+  const { cliente, sincronizarCarrito, productos: productosContexto } = useCarrito()
   const esJuridica = cliente?.tipo_persona === 'juridica'
   const [searchParams, setSearchParams] = useSearchParams();
   const seccionParam = searchParams.get("seccion");
@@ -1025,9 +1025,28 @@ function CatalogoInterno() {
   const [filtros, setFiltros] = useState({ tipo: "", disp: "", marca: "" });
   const [carritoOpen, setCarritoOpen] = useState(false);
   const [detalle, setDetalle] = useState(null);
-  const [carrito, setCarrito] = useState([]);
-  // Sincronizar carrito local con el contexto para persistir en localStorage
-  useEffect(() => { sincronizarCarrito(carrito); }, [carrito]);
+  const [carrito, setCarrito] = useState(() => {
+    // Semilla desde el contexto (persistido en localStorage) para no borrar el carrito existente
+    return (productosContexto || []).map(p => ({
+      id: p.id,
+      nombre: p.nombre,
+      precio: p.precio,
+      cant: p.cantidad || 1,
+      img: p.img || '',
+      unidad: p.unidad || 'kg',
+      origen: p.presentacion || '',
+      id_formato: p.id_formato ?? null,
+      peso_kg: p.peso_kg ?? null,
+      etiqueta_formato: p.etiqueta_formato || '',
+      promoPct: p.promo_pct ?? null,
+    }));
+  });
+  // Sincronizar carrito local con el contexto (skip mount para no sobreescribir)
+  const mountRef = useRef(true);
+  useEffect(() => {
+    if (mountRef.current) { mountRef.current = false; return; }
+    sincronizarCarrito(carrito);
+  }, [carrito]);
   const [tabDestacados, setTabDestacados] = useState("masVendidos");
   const [tabCarousel, setTabCarousel] = useState("ofertas");
   const [confirmPendiente, setConfirmPendiente] = useState(null);
