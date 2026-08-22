@@ -1009,6 +1009,11 @@ function CatalogoInterno() {
   const seccion = ["cafe", "maquinas", "favoritos"].includes(seccionParam) ? seccionParam : "cafe";
   const cambiarSeccion = (id) => setSearchParams(id === "cafe" ? {} : { seccion: id }, { replace: true });
 
+  useEffect(() => {
+    setBusqueda("");
+    setFiltros({ tipo: "", disp: "", marca: "" });
+  }, [seccion]);
+
   const [productos, setProductos] = useState([]);
   const [descuentosVolumen, setDescuentosVolumen] = useState([]);
   const [seleccionadosComparar, setSeleccionadosComparar] = useState([])
@@ -1316,6 +1321,13 @@ function CatalogoInterno() {
                 placeholder={seccion === "maquinas" ? "Buscar cafetera, marca..." : "Buscar por nombre, tipo de café..."}
                 className="flex-1 min-w-0 text-sm outline-none bg-transparent text-white placeholder-white/35 sm:hidden" readOnly onClick={() => setSpotlightOpen(true)} />
               <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                    document.getElementById("catalogo-resultados")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }}
                 placeholder={seccion === "maquinas" ? "Buscar cafetera, marca..." : "Buscar por nombre, tipo de café..."}
                 className="flex-1 min-w-0 text-sm outline-none bg-transparent text-white placeholder-white/35 hidden sm:block" />
             </div>
@@ -1491,12 +1503,16 @@ function CatalogoInterno() {
               {recomendaciones.length > 0 && (
                 <FadeIn>
                 <div>
-                  <div className="flex items-center justify-between mb-4">
+            <div id="catalogo-resultados" className="flex items-center justify-between mb-4">
                     <div>
                       <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Personalizado</span>
                       <h2 className="text-xl font-semibold text-white mt-1">Recomendado para ti</h2>
                     </div>
-                    <button type="button" onClick={() => setBusqueda('')} className="text-sm text-[#9DC9B4] hover:text-white transition">Ver todos →</button>
+                    <button type="button" onClick={() => {
+                      setBusqueda("");
+                      setFiltros({ tipo: "", disp: "", marca: "" });
+                      document.getElementById("catalogo-resultados")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }} className="text-sm text-[#9DC9B4] hover:text-white transition">Ver todos →</button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {recomendaciones.map(p => (
