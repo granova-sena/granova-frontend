@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { API_URL } from "../config";
+import { useCarrito } from '../context/CarritoContext'
+import { calcularNivel } from '../utils/lealtad'
+import LoyaltyRing from '../components/ui/LoyaltyRing'
 
 const ETIQUETAS_TIPO_PERSONA = { natural: 'Persona natural', juridica: 'Persona jurídica' }
-const ETIQUETAS_TIPO_CLIENTE = { minorista: 'Minorista', mayorista: 'Mayorista' }
 const ETIQUETAS_TIPO_DOCUMENTO = { CC: 'Cédula de ciudadanía (CC)', CE: 'Cédula de extranjería (CE)', NIT: 'NIT', PASAPORTE: 'Pasaporte' }
 
 const IconoUsuario = (props) => (
@@ -19,14 +21,19 @@ const IconoSalir = (props) => (
 
 function MiCuenta() {
   const navigate = useNavigate()
+  const { cliente: clienteContexto, actualizarPerfilCliente } = useCarrito()
 
-  const cliente = (() => {
+  // El contexto trae el perfil sincronizado con el servidor (fuente de verdad);
+  // si quedó vacío (p. ej. el provider montó antes del login), se cae a la
+  // caché de localStorage para no mostrar la cuenta en blanco.
+  const clienteLocal = (() => {
     try {
       return JSON.parse(localStorage.getItem('cliente')) || {}
     } catch {
       return {}
     }
   })()
+  const cliente = (clienteContexto && clienteContexto.nombre) ? clienteContexto : clienteLocal
 
   const [editando, setEditando] = useState(false)
   const [guardando, setGuardando] = useState(false)
@@ -100,11 +107,11 @@ function MiCuenta() {
         return
       }
 
-      const clienteActualizado = { ...cliente, ...datos.data }
-      localStorage.setItem('cliente', JSON.stringify(clienteActualizado))
+      // El contexto refresca la caché y re-renderiza la pantalla al instante
+      // (sin window.location.reload: el barco no necesita hundirse para repararse)
+      actualizarPerfilCliente(datos.data)
       toast.success('Identificación actualizada', { id: 'perfil-identificacion' })
       setEditando(false)
-      window.location.reload()
     } catch (error) {
       console.error('Error actualizando identificación:', error)
       toast.error('No se pudo conectar con el servidor', { id: 'perfil-identificacion' })
@@ -114,12 +121,94 @@ function MiCuenta() {
   }
 
   const tieneDocumento = Boolean(cliente.numero_documento)
+  const tienePremio = cliente.descuento_proxima_compra === true
+  const esJuridica = cliente.tipo_persona === 'juridica'
+
+  // Lealtad (Frente D)
+  const puntos = Number(cliente.puntos) || 0
+  const nivel = calcularNivel(puntos)
+  const progresoPct = nivel.siguiente
+    ? Math.min(100, Math.round(((puntos - nivel.rangoMin) / (nivel.siguiente - nivel.rangoMin)) * 100))
+    : 100
+  const puntosFaltantes = nivel.siguiente ? nivel.siguiente - puntos : 0
+  const [canjeando, setCanjeando] = useState(false)
+  const [cuponObtenido, setCuponObtenido] = useState(null)
+  const [cupones, setCupones] = useState([])
+
+  // Los cupones viven en la BD: aunque el cliente cierre sesión y vuelva,
+  // sus cupones activos siguen apareciendo aquí. 🎟️
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    const id = cliente?.id
+    if (!token || !id) return
+
+    fetch(`${API_URL}/api/cupones`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(json => {
+        if (json.ok) setCupones(json.data || [])
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carga una vez al entrar
+  }, [])
+
+  async function copiarCodigo(codigo) {
+    try {
+      await navigator.clipboard.writeText(codigo)
+      toast.success(`Código ${codigo} copiado`)
+    } catch {
+      toast.error('No se pudo copiar el código')
+    }
+  }
+
+  async function canjearPuntos(puntosACanjear) {
+    toast.dismiss('perfil-cupon')
+
+    if (puntos < puntosACanjear) {
+      toast.error(`Te faltan ${puntosACanjear - puntos} puntos para este canje`, { id: 'perfil-cupon' })
+      return
+    }
+
+    setCanjeando(true)
+    try {
+      const token = localStorage.getItem('token')
+      const respuesta = await fetch(`${API_URL}/api/cupones/canjear`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ puntos: puntosACanjear }),
+      })
+
+      const datos = await respuesta.json()
+
+      if (!respuesta.ok) {
+        toast.error(datos.mensaje || 'Error al canjear', { id: 'perfil-cupon' })
+        return
+      }
+
+      actualizarPerfilCliente({ puntos: datos.data.puntos_restantes })
+      setCuponObtenido(datos.data)
+      // El cupón nuevo entra directo a la lista de cupones activos
+      setCupones(prev => [
+        { codigo: datos.data.codigo, descuento_pct: Number(datos.data.descuento_pct) },
+        ...prev,
+      ])
+      toast.success(`¡Cupón de ${datos.data.descuento_pct}% creado!`, { id: 'perfil-cupon' })
+    } catch (error) {
+      console.error('Error canjeando puntos:', error)
+      toast.error('No se pudo conectar con el servidor', { id: 'perfil-cupon' })
+    } finally {
+      setCanjeando(false)
+    }
+  }
 
   const campos = [
     { label: 'Nombre completo', valor: [cliente.nombre, cliente.apellido].filter(Boolean).join(' ') || '—' },
     { label: 'Correo electrónico', valor: cliente.email || '—' },
-    { label: 'Tipo de cliente', valor: ETIQUETAS_TIPO_CLIENTE[cliente.tipo_cliente] || '—' },
-    { label: 'Miembro desde', valor: cliente.fecha_creacion ? new Date(cliente.fecha_creacion).toLocaleDateString('es-CO', { year: 'numeric', month: 'long' }) : '—' },
+    { label: 'Miembro desde', valor: cliente.fecha_registro ? new Date(cliente.fecha_registro).toLocaleDateString('es-CO', { day: 'numeric', year: 'numeric', month: 'long' }) : '—' },
   ]
 
   const camposIdentificacion = [
@@ -172,6 +261,124 @@ function MiCuenta() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* DESCUENTOS (EMPRESA / PREMIO) */}
+        <div className={`rounded-2xl p-6 sm:p-8 mb-5 border shadow-sm ${(esJuridica || tienePremio) ? 'bg-[#6FA98C]/15 border-[#6FA98C]/40' : 'bg-white/[0.08] border-white/15'}`}>
+          {esJuridica ? (
+            <>
+              <p className="text-lg font-semibold text-white mb-1">🏢 Tienes 10% de descuento en todos tus pedidos</p>
+              <p className="text-sm text-white/60 leading-relaxed">
+                Por comprar como empresa, el 10% se aplica automáticamente en cada pedido.
+              </p>
+            </>
+          ) : tienePremio ? (
+            <>
+              <p className="text-lg font-semibold text-white mb-1">🎉 ¡Tienes 10% de descuento disponible!</p>
+              <p className="text-sm text-white/60 leading-relaxed">
+                Gracias a tu última compra al por mayor. Se aplicará automáticamente en tu próxima compra.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-semibold text-white mb-1">🔥 Compra y gana 10% de descuento</p>
+              <p className="text-sm text-white/60 leading-relaxed">
+                Compra 5 productos (en uno o varios pedidos, se van sumando) y ganas 10% de descuento para tu próxima compra.
+              </p>
+              {Number(cliente.unidades_acumuladas) > 0 && (
+                <p className="text-sm text-[#9DC9B4] mt-3 leading-relaxed">
+                  🏆 Llevas {Number(cliente.unidades_acumuladas)} de 5 productos acumulados para tu premio.
+                </p>
+              )}
+              {!tieneDocumento && (
+                <p className="text-sm text-[#9DC9B4] mt-3 leading-relaxed">
+                  💡 ¿Compras como empresa? Registra tu NIT en la sección Identificación y obtén 10% en todos tus pedidos.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* LEALTAD (Frente D): nivel, puntos, progreso y canje */}
+        <div className="rounded-2xl p-6 sm:p-8 mb-5 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center gap-8">
+            {/* Anillo de lealtad */}
+            <LoyaltyRing
+              puntos={puntos}
+              nivel={nivel}
+              progresoPct={progresoPct}
+              puntosFaltantes={puntosFaltantes}
+              size={160}
+            />
+
+            {/* Panel de canje */}
+            <div className="flex-1 w-full">
+            {cuponObtenido ? (
+            <div className="rounded-xl p-4 bg-[#6FA98C]/15 border border-[#6FA98C]/40">
+              <p className="text-sm font-semibold text-white">🎟️ ¡Tu cupón está listo!</p>
+              <p className="text-xs text-white/60 mt-1">Código: <span className="font-mono font-bold text-[#9DC9B4] text-sm">{cuponObtenido.codigo}</span></p>
+              <p className="text-xs text-white/60 mt-1">Descuento de {Number(cuponObtenido.descuento_pct)}% · válido por {cuponObtenido.vigencia_dias} días · úsalo en el checkout</p>
+            </div>
+          ) : esJuridica ? (
+            <p className="text-sm text-white/50 leading-relaxed">
+              🏢 Tu descuento de empresa (10%) ya supera los cupones de lealtad — tus puntos se siguen acumulando para tu rango.
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-white/50 mb-3">Canjea tus puntos por un cupón de descuento para tu próxima compra:</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => canjearPuntos(500)}
+                  disabled={canjeando || puntos < 500}
+                  className="flex-1 py-3 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  🎟️ 500 pts → Cupón 5%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => canjearPuntos(1000)}
+                  disabled={canjeando || puntos < 1000}
+                  className="flex-1 py-3 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                   🎟️ 1.000 pts → Cupón 10%
+                </button>
+              </div>
+            </>
+          )}
+            </div>
+          </div>
+        </div>
+
+        {/* MIS CUPONES ACTIVOS (persisten en la BD) */}
+        <div className="rounded-2xl p-6 sm:p-8 mb-5 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-xl">🎟️</span>
+            <p className="text-sm font-semibold text-white">Mis cupones activos</p>
+          </div>
+          {cupones.length === 0 ? (
+            <p className="text-sm text-white/50 leading-relaxed">
+              Aún no tienes cupones. Canjea tus puntos arriba y tu cupón quedará guardado aquí para siempre.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {cupones.map(c => (
+                <div key={c.codigo} className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 bg-[#6FA98C]/10 border border-[#6FA98C]/25">
+                  <div className="min-w-0">
+                    <p className="text-sm font-mono font-bold text-[#9DC9B4]">{c.codigo}</p>
+                    <p className="text-xs text-white/50 mt-0.5">Descuento de {Number(c.descuento_pct)}% · úsalo en el checkout</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copiarCodigo(c.codigo)}
+                    className="shrink-0 px-3.5 py-2 rounded-lg text-xs font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition"
+                  >
+                    Copiar
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* IDENTIFICACIÓN */}

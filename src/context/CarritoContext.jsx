@@ -168,6 +168,11 @@ export function CarritoProvider({ children }) {
       .catch(() => {})
   }, [])
 
+  const actualizarPerfilCliente = (datos) => {
+    setClienteActual(prev => ({ ...prev, ...datos }))
+    localStorage.setItem('cliente', JSON.stringify({ ...obtenerCliente(), ...datos }))
+  }
+
   const subtotal = productos.reduce((acc, p) => acc + p.precio * p.cantidad, 0)
   const totalUnidades = productos.reduce((acc, p) => acc + p.cantidad, 0)
   const esMayorista = obtenerTipoCliente() === 'mayorista'
@@ -180,6 +185,11 @@ export function CarritoProvider({ children }) {
   const descuentoMonto = Math.round(subtotal * DESCUENTO)
   const ivaMonto = Math.round((subtotal - descuentoMonto) * IVA)
   const total = subtotal - descuentoMonto + ivaMonto
+
+  const [cuponValidado] = useState(null)
+  const validarCupon = async () => null
+  const tienePremio = false
+  const descuentoFuente = DESCUENTO > 0 ? (esMayorista ? 'empresa' : 'volumen') : null
 
   return (
     <CarritoContext.Provider value={{
@@ -203,6 +213,11 @@ export function CarritoProvider({ children }) {
       esMayorista,
       totalUnidades,
       unidadesFaltantes,
+      descuentoFuente,
+      tienePremio,
+      validarCupon,
+      cuponValidado,
+      actualizarPerfilCliente,
     }}>
       {children}
     </CarritoContext.Provider>

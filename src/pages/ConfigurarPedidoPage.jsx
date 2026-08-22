@@ -17,7 +17,7 @@ const metodosPago = [
 const camposObligatorios = ['nombre', 'correo', 'telefono', 'direccion', 'ciudad']
 
 function ResumenLateral() {
-  const { subtotal, descuentoMonto, total, DESCUENTO, productos, descuentoFuente } = useCarrito()
+  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, esMayorista, productos } = useCarrito()
 
   return (
     <div className="w-full lg:w-72 shrink-0 flex flex-col gap-4">
@@ -31,10 +31,10 @@ function ResumenLateral() {
             <span className="text-white/60">Subtotal</span>
             <span className="text-white">${subtotal.toLocaleString()}</span>
           </div>
-          {descuentoFuente && (
+          {DESCUENTO > 0 && (
             <div className="flex justify-between">
               <span className="text-white/60">
-                {descuentoFuente === 'volumen' ? '📦 Descuento por volumen' : descuentoFuente === 'empresa' ? '🏢 Descuento empresa' : descuentoFuente === 'cupon' ? '🎟️ Cupón' : descuentoFuente === 'promo' ? '🏷️ Promoción' : '🎉 Descuento'} ({(DESCUENTO * 100).toFixed(0)}%)
+                {esMayorista ? '🏢 Descuento mayorista' : 'Descuento'} ({(DESCUENTO * 100).toFixed(0)}%)
               </span>
               <span className="text-[#9DC9B4]">- ${descuentoMonto.toLocaleString()}</span>
             </div>
@@ -76,7 +76,7 @@ function ResumenLateral() {
 
 function ConfigurarPedidoPage() {
   const navigate = useNavigate()
-  const { guardarDatosCliente, confirmarPedido, actualizarPerfilCliente, validarCupon, cuponValidado } = useCarrito()
+  const { guardarDatosCliente, confirmarPedido, actualizarPerfilCliente } = useCarrito()
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
   const [idPedido, setIdPedido] = useState(null)
