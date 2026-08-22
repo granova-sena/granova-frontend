@@ -7,6 +7,7 @@ import FadeIn from '../components/ui/FadeIn'
 const API_URL = `${BASE_API_URL}/productos`
 
 const DESCUENTO_EMPRESA = 10
+const MAX_CANTIDAD = 10000
 
 const BENEFICIOS = [
   { icono: '🏢', titulo: '10% en todos tus pedidos', texto: 'Por comprar como empresa, el descuento se aplica automáticamente, sin cupones ni letra pequeña.' },
@@ -57,8 +58,8 @@ function Empresas() {
   const formatos = producto?.formatos || []
   const formato = formatos.find(f => f.id_formato === formatoId)
 
-  const kgTotales = formato ? Number(formato.peso_kg) * cantidad : 0
-  const bruto = formato ? Number(formato.precio) * cantidad : 0
+  const kgTotales = formato ? Math.min(Number(formato.peso_kg) * cantidad, Number.MAX_SAFE_INTEGER) : 0
+  const bruto = formato ? Math.min(Number(formato.precio) * cantidad, Number.MAX_SAFE_INTEGER) : 0
   const tier = descuentosVolumen.find(t => kgTotales >= Number(t.kg_min) && (t.kg_max === null || kgTotales <= Number(t.kg_max)))
   const volumenPct = tier ? Number(tier.descuento_pct) : 0
   const pctFinal = Math.max(volumenPct, DESCUENTO_EMPRESA)
@@ -170,20 +171,22 @@ function Empresas() {
                 <div>
                   <label htmlFor="empresa-cantidad" className="block text-xs text-white/60 mb-1.5">Cantidad</label>
                   <div className="flex items-center gap-3">
-                    <button type="button" onClick={() => setCantidad(c => Math.max(1, c - 1))} className="w-11 h-11 rounded-xl text-xl text-white/70 flex items-center justify-center hover:bg-white/10 transition" style={estilosInput}>−</button>
+                    <button type="button" onClick={() => setCantidad(c => Math.max(1, Math.min(MAX_CANTIDAD, c - 1)))} className="w-11 h-11 rounded-xl text-xl text-white/70 flex items-center justify-center hover:bg-white/10 transition" style={estilosInput}>−</button>
                     <input
                       id="empresa-cantidad"
                       type="number"
                       min={1}
+                      max={MAX_CANTIDAD}
                       value={cantidad}
                       onChange={e => {
                         const val = Number(e.target.value)
-                        setCantidad(Number.isFinite(val) && val > 0 ? val : 1)
+                        if (!Number.isFinite(val) || val <= 0) { setCantidad(1); return }
+                        setCantidad(Math.min(Math.floor(val), MAX_CANTIDAD))
                       }}
                       className="w-20 px-3 py-2.5 rounded-xl text-sm text-white text-center outline-none"
                       style={estilosInput}
                     />
-                    <button type="button" onClick={() => setCantidad(c => c + 1)} className="w-11 h-11 rounded-xl text-xl text-white/70 flex items-center justify-center hover:bg-white/10 transition" style={estilosInput}>+</button>
+                    <button type="button" onClick={() => setCantidad(c => Math.min(MAX_CANTIDAD, c + 1))} className="w-11 h-11 rounded-xl text-xl text-white/70 flex items-center justify-center hover:bg-white/10 transition" style={estilosInput}>+</button>
                   </div>
                   {formato && (
                     <p className="text-xs text-white/40 mt-2">{kgTotales.toLocaleString('es-CO')} kg de café en total</p>
@@ -195,15 +198,15 @@ function Empresas() {
               <div className="flex-1 rounded-2xl p-6 flex flex-col justify-center gap-3" style={{ background: '#0B1810', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <div className="flex justify-between text-sm">
                   <span className="text-white/50">Subtotal</span>
-                  <span className="text-white">${bruto.toLocaleString('es-CO')}</span>
+                  <span className="text-white min-w-0 break-all text-right">${bruto.toLocaleString('es-CO')}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-white/50">Tu descuento {pctFinal}% {volumenPct > DESCUENTO_EMPRESA ? '(por volumen)' : '(empresa)'}</span>
-                  <span className="text-[#9DC9B4]">− ${ahorro.toLocaleString('es-CO')}</span>
+                  <span className="text-[#9DC9B4] min-w-0 break-all text-right">− ${ahorro.toLocaleString('es-CO')}</span>
                 </div>
                 <div className="flex justify-between border-t border-white/10 pt-3">
                   <span className="text-base font-semibold text-white">Total estimado</span>
-                  <span className="text-base font-semibold text-white">${total.toLocaleString('es-CO')}</span>
+                  <span className="text-base font-semibold text-white min-w-0 break-all text-right">${total.toLocaleString('es-CO')}</span>
                 </div>
                 <p className="text-xs text-[#9DC9B4] mt-2">
                   🎉 Te ahorras ${ahorro.toLocaleString('es-CO')} en este pedido frente al precio sin descuento

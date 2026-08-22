@@ -1469,6 +1469,7 @@ function CatalogoInterno() {
                       key={`${tabActiva.id}-${p.id}`}
                       p={p}
                       onVerDetalle={verDetalle}
+                      onAgregar={agregar}
                     />
                   ))}
                 </CaruselGenerico>

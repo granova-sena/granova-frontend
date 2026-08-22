@@ -15,6 +15,8 @@ export default function SpotlightSearch({ abierto, onCerrar, productos, onVerDet
   const inputRef = useRef(null);
   const listaRef = useRef(null);
 
+  const norm = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
   useEffect(() => {
     if (!abierto) return;
 
@@ -38,15 +40,15 @@ export default function SpotlightSearch({ abierto, onCerrar, productos, onVerDet
 
   const resultados = useMemo(() => {
     if (!busqueda.trim()) return [];
-    const q = busqueda.toLowerCase();
+    const q = norm(busqueda);
     return productos
       .filter(p => {
         return (
-          p.nombre?.toLowerCase().includes(q) ||
-          p.tipo?.toLowerCase().includes(q) ||
-          p.marca?.toLowerCase().includes(q) ||
-          p.modelo?.toLowerCase().includes(q) ||
-          p.origen?.toLowerCase().includes(q)
+          norm(p.nombre).includes(q) ||
+          norm(p.tipo).includes(q) ||
+          norm(p.marca).includes(q) ||
+          norm(p.modelo).includes(q) ||
+          norm(p.origen).includes(q)
         );
       })
       .slice(0, 8);
