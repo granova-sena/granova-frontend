@@ -103,7 +103,11 @@ function MiCuenta() {
       const datos = await respuesta.json()
 
       if (!respuesta.ok) {
-        toast.error(datos.mensaje || 'Error al actualizar', { id: 'perfil-identificacion' })
+        const msg = datos.error ?? datos.mensaje ?? 'Error al actualizar'
+        toast.error(msg, { id: 'perfil-identificacion' })
+        if (respuesta.status === 401 || respuesta.status === 403) {
+          setTimeout(() => { localStorage.removeItem('token'); window.location.href = '/login'; }, 1500)
+        }
         return
       }
 

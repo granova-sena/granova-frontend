@@ -212,7 +212,12 @@ export function CarritoProvider({ children }) {
   // Descuento por volumen/mayorista como porcentaje
   const pctVolumen = DESCUENTO * 100
 
-  // Cada producto gana: mayor entre promo y volumen. El cupón se aplica DESPUÉS sobre el subtotal.
+  // Subtotal base (sin ningún descuento)
+  const subtotalBase = productos.reduce((acc, p) => {
+    return acc + (Number(p.precio) || 0) * (Number(p.cantidad) || 0)
+  }, 0)
+
+  // Cada producto gana: mayor entre promo y volumen → subtotal con descuento de producto
   const subtotalConDescuento = productos.reduce((acc, p) => {
     const precio = Number(p.precio) || 0
     const cant = Number(p.cantidad) || 0
@@ -220,12 +225,15 @@ export function CarritoProvider({ children }) {
     return acc + Math.round(precio * (1 - pctGanador / 100)) * cant
   }, 0)
 
+  // Descuento por productos (volumen/promo) — separado para mostrar en resumen
+  const descuentoProductos = subtotalBase - subtotalConDescuento
+
   // Cupón: descuento adicional sobre el subtotal ya con descuento de producto/volumen
   const cuponPct = Number(cuponValidado?.pct) || 0
   const descuentoCuponMonto = cuponPct > 0 ? Math.round(subtotalConDescuento * cuponPct / 100) : 0
 
   const subtotal = Math.max(0, subtotalConDescuento - descuentoCuponMonto)
-  const descuentoMonto = Number(subtotalConDescuento) - Number(subtotal)
+  const descuentoMonto = descuentoProductos + descuentoCuponMonto
 
   // IVA: se EXTRAe de los precios (ya incluyen IVA). Tasa real por producto.
   const ivaMonto = Math.round(productos.reduce((acc, p) => {
@@ -278,7 +286,10 @@ export function CarritoProvider({ children }) {
       cliente: clienteActual,
       esJuridica,
       subtotal,
+      subtotalBase,
       descuentoMonto,
+      descuentoProductos,
+      descuentoCuponMonto,
       ivaMonto,
       total,
       DESCUENTO,

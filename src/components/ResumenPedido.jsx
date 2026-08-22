@@ -3,7 +3,7 @@ import { useCarrito } from '../context/CarritoContext'
 
 function ResumenPedido() {
   const navigate = useNavigate()
-  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, esMayorista, unidadesFaltantes, cuponValidado, cuponPct, descuentoCuponMonto } = useCarrito()
+  const { subtotal, subtotalBase, descuentoProductos, descuentoCuponMonto, ivaMonto, total, DESCUENTO, esMayorista, unidadesFaltantes, cuponPct } = useCarrito()
 
   return (
     <div className="w-full lg:w-80 flex flex-col gap-4">
@@ -18,12 +18,12 @@ function ResumenPedido() {
         <div className="px-6 py-4 flex flex-col gap-3">
           <div className="flex justify-between">
             <span className="text-sm text-white/60">Subtotal</span>
-            <span className="text-sm text-white">${subtotal.toLocaleString()}</span>
+            <span className="text-sm text-white">${subtotalBase.toLocaleString()}</span>
           </div>
-          {DESCUENTO > 0 && (
+          {descuentoProductos > 0 && (
             <div className="flex justify-between">
-              <span className="text-sm text-white/60">{esMayorista ? '🏢 Descuento mayorista' : 'Descuento'} {(DESCUENTO * 100).toFixed(0)}%</span>
-              <span className="text-sm text-[#9DC9B4]">- ${descuentoMonto.toLocaleString()}</span>
+              <span className="text-sm text-white/60">{esMayorista ? '🏢 Descuento empresa' : 'Descuento por volumen'}</span>
+              <span className="text-sm text-[#9DC9B4]">- ${descuentoProductos.toLocaleString()}</span>
             </div>
           )}
           {unidadesFaltantes > 0 && (
@@ -33,7 +33,7 @@ function ResumenPedido() {
           )}
           {cuponPct > 0 && (
             <div className="flex justify-between">
-              <span className="text-sm text-white/60">🎟️ Cupón {cuponPct}%</span>
+              <span className="text-sm text-white/60">🎟️ Cupón ({cuponPct}%)</span>
               <span className="text-sm text-[#9DC9B4]">- ${descuentoCuponMonto.toLocaleString()}</span>
             </div>
           )}

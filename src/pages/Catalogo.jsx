@@ -333,9 +333,7 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar, descuentosVol
   };
   const quitar = (id) => setCarrito(prev => prev.filter(x => x.id !== id));
 
-  const subtotal = carrito.reduce((s, x) => s + x.precio * (x.cant || 1), 0);
-  // Descuento REAL (el mismo "mayor gana" del backend): volumen vs empresa vs premio.
-  // Nunca más un descuento de mentira en el carrito. 🚫👻
+  // Descuento REAL: volumen vs empresa vs premio → ganador global
   const kgTotales = carrito.reduce((s, x) => s + (x.peso_kg ? x.peso_kg * (x.cant || 1) : 0), 0);
   const tier = descuentosVolumen.find(t =>
     kgTotales >= Number(t.kg_min) && (t.kg_max === null || kgTotales <= Number(t.kg_max))
@@ -347,9 +345,17 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar, descuentosVol
     { fuente: 'premio', pct: tienePremio && !esJuridica ? 10 : 0 },
   ].filter(f => f.pct > 0).sort((a, b) => b.pct - a.pct);
   const ganador = fuentes[0] || { fuente: null, pct: 0 };
-  const descuento = Math.round(subtotal * (ganador.pct / 100));
-  const total = subtotal - descuento;
+
+  // Subtotal base (sin descuentos) y per-item "mayor gana" entre promo y volumen/empresa
+  const subtotalBase = carrito.reduce((s, x) => s + x.precio * (x.cant || 1), 0);
+  const subtotal = carrito.reduce((s, x) => {
+    const pct = Math.max(Number(x.promoPct) || 0, ganador.pct);
+    return s + Math.round(x.precio * (1 - pct / 100)) * (x.cant || 1);
+  }, 0);
   const totalUnidades = carrito.reduce((s, x) => s + (x.cant || 1), 0);
+  const descuento = subtotalBase - subtotal;
+
+  const precioItem = (p) => Math.round(p.precio * (1 - Math.max(Number(p.promoPct) || 0, ganador.pct) / 100));
 
   const irACotizacion = () => {
     sincronizarCarrito(carrito);
@@ -422,14 +428,14 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar, descuentosVol
                     <IconoBasura />
                   </button>
                 </div>
-                <p className="text-xs text-white/40 mt-1">${p.precio.toLocaleString("es-CO")} <span className="text-white/25">/ {p.etiqueta_formato || p.unidad}</span></p>
+                <p className="text-xs text-white/40 mt-1">${precioItem(p).toLocaleString("es-CO")} <span className="text-white/25">/ {p.etiqueta_formato || p.unidad}</span></p>
                 <div className="flex items-center justify-between mt-2.5">
                   <div className="flex items-center bg-[#0B1810] border border-white/10 rounded-lg">
                     <button type="button" onClick={() => disminuir(p.id)} className="w-8 h-8 text-white/60 hover:text-white text-base flex items-center justify-center rounded-l-lg hover:bg-white/[0.06]">−</button>
                     <span className="text-xs font-semibold w-6 text-center text-white">{p.cant || 1}</span>
                     <button type="button" onClick={() => onAumentar(p)} disabled={(p.cant || 1) >= p.stock} className="w-8 h-8 text-white/60 hover:text-white text-base flex items-center justify-center rounded-r-lg hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed">+</button>
                   </div>
-                  <p className="text-sm font-semibold text-white">${((p.cant||1)*p.precio).toLocaleString("es-CO")}</p>
+                  <p className="text-sm font-semibold text-white">${(precioItem(p) * (p.cant||1)).toLocaleString("es-CO")}</p>
                 </div>
               </div>
             </div>
@@ -438,7 +444,7 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar, descuentosVol
         {/* totales */}
         {carrito.length > 0 && (
           <div className="px-4 pb-5 pt-4 border-t border-white/10" style={{ background: "#0D1D13" }}>
-            <div className="flex justify-between text-sm text-white/50 mb-2"><span>Subtotal</span><span>${subtotal.toLocaleString("es-CO")}</span></div>
+            <div className="flex justify-between text-sm text-white/50 mb-2"><span>Subtotal</span><span>${subtotalBase.toLocaleString("es-CO")}</span></div>
             {ganador.pct > 0 && (
               <div className="flex justify-between text-sm text-[#9DC9B4] mb-2">
                 <span>
@@ -449,7 +455,7 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar, descuentosVol
             )}
             <div className="flex justify-between text-sm text-white/50 mb-3"><span>Envío</span><span className="text-[#9DC9B4]">Gratis</span></div>
             <div className="flex justify-between text-base font-semibold text-white border-t border-white/10 pt-3 mb-4">
-              <span>Total</span><span>${total.toLocaleString("es-CO")}</span>
+              <span>Total</span><span>${subtotal.toLocaleString("es-CO")}</span>
             </div>
             <div className="flex gap-3">
               <button type="button" onClick={irACotizacion} className="flex-1 py-3 rounded-xl text-white/70 text-sm border border-white/15 hover:bg-white/[0.06] transition">Cotización</button>
@@ -772,18 +778,18 @@ function CalculadoraRapida({ precio, stock }) {
       <input
         type="number"
         min={1}
-        max={stock || 1}
+        max={Math.min(stock || 1, 10000)}
         value={kgCalc}
         onClick={e => e.stopPropagation()}
         onChange={e => {
           e.stopPropagation();
           const val = Number(e.target.value);
-          setKgCalc(Number.isFinite(val) && val > 0 ? val : 1);
+          setKgCalc(Number.isFinite(val) && val > 0 ? Math.min(val, 10000) : 1);
         }}
-        className="w-12 bg-transparent border border-white/15 rounded px-1 py-0.5 text-white text-center outline-none focus:border-[#6FA98C]"
+        className="w-16 bg-transparent border border-white/15 rounded px-1 py-0.5 text-white text-center outline-none focus:border-[#6FA98C]"
       />
       <span className="text-white/40">kg =</span>
-      <span className="text-white font-semibold ml-auto">${(kgCalc * precio).toLocaleString("es-CO")}</span>
+      <span className="text-white font-semibold ml-auto break-all">${(kgCalc * precio).toLocaleString("es-CO")}</span>
     </div>
   );
 }

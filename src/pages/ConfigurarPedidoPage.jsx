@@ -17,7 +17,7 @@ const metodosPago = [
 const camposObligatorios = ['nombre', 'correo', 'telefono', 'direccion', 'ciudad']
 
 function ResumenLateral() {
-  const { subtotal, descuentoMonto, ivaMonto, total, DESCUENTO, IVA, esMayorista, productos } = useCarrito()
+  const { subtotal, subtotalBase, descuentoProductos, descuentoCuponMonto, ivaMonto, total, DESCUENTO, esMayorista, productos, cuponPct } = useCarrito()
 
   return (
     <div className="w-full lg:w-72 shrink-0 flex flex-col gap-4">
@@ -29,16 +29,26 @@ function ResumenLateral() {
         <div className="flex flex-col gap-3 text-sm border-t border-white/10 pt-3">
           <div className="flex justify-between">
             <span className="text-white/60">Subtotal</span>
-            <span className="text-white">${subtotal.toLocaleString()}</span>
+            <span className="text-white">${subtotalBase.toLocaleString()}</span>
           </div>
-          {DESCUENTO > 0 && (
+          {descuentoProductos > 0 && (
             <div className="flex justify-between">
               <span className="text-white/60">
-                {esMayorista ? '🏢 Descuento mayorista' : 'Descuento'} ({(DESCUENTO * 100).toFixed(0)}%)
+                {esMayorista ? '🏢 Descuento empresa' : 'Descuento por volumen'}
               </span>
-              <span className="text-[#9DC9B4]">- ${descuentoMonto.toLocaleString()}</span>
+              <span className="text-[#9DC9B4]">- ${descuentoProductos.toLocaleString()}</span>
             </div>
           )}
+          {cuponPct > 0 && (
+            <div className="flex justify-between">
+              <span className="text-white/60">🎟️ Cupón ({cuponPct}%)</span>
+              <span className="text-[#9DC9B4]">- ${descuentoCuponMonto.toLocaleString()}</span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-white/60">IVA (incluido)</span>
+            <span className="text-white">${ivaMonto.toLocaleString()}</span>
+          </div>
           <div className="flex justify-between border-t border-white/10 pt-3">
             <span className="font-semibold text-white">Total</span>
             <span className="font-semibold text-white">${total.toLocaleString()}</span>
