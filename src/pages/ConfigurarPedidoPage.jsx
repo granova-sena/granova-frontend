@@ -76,7 +76,7 @@ function ResumenLateral() {
 
 function ConfigurarPedidoPage() {
   const navigate = useNavigate()
-  const { guardarDatosCliente, confirmarPedido, actualizarPerfilCliente, cuponValidado } = useCarrito()
+  const { guardarDatosCliente, confirmarPedido, actualizarPerfilCliente, cuponValidado, validarCupon } = useCarrito()
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
   const [idPedido, setIdPedido] = useState(null)

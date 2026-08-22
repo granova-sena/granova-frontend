@@ -112,6 +112,7 @@ function adaptarProducto(p) {
     promoPct: promo ? promo.descuento_pct : 0,
     promoNombre: promo ? promo.nombre : "",
     promoFin: promo ? promo.fecha_fin : null,
+    iva_pct: p.iva_pct == null ? 5 : Number(p.iva_pct),
     stock,
     stockLabel: calcularStockLabel(stock),
     badge: calcularBadge(p),
@@ -1039,6 +1040,7 @@ function CatalogoInterno() {
       peso_kg: p.peso_kg ?? null,
       etiqueta_formato: p.etiqueta_formato || '',
       promoPct: p.promo_pct ?? null,
+      iva_pct: p.iva_pct == null ? 5 : Number(p.iva_pct),
     }));
   });
   // Sincronizar carrito local con el contexto (skip mount para no sobreescribir)
