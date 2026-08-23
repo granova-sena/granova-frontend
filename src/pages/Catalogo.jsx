@@ -1526,7 +1526,7 @@ function CatalogoInterno() {
                     <button type="button" onClick={() => {
                       setBusqueda("");
                       setFiltros({ tipo: "", disp: "", marca: "" });
-                      document.getElementById("catalogo-resultados")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      cambiarSeccion("cafe");
                     }} className="text-sm text-[#9DC9B4] hover:text-white transition">Ver todos →</button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
