@@ -414,23 +414,11 @@ function MiCuenta() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { valor: 'natural', etiqueta: 'Persona natural' },
-                  { valor: 'juridica', etiqueta: 'Persona jurídica' },
-                ].map((opcion) => (
-                  <button
-                    key={opcion.valor}
-                    type="button"
-                    onClick={() => handleCambioIdentificacion({ target: { name: 'tipo_persona', value: opcion.valor } })}
-                    className="py-2.5 rounded-xl text-sm font-medium transition"
-                    style={formIdentificacion.tipo_persona === opcion.valor
-                      ? { background: 'rgba(111,169,140,0.15)', border: '1px solid #6FA98C', color: '#fff' }
-                      : { background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)' }}
-                  >
-                    {opcion.etiqueta}
-                  </button>
-                ))}
+              <div className="px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10">
+                <span className="text-white/45 text-xs">Tipo de persona</span>
+                <p className="text-white text-sm font-medium mt-0.5">
+                  {formIdentificacion.tipo_persona === 'juridica' ? 'Persona jurídica' : 'Persona natural'}
+                </p>
               </div>
 
               <div>

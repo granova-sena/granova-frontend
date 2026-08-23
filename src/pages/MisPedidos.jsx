@@ -74,9 +74,11 @@ const descargarFactura = async (id_pedido) => {
     doc.text('Subtotal:', 130, finalY)
     doc.text(`$${Number(factura.subtotal).toLocaleString()}`, 175, finalY, { align: 'right' })
 
-    doc.setTextColor(200, 0, 0)
-    doc.text('IVA:', 130, finalY + 6)
-    doc.text(`$${Number(factura.impuestos).toLocaleString()}`, 175, finalY + 6, { align: 'right' })
+    if (factura.descuento > 0) {
+      doc.setTextColor(200, 0, 0)
+      doc.text('Descuento:', 130, finalY + 6)
+      doc.text(`-$${Number(factura.descuento).toLocaleString()}`, 175, finalY + 6, { align: 'right' })
+    }
 
     doc.setTextColor(0)
     doc.setFontSize(11)
