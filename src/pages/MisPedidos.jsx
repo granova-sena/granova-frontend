@@ -126,6 +126,8 @@ function MisPedidos() {
   const [pedidos, setPedidos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
+  const [pagina, setPagina] = useState(1)
+  const [paginacion, setPaginacion] = useState({ totalPages: 1, totalRows: 0 })
 
   useEffect(() => {
     const id_cliente = obtenerIdCliente()
@@ -139,12 +141,15 @@ function MisPedidos() {
       try {
         setCargando(true)
         const token = localStorage.getItem('token')
-        const res = await fetch(`${API_URL}/api/pedidos/cliente/${id_cliente}`, {
+        const res = await fetch(`${API_URL}/api/pedidos/cliente/${id_cliente}?page=${pagina}&limit=10`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         })
         const json = await res.json()
         if (!json.ok) throw new Error(json.mensaje)
-        if (!cancelado) setPedidos(json.data)
+        if (!cancelado) {
+          setPedidos(json.data)
+          setPaginacion(json.paginacion || { totalPages: 1, totalRows: 0 })
+        }
       } catch (err) {
         if (!cancelado) setError(err.message)
       } finally {
@@ -153,7 +158,7 @@ function MisPedidos() {
     }
     cargarPedidos()
     return () => { cancelado = true }
-  }, [])
+  }, [pagina])
 
   const formatearFecha = (fecha) =>
     new Date(fecha).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -246,7 +251,31 @@ function MisPedidos() {
           ))}
         </div>
         </FadeIn>
-      )}
+        )}
+
+        {paginacion.totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 px-1">
+            <button
+              type="button"
+              onClick={() => setPagina(p => Math.max(1, p - 1))}
+              disabled={pagina <= 1}
+              className="px-4 py-2 rounded-xl text-sm font-medium bg-white/[0.08] text-white/70 hover:bg-white/[0.15] disabled:opacity-30 disabled:cursor-not-allowed transition"
+            >
+              ← Anterior
+            </button>
+            <span className="text-xs text-white/40">
+              Página {pagina} de {paginacion.totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPagina(p => Math.min(paginacion.totalPages, p + 1))}
+              disabled={pagina >= paginacion.totalPages}
+              className="px-4 py-2 rounded-xl text-sm font-medium bg-white/[0.08] text-white/70 hover:bg-white/[0.15] disabled:opacity-30 disabled:cursor-not-allowed transition"
+            >
+              Siguiente →
+            </button>
+          </div>
+        )}
 
         <FadeIn>
         <div className="mt-6 rounded-2xl p-6 sm:p-8 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
