@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import logo from '../assets/logo.png'
 import AsistenteWidgetCliente from '../components/AsistenteWidgetCliente'
+import { useCarrito } from '../context/CarritoContext'
 
 const ENLACES = [
   { to: '/cliente', label: 'Inicio', end: true },
@@ -12,6 +13,7 @@ const ENLACES = [
 
 function ClienteLayout() {
   const navigate = useNavigate()
+  const { limpiarSesion } = useCarrito()
   const [menuOpen, setMenuOpen] = useState(false)
   const [cuentaOpen, setCuentaOpen] = useState(false)
   const cuentaRef = useRef(null)
@@ -37,8 +39,7 @@ function ClienteLayout() {
   }, [])
 
   function cerrarSesion() {
-    localStorage.removeItem('token')
-    localStorage.removeItem('cliente')
+    limpiarSesion()
     navigate('/')
   }
 

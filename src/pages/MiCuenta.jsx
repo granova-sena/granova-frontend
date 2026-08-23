@@ -21,7 +21,7 @@ const IconoSalir = (props) => (
 
 function MiCuenta() {
   const navigate = useNavigate()
-  const { cliente: clienteContexto, actualizarPerfilCliente } = useCarrito()
+  const { cliente: clienteContexto, actualizarPerfilCliente, limpiarSesion } = useCarrito()
 
   // El contexto trae el perfil sincronizado con el servidor (fuente de verdad);
   // si quedó vacío (p. ej. el provider montó antes del login), se cae a la
@@ -49,8 +49,7 @@ function MiCuenta() {
   const nombreCompleto = [cliente.nombre, cliente.apellido].filter(Boolean).join(' ') || 'Cliente Granova'
 
   function cerrarSesion() {
-    localStorage.removeItem('token')
-    localStorage.removeItem('cliente')
+    limpiarSesion()
     navigate('/login')
   }
 

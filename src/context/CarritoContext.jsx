@@ -215,6 +215,40 @@ export function CarritoProvider({ children }) {
 
   const [cuponValidado, setCuponValidado] = useState(null)
 
+  // ── Limpiar sesión (logout): resetea todo el estado React ──
+  const limpiarSesion = () => {
+    setClienteActual({})
+    setProductos([])
+    setCuponValidado(null)
+    setDatosCliente(null)
+    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem('token')
+    localStorage.removeItem('cliente')
+  }
+
+  // ── Re-sincronizar sesión (login): re-lee localStorage + fetch perfil ──
+  const sincronizarSesion = async () => {
+    const nuevoCliente = obtenerCliente()
+    setClienteActual(nuevoCliente)
+    setCuponValidado(null)
+    setDatosCliente(null)
+
+    const token = localStorage.getItem('token')
+    const id = nuevoCliente?.id
+    if (!token || !id) return
+
+    try {
+      const res = await fetch(`${API_URL}/api/clientes/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json()
+      if (json.ok) {
+        setClienteActual(prev => ({ ...prev, ...json.data }))
+        localStorage.setItem('cliente', JSON.stringify({ ...obtenerCliente(), ...json.data }))
+      }
+    } catch { /* best effort */ }
+  }
+
   // ── Totales: per-item "mayor gana" + cupón + IVA extraído ──
   const totalUnidades = productos.reduce((acc, p) => acc + Number(p.cantidad || 0), 0)
   const esMayorista = obtenerTipoCliente() === 'mayorista'
@@ -320,6 +354,8 @@ export function CarritoProvider({ children }) {
       cuponPct,
       descuentoCuponMonto,
       actualizarPerfilCliente,
+      limpiarSesion,
+      sincronizarSesion,
     }}>
       {children}
     </CarritoContext.Provider>

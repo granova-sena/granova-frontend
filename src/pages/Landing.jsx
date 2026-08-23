@@ -5,9 +5,11 @@ import registerBg from '../assets/register-bg.mp4'
 import { API_URL } from "../config";
 import AsistenteWidgetCliente from '../components/AsistenteWidgetCliente'
 import FadeIn from '../components/ui/FadeIn'
+import { useCarrito } from '../context/CarritoContext'
 
 function Landing() {
   const navigate = useNavigate()
+  const { sincronizarSesion } = useCarrito()
   const [scrolled, setScrolled] = useState(false)
   const [menuAbierto, setMenuAbierto] = useState(false)
   const oneTapInicializado = useRef(false)
@@ -41,6 +43,7 @@ function Landing() {
             if (respuesta.ok) {
               localStorage.setItem('token', datos.token)
               localStorage.setItem('cliente', JSON.stringify(datos.cliente))
+              await sincronizarSesion()
               navigate('/cliente')
             } else {
               toast.error(datos.error || 'No se pudo iniciar sesión con Google')

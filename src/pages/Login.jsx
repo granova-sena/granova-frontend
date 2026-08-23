@@ -5,9 +5,11 @@ import logo from '../assets/logo.png'
 import registerBg from '../assets/register-bg.mp4'
 import toast from 'react-hot-toast'
 import { API_URL, FRONTEND_URL } from "../config";
+import { useCarrito } from '../context/CarritoContext'
 
 function Login() {
   const navigate = useNavigate()
+  const { sincronizarSesion } = useCarrito()
   const [loading, setLoading] = useState(false)
   const [verContraseña, setVerContraseña] = useState(false)
   const loginEnCurso = useRef(false)
@@ -78,6 +80,7 @@ function Login() {
         JSON.stringify(datos.cliente)
       )
 
+      await sincronizarSesion()
       navigate('/cliente')
 
     } catch (error) {
@@ -133,6 +136,7 @@ function Login() {
         )
 
         popup.close()
+        sincronizarSesion()
         navigate('/cliente')
       }
     }
