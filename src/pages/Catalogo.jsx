@@ -1042,6 +1042,9 @@ function CatalogoInterno() {
   const [mostrarRecomendador, setMostrarRecomendador] = useState(false);
   const [recomendaciones, setRecomendaciones] = useState([]);
   const [busqueda, setBusqueda] = useState("");
+  const [buscaAbierto, setBuscaAbierto] = useState(false);
+  const [busquedaIdx, setBusquedaIdx] = useState(-1);
+  const buscaRef = useRef(null);
   const [filtros, setFiltros] = useState({ tipo: "", disp: "", marca: "" });
   const [carritoOpen, setCarritoOpen] = useState(false);
   const [detalle, setDetalle] = useState(null);
@@ -1227,6 +1230,29 @@ function CatalogoInterno() {
     return matchBus && matchTipo && matchMarca && matchDisp && matchFav;
   });
 
+  const norm = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+  const sugerencias = useMemo(() => {
+    if (busqueda.trim().length < 2) return [];
+    const q = norm(busqueda);
+    return productos.filter(p => (
+      norm(p.nombre).includes(q) ||
+      norm(p.tipo).includes(q) ||
+      norm(p.marca).includes(q) ||
+      norm(p.origen).includes(q) ||
+      norm(p.modelo).includes(q)
+    )).slice(0, 6);
+  }, [busqueda, productos]);
+
+  useEffect(() => {
+    if (!buscaAbierto) return;
+    function fuera(e) {
+      if (buscaRef.current && !buscaRef.current.contains(e.target)) setBuscaAbierto(false);
+    }
+    document.addEventListener("mousedown", fuera);
+    return () => document.removeEventListener("mousedown", fuera);
+  }, [buscaAbierto]);
+
   const productosVistos = vistos.map(id => productos.find(p => p.id === id)).filter(Boolean);
 
   const masVendidos = [...cafeProductos].sort((a, b) => b.stock - a.stock).slice(0, 4);
@@ -1327,23 +1353,72 @@ function CatalogoInterno() {
           {/* Búsqueda + acciones, agrupadas a la derecha */}
           <div className="flex items-center gap-2.5 flex-1 min-w-[220px] justify-end">
             {/* Input de búsqueda local — en mobile abre Spotlight */}
-            <div className="flex items-center gap-2 rounded-xl px-3.5 py-2 w-full max-w-none sm:max-w-xs bg-[#0F1D13] border border-white/[0.08]">
+            <div ref={buscaRef} className="relative flex items-center gap-2 rounded-xl px-3.5 py-2 w-full max-w-none sm:max-w-xs bg-[#0F1D13] border border-white/[0.08]">
               <button type="button" onClick={() => setSpotlightOpen(true)} className="text-white/35 hover:text-white/60 transition shrink-0" aria-label="Abrir búsqueda avanzada">
                 <IconoBuscar className="shrink-0" />
               </button>
               <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
                 placeholder={seccion === "maquinas" ? "Buscar cafetera, marca..." : "Buscar por nombre, tipo de café..."}
                 className="flex-1 min-w-0 text-sm outline-none bg-transparent text-white placeholder-white/35 sm:hidden" readOnly onClick={() => setSpotlightOpen(true)} />
-              <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
+              <input value={busqueda}
+                onChange={e => { setBusqueda(e.target.value); setBusquedaIdx(-1); setBuscaAbierto(true); }}
+                onFocus={() => { if (sugerencias.length > 0) setBuscaAbierto(true); }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "ArrowDown") {
                     e.preventDefault();
-                    e.currentTarget.blur();
-                    document.getElementById("catalogo-resultados")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    setBusquedaIdx(i => Math.min(i + 1, sugerencias.length - 1));
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setBusquedaIdx(i => Math.max(i - 1, -1));
+                  } else if (e.key === "Escape") {
+                    setBuscaAbierto(false);
+                  } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (busquedaIdx >= 0 && sugerencias[busquedaIdx]) {
+                      verDetalle(sugerencias[busquedaIdx]);
+                      setBuscaAbierto(false);
+                      setBusqueda("");
+                    } else {
+                      e.currentTarget.blur();
+                      document.getElementById("catalogo-resultados")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
                   }
                 }}
                 placeholder={seccion === "maquinas" ? "Buscar cafetera, marca..." : "Buscar por nombre, tipo de café..."}
                 className="flex-1 min-w-0 text-sm outline-none bg-transparent text-white placeholder-white/35 hidden sm:block" />
+
+              {/* Dropdown de autocompletado */}
+              <AnimatePresence>
+                {buscaAbierto && sugerencias.length > 0 && (
+                  <motion.ul
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute top-full left-0 right-0 mt-2 z-50 bg-[#0F1D13] border border-white/[0.12] rounded-xl shadow-xl shadow-black/40 overflow-hidden max-h-[320px] overflow-y-auto"
+                  >
+                    {sugerencias.map((p, i) => (
+                      <li
+                        key={p.id}
+                        className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${i === busquedaIdx ? "bg-white/[0.08]" : "hover:bg-white/[0.04]"}`}
+                        onMouseEnter={() => setBusquedaIdx(i)}
+                        onClick={() => { verDetalle(p); setBuscaAbierto(false); setBusqueda(""); }}
+                      >
+                        <div className="w-9 h-9 rounded-lg overflow-hidden bg-[#14291B] shrink-0">
+                          <ImagenProducto src={p.img} alt={p.nombre} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white font-medium truncate">{p.nombre}</p>
+                          <p className="text-[11px] text-white/35 mt-0.5">{p.origen || p.marca}</p>
+                        </div>
+                        <span className="text-sm font-semibold text-white/60 shrink-0">
+                          ${p.precio.toLocaleString("es-CO")}
+                        </span>
+                      </li>
+                    ))}
+                  </motion.ul>
+                )}
+              </AnimatePresence>
             </div>
             {/* Chip Ctrl+K — solo desktop */}
             <button type="button" onClick={() => setSpotlightOpen(true)}
