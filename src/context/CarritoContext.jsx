@@ -109,11 +109,27 @@ export function CarritoProvider({ children }) {
       setProductos([])
       setCuponValidado(null)
 
+      // Refrescar perfil del cliente para actualizar puntos
+      try {
+        const token = localStorage.getItem('token')
+        if (token && id_cliente) {
+          const r = await fetch(`${API_URL}/api/clientes/${id_cliente}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          const pj = await r.json()
+          if (pj.ok) {
+            setClienteActual(prev => ({ ...prev, ...pj.data }))
+            localStorage.setItem('cliente', JSON.stringify({ ...obtenerCliente(), ...pj.data }))
+          }
+        }
+      } catch { /* best effort */ }
+
       return {
         ok: true,
         id_pedido: json.data.id_pedido,
         descuento_aplicado: json.data?.descuento_aplicado ?? 0,
         descuento_fuente: json.data?.descuento_fuente ?? null,
+        puntos_ganados: json.data?.puntos_ganados ?? 0,
       }
     } catch (error) {
       console.error('Error confirmando pedido:', error.message)

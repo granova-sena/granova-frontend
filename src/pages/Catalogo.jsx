@@ -445,11 +445,9 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar, descuentosVol
         {carrito.length > 0 && (
           <div className="px-4 pb-5 pt-4 border-t border-white/10" style={{ background: "#0D1D13" }}>
             <div className="flex justify-between text-sm text-white/50 mb-2"><span>Subtotal</span><span>${subtotalBase.toLocaleString("es-CO")}</span></div>
-            {ganador.pct > 0 && (
+            {descuento > 0 && (
               <div className="flex justify-between text-sm text-[#9DC9B4] mb-2">
-                <span>
-                  {ganador.fuente === 'volumen' ? '📦 Descuento por volumen' : ganador.fuente === 'empresa' ? '🏢 Descuento empresa' : '🎉 Descuento'} {ganador.pct}%
-                </span>
+                <span>Descuento aplicado</span>
                 <span>−${descuento.toLocaleString("es-CO")}</span>
               </div>
             )}
