@@ -1350,12 +1350,10 @@ function CatalogoInterno() {
               className="h-10 px-3 rounded-xl bg-[#0F1D13] text-white/30 text-[11px] font-medium border border-white/[0.08] hover:border-white/20 hover:text-white/50 shrink-0 transition hidden md:flex items-center gap-1.5">
               <span>Ctrl</span><kbd className="text-[9px] bg-white/[0.06] px-1 py-0.5 rounded">K</kbd>
             </button>
-            {seccion === "cafe" && (
-              <button type="button" onClick={() => setMostrarRecomendador(true)}
-                className="relative h-10 px-4 rounded-xl bg-[#0F1D13] text-[#9DC9B4] text-sm font-medium items-center gap-2 border border-[#6FA98C]/25 hover:bg-[#14291B] shrink-0 transition hidden md:flex">
-                ✨ ¿No sabes qué elegir?
-              </button>
-            )}
+            <button type="button" onClick={() => setMostrarRecomendador(true)}
+              className="relative h-10 px-4 rounded-xl bg-[#0F1D13] text-[#9DC9B4] text-sm font-medium items-center gap-2 border border-[#6FA98C]/25 hover:bg-[#14291B] shrink-0 transition hidden md:flex">
+              ✨ ¿No sabes qué elegir?
+            </button>
             <motion.button
               type="button"
               id="icono-carrito-header"
