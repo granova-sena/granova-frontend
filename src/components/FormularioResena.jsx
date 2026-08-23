@@ -27,7 +27,7 @@ function FormularioResena({ id_detalle, producto_nombre, onCerrar, onEnviado }) 
     setEnviando(true)
     setError(null)
     try {
-      const res = await fetch(`${API_URL}/resenas`, {
+      const res = await fetch(`${API_URL}/api/resenas`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
