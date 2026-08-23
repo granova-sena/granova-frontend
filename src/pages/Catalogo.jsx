@@ -959,37 +959,47 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
           <input type="checkbox" checked={seleccionadoComparar} onChange={onToggleComparar} className="w-3.5 h-3.5 accent-[#6FA98C]" />
           <span>Comparar</span>
         </label>
-        <motion.button
-          type="button"
-          onClick={handleAgregar}
-          disabled={!p.disponible}
-          whileTap={{ scale: 0.95 }}
-          animate={feedback ? { backgroundColor: "#4F8A70" } : { backgroundColor: "#6FA98C" }}
-          className={`mt-1 h-9 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1D13]`}
-        >
-          <AnimatePresence mode="wait">
-            {feedback ? (
-              <motion.span
-                key="added"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-              >
-                ✓ Agregado
-              </motion.span>
-            ) : (
-              <motion.span
-                key="add"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="flex items-center gap-1.5"
-              >
-                <IconoCarrito width={14} height={14} /> Agregar
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </motion.button>
+        <div className="flex gap-2 mt-1">
+          <motion.button
+            type="button"
+            onClick={() => onVerDetalle(p)}
+            whileTap={{ scale: 0.95 }}
+            className="flex-1 h-9 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border border-white/15 text-white/70 hover:bg-white/[0.06] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1D13]"
+          >
+            Ver detalles
+          </motion.button>
+          <motion.button
+            type="button"
+            onClick={handleAgregar}
+            disabled={!p.disponible}
+            whileTap={{ scale: 0.95 }}
+            animate={feedback ? { backgroundColor: "#4F8A70" } : { backgroundColor: "#6FA98C" }}
+            className={`flex-1 h-9 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1D13]`}
+          >
+            <AnimatePresence mode="wait">
+              {feedback ? (
+                <motion.span
+                  key="added"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                >
+                  ✓ Agregado
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="add"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className="flex items-center gap-1.5"
+                >
+                  <IconoCarrito width={14} height={14} /> Agregar
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        </div>
       </div>
     </motion.div>
   );
