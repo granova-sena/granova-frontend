@@ -1160,6 +1160,22 @@ function CatalogoInterno() {
     return () => { cancelado = true; };
   }, []);
 
+  // Ranking real de ventas (endpoint público) para "Más vendidos"
+  const [topVendidos, setTopVendidos] = useState([]);
+  useEffect(() => {
+    let cancelado = false;
+    async function cargarTop() {
+      try {
+        const res = await fetch(`${API_URL}/top-vendidos?limit=5&dias=30`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.ok && !cancelado) setTopVendidos(json.data);
+      } catch { /* silencioso: la sección cae al fallback */ }
+    }
+    cargarTop();
+    return () => { cancelado = true; };
+  }, []);
+
   // Agrega un producto al carrito.
   // - Si te pasas del stock disponible: abre modal (Aceptar agrega el resto / Cancelar no hace nada).
   // - Si al agregar CRUZAS UN UMBRAL (10, 50 o 100 unidades): abre modal de confirmación
@@ -1322,8 +1338,21 @@ function CatalogoInterno() {
 
   const productosVistos = vistos.map(id => productos.find(p => p.id === id)).filter(Boolean);
 
-  const masVendidos = [...cafeProductos].sort((a, b) => b.stock - a.stock).slice(0, 4);
-  const promociones = cafeProductos.filter(p => p.badge === "Oferta");
+  // "Más vendidos": ranking REAL del backend (unidades vendidas últimos 30 días).
+  // Si el endpoint aún no reporta datos (tienda nueva), cae al proxy de stock.
+  const masVendidos = useMemo(() => {
+    const reales = topVendidos
+      .map(t => {
+        const p = cafeProductos.find(c => c.id === t.id_producto);
+        return p ? { ...p, unidadesVendidas: Number(t.unidades_vendidas) || 0 } : null;
+      })
+      .filter(Boolean);
+    if (reales.length > 0) return reales.slice(0, 5);
+    return [...cafeProductos].sort((a, b) => b.stock - a.stock).slice(0, 4).map(p => ({ ...p, unidadesVendidas: null }));
+  }, [topVendidos, cafeProductos]);
+
+  // "Promociones": productos con promo activa real (tabla promociones)
+  const promociones = cafeProductos.filter(p => (p.promoPct || 0) > 0);
   const totalCarrito = carrito.reduce((s, x) => s + (x.cant || 1), 0);
 
   // ── Carruseles ──
@@ -1795,6 +1824,7 @@ function CatalogoInterno() {
                 const lista = tabDestacados === "masVendidos" ? masVendidos : promociones;
                 if (lista.length === 0) return <p className="text-white/40 text-sm">No hay productos en esta categoría.</p>;
                 const [primero, ...resto] = lista;
+                const esRankingReal = tabDestacados === "masVendidos" && primero.unidadesVendidas != null;
                 return (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div
@@ -1807,21 +1837,34 @@ function CatalogoInterno() {
                     >
                       <div className="relative h-64 sm:h-80 bg-[#14291B]">
                         <ImagenProducto src={primero.img} alt={primero.nombre} className="w-full h-full object-cover" />
-                        {primero.badge && <span className={`absolute top-3 left-3 text-[10px] font-semibold px-2.5 py-1 rounded-full ${badgeColor[primero.badge]}`}>{primero.badge}</span>}
+                        {esRankingReal ? (
+                          <span className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#6FA98C] text-white shadow-lg">#1 · +{primero.unidadesVendidas} vendidos</span>
+                        ) : primero.badge ? (
+                          <span className={`absolute top-3 left-3 text-[10px] font-semibold px-2.5 py-1 rounded-full ${badgeColor[primero.badge]}`}>{primero.badge}</span>
+                        ) : null}
+                        {(primero.promoPct || 0) > 0 && (
+                          <span className="absolute top-3 right-3 text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#D85A30]/10 text-[#D85A30] ring-1 ring-inset ring-[#D85A30]/25">-{primero.promoPct}%</span>
+                        )}
                       </div>
                       <div className="p-4">
                         <p className="text-xs text-white/40">{primero.origen}</p>
                         <p className="text-base font-semibold text-white mt-1">{primero.nombre}</p>
                         <p className="text-xl font-semibold text-white mt-2">{primero.formatos.length > 0 ? `Desde $${primero.precioDesde.toLocaleString("es-CO")}` : `$${primero.precio.toLocaleString("es-CO")}`}</p>
                         <p className="text-[10px] text-white/40">{primero.formatos.length > 0 ? primero.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ") : "por kg"}</p>
+                        {tabDestacados === "promociones" && (
+                          <p className="text-[11px] font-medium text-[#D85A30] mt-1">
+                            🏷️ {primero.promoNombre || "Oferta"}{primero.promoFin ? ` · hasta el ${new Date(primero.promoFin).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}` : ""}
+                          </p>
+                        )}
                         <div className="flex items-center gap-1.5 mt-2">
                           <span className={`w-2 h-2 rounded-full ${stockColor[primero.stockLabel]}`}></span>
                           <span className={`text-xs ${stockTexto[primero.stockLabel]}`}>{primero.stockLabel} · {primero.stock} kg</span>
                         </div>
-                        <button type="button" onClick={e => { e.stopPropagation(); agregar({...primero, cant:1}, e.currentTarget); }} className="w-full mt-3 h-9 rounded-xl bg-[#6FA98C] text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#4F8A70] active:scale-95 transition duration-150"><IconoCarrito width={14} height={14} /> Agregar al carrito</button>
+                        <button type="button" onClick={e => { e.stopPropagation(); verDetalle(primero); }} className="w-full mt-3 h-9 rounded-xl bg-white/[0.07] border border-white/[0.12] text-white/80 text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-white/[0.14] hover:text-white active:scale-95 transition duration-150"><IconoBuscar width={13} height={13} /> Ver detalles</button>
+                        <button type="button" onClick={e => { e.stopPropagation(); agregar({...primero, cant:1}, e.currentTarget); }} className="w-full mt-2 h-9 rounded-xl bg-[#6FA98C] text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#4F8A70] active:scale-95 transition duration-150"><IconoCarrito width={14} height={14} /> Agregar al carrito</button>
                       </div>
                     </div>
-                    {resto.slice(0,4).map(p => (
+                    {resto.slice(0,4).map((p, i) => (
                       <div
                         key={p.id}
                         className="rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 bg-[#0F1D13] border border-white/[0.08] hover:shadow-xl"
@@ -1833,11 +1876,20 @@ function CatalogoInterno() {
                       >
                         <div className="relative h-36 bg-[#14291B]">
                           <ImagenProducto src={p.img} alt={p.nombre} className="w-full h-full object-cover" />
+                          {esRankingReal && p.unidadesVendidas != null && (
+                            <span className="absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-full bg-black/60 text-white backdrop-blur-sm">#{i + 2} · +{p.unidadesVendidas} vendidos</span>
+                          )}
+                          {(p.promoPct || 0) > 0 && (
+                            <span className="absolute top-2 right-2 text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#D85A30]/10 text-[#D85A30] ring-1 ring-inset ring-[#D85A30]/25 backdrop-blur-sm">-{p.promoPct}%</span>
+                          )}
                         </div>
                         <div className="p-3">
-                          <p className="text-sm font-medium text-white">{p.nombre}</p>
+                          <p className="text-sm font-medium text-white truncate">{p.nombre}</p>
                           <p className="text-xs text-white mt-0.5 font-semibold">${p.precio.toLocaleString("es-CO")}</p>
-                          <button type="button" onClick={e => { e.stopPropagation(); agregar({...p, cant:1}, e.currentTarget); }} className="w-full mt-2 h-8 rounded-lg bg-[#6FA98C] text-white text-xs font-semibold flex items-center justify-center hover:bg-[#4F8A70] active:scale-95 transition duration-150">Agregar</button>
+                          <div className="flex gap-2 mt-2">
+                            <button type="button" onClick={e => { e.stopPropagation(); verDetalle(p); }} className="flex-1 h-8 rounded-lg bg-white/[0.07] border border-white/[0.12] text-white/80 text-xs font-semibold flex items-center justify-center hover:bg-white/[0.14] hover:text-white transition duration-150">Ver detalles</button>
+                            <button type="button" onClick={e => { e.stopPropagation(); agregar({...p, cant:1}, e.currentTarget); }} className="flex-1 h-8 rounded-lg bg-[#6FA98C] text-white text-xs font-semibold flex items-center justify-center hover:bg-[#4F8A70] transition duration-150">Agregar</button>
+                          </div>
                         </div>
                       </div>
                     ))}

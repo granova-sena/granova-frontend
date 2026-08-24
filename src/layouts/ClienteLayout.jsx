@@ -7,6 +7,7 @@ import { useCarrito } from '../context/CarritoContext'
 const ENLACES = [
   { to: '/cliente', label: 'Inicio', end: true },
   { to: '/cliente/catalogo', label: 'Catálogo' },
+  { to: '/cliente/foros', label: 'Foros' },
   { to: '/cliente/pedidos', label: 'Mis pedidos' },
   { to: '/cliente/promociones', label: 'Promociones' },
 ]
