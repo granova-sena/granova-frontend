@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useModalBehavior } from "../hooks/useModalBehavior";
 import { useCarrito } from "../context/CarritoContext";
 import { API_URL as BASE_API_URL } from "../config";
+import toast from "react-hot-toast";
 import RecomendadorModal from "../components/RecomendadorModal";
 import CaruselGenerico from "../components/CaruselGenerico";
 import ProductoCardMini from "../components/ProductoCardMini";
@@ -58,7 +59,7 @@ function calcularBadge(producto) {
 // primero 10, luego 50, luego 100, y de ahí en adelante cada 100 (200, 300, 400...) sin límite.
 const UMBRALES_FIJOS = [10, 50, 100];
 
-function cruzaUmbral(cantActual, total) {
+export function cruzaUmbral(cantActual, total) {
   // Los 3 primeros umbrales son puntuales
   for (const u of UMBRALES_FIJOS) {
     if (cantActual < u && total >= u) return true;
@@ -248,6 +249,50 @@ function volarAlCarrito(elementoOrigen) {
   requestAnimationFrame(frame);
 }
 
+// ── ANIMACIÓN: corazón volando hacia "Mi Cuenta" ──────────
+// Feedback espacial al guardar un favorito: un ❤️ sale del botón que se
+// tocó y vuela hasta el avatar de la esquina (donde vive el menú con
+// "Favoritos"). Así el usuario entiende a dónde fue a parar.
+function volarCorazon(elementoOrigen) {
+  const destino = document.getElementById("boton-cuenta-header") || document.getElementById("boton-menu-header");
+  if (!elementoOrigen || !destino) return;
+
+  const o = elementoOrigen.getBoundingClientRect();
+  const d = destino.getBoundingClientRect();
+
+  const cora = document.createElement("span");
+  cora.textContent = "❤️";
+  cora.style.cssText = [
+    "position:fixed",
+    "z-index:9999",
+    `left:${o.left + o.width / 2 - 11}px`,
+    `top:${o.top + o.height / 2 - 11}px`,
+    "font-size:22px",
+    "line-height:1",
+    "pointer-events:none",
+    "will-change:transform,opacity",
+  ].join(";");
+  document.body.appendChild(cora);
+
+  const dx = (d.left + d.width / 2) - (o.left + o.width / 2);
+  const dy = (d.top + d.height / 2) - (o.top + o.height / 2);
+
+  cora.animate([
+    { transform: "translate(0,0) scale(0.6)", opacity: 0 },
+    { transform: `translate(${dx * 0.25}px, ${dy * 0.25 - 30}px) scale(1.4)`, opacity: 1, offset: 0.3 },
+    { transform: `translate(${dx}px, ${dy}px) scale(0.35)`, opacity: 0 },
+  ], { duration: 750, easing: "cubic-bezier(.45,.05,.55,.95)" }).onfinish = () => {
+    cora.remove();
+    // Pulso en el avatar para confirmar el destino
+    destino.animate(
+      [{ transform: "scale(1)" }, { transform: "scale(1.25)" }, { transform: "scale(1)" }],
+      { duration: 350, easing: "ease-out" }
+    );
+  };
+}
+
+export { volarCorazon };
+
 // ── ÍCONOS ─────────────────────────────────────────────────
 const IconoCarrito = (props) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" {...props}><path d="M6 8h12l-1.2 10.2a2 2 0 01-2 1.8H9.2a2 2 0 01-2-1.8L6 8z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><path d="M9 8V6a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
@@ -277,7 +322,7 @@ const IconoEscudo = (props) => (
 // Reemplaza <img src={...}>: si no hay URL, no renderiza <img> (evita el
 // warning de src="" y la descarga completa de la página). Si la URL falla
 // al cargar, oculta la imagen igual que antes.
-function ImagenProducto({ src, alt, className }) {
+export function ImagenProducto({ src, alt, className }) {
   const [fallo, setFallo] = useState(false);
   if (!src || fallo) {
     return <div className={`${className} bg-[#14291B] flex items-center justify-center`}>
@@ -524,7 +569,7 @@ export function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFav
           <button type="button" onClick={onClose} className="absolute top-3 right-3 w-8 h-8 bg-black/40 rounded-full flex items-center justify-center text-white/80 shadow hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C]">✕</button>
           <button
             type="button"
-            onClick={() => onToggleFavorito(p.id)}
+            onClick={(e) => onToggleFavorito(p.id, e.currentTarget)}
             className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center shadow transition ${esFavorito ? "bg-[#D85A30] text-white" : "bg-black/40 text-white/80 hover:text-white"}`}
             aria-label={esFavorito ? "Quitar de favoritos" : "Agregar a favoritos"}
           >
@@ -670,7 +715,7 @@ export function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFav
 }
 
 // ── MODAL CONFIRMAR CANTIDAD ──────────────────────────────
-function ModalConfirmarCantidad({ data, onCancelar, onAceptar }) {
+export function ModalConfirmarCantidad({ data, onCancelar, onAceptar }) {
   useModalBehavior(onCancelar);
   if (!data) return null;
   const { tipo, producto, disponibleRestante, total } = data;
@@ -857,7 +902,7 @@ export function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0
         ) : null}
         <motion.button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onToggleFavorito(p.id); }}
+          onClick={(e) => { e.stopPropagation(); onToggleFavorito(p.id, e.currentTarget); }}
           className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center shadow-lg"
           whileTap={{ scale: 0.8 }}
           animate={esFavorito ? { scale: [1, 1.3, 1], backgroundColor: "#D85A30" } : { scale: 1, backgroundColor: "rgba(0,0,0,0.45)" }}
@@ -1189,14 +1234,38 @@ function CatalogoInterno() {
     setConfirmPendiente(null);
   };
 
-  // Favoritos
-  const toggleFavorito = (id) => {
+  // Favoritos — con feedback visual: corazón volando al avatar + toast con
+  // acceso directo a la página de favoritos.
+  const toggleFavorito = (id, elementoOrigen) => {
+    const yaEstaba = favoritos.has(id);
     setFavoritos(prev => {
       const nuevo = new Set(prev);
       if (nuevo.has(id)) nuevo.delete(id); else nuevo.add(id);
       guardarFavoritos(nuevo);
       return nuevo;
     });
+
+    if (!yaEstaba) {
+      volarCorazon(elementoOrigen);
+      toast.custom(t => (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl"
+          style={{ background: "#0F1D13", border: "1px solid rgba(111,169,140,0.35)" }}
+        >
+          <span className="text-lg">❤️</span>
+          <span className="text-sm text-white">Guardado en tus favoritos</span>
+          <button
+            type="button"
+            onClick={() => { toast.dismiss(t.id); navigate("/cliente/favoritos"); }}
+            className="text-xs font-semibold text-[#9DC9B4] hover:text-white transition ml-1"
+          >
+            Ver favoritos →
+          </button>
+        </div>
+      ), { duration: 3200, id: `fav-${id}` });
+    } else {
+      toast("Eliminado de favoritos", { icon: "🤍", id: `fav-${id}` });
+    }
   };
 
   // Ver detalle + registrar en "vistos recientemente" (máximo 5, sin duplicados)
@@ -1417,6 +1486,10 @@ function CatalogoInterno() {
             <button type="button" onClick={() => setMostrarRecomendador(true)}
               className="relative h-10 px-4 rounded-xl bg-[#0F1D13] text-[#9DC9B4] text-sm font-medium items-center gap-2 border border-[#6FA98C]/25 hover:bg-[#14291B] shrink-0 transition hidden md:flex">
               ✨ ¿No sabes qué elegir?
+            </button>
+            <button type="button" onClick={() => navigate("/cliente/simulador")}
+              className="relative h-10 px-4 rounded-xl bg-[#0F1D13] text-white/70 text-sm font-medium items-center gap-2 border border-white/[0.12] hover:border-[#6FA98C]/40 hover:text-white shrink-0 transition hidden md:flex">
+              🧮 Simular compra
             </button>
             <motion.button
               type="button"

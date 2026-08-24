@@ -1,10 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useCarrito } from "../context/CarritoContext";
 import { API_URL as BASE_API_URL } from "../config";
 import FadeIn from "../components/ui/FadeIn";
 import { SkeletonCard } from "../components/ui/Skeleton";
-import { ProductoCard, DetalleProducto, adaptarProducto, eliminarDuplicados, cargarFavoritos, guardarFavoritos } from "./Catalogo";
+import toast from "react-hot-toast";
+import {
+  ProductoCard,
+  DetalleProducto,
+  ModalConfirmarCantidad,
+  adaptarProducto,
+  eliminarDuplicados,
+  cargarFavoritos,
+  guardarFavoritos,
+  cruzaUmbral,
+} from "./Catalogo";
 
 const API_URL = `${BASE_API_URL}/productos`;
 
@@ -27,9 +37,31 @@ function FavoritosInterno() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [detalle, setDetalle] = useState(null);
-  const [carrito, setCarrito] = useState(() =>
-    (productosContexto || []).map(p => ({ id: p.id, cant: p.cantidad || 1 }))
-  );
+  const [confirmPendiente, setConfirmPendiente] = useState(null);
+  const [carrito, setCarrito] = useState(() => {
+    // Semilla desde el contexto (persistido) con los mismos campos que usa el catálogo
+    return (productosContexto || []).map(p => ({
+      id: p.id,
+      nombre: p.nombre,
+      precio: p.precio,
+      cant: p.cantidad || 1,
+      img: p.img || '',
+      unidad: p.unidad || 'kg',
+      origen: p.presentacion || '',
+      id_formato: p.id_formato ?? null,
+      peso_kg: p.peso_kg ?? null,
+      etiqueta_formato: p.etiqueta_formato || '',
+      promoPct: p.promo_pct ?? null,
+      iva_pct: p.iva_pct == null ? 5 : Number(p.iva_pct),
+    }));
+  });
+  // Sincronizar carrito local con el contexto (skip mount para no sobreescribir)
+  const mountRef = useRef(true);
+  useEffect(() => {
+    if (mountRef.current) { mountRef.current = false; return; }
+    sincronizarCarrito(carrito);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carrito]);
 
   // Cargar productos del catálogo
   useEffect(() => {
@@ -56,12 +88,10 @@ function FavoritosInterno() {
     return () => { cancelado = true; };
   }, []);
 
-  // Sincronizar carrito local con el contexto (para mostrar cantidades)
-  useEffect(() => {
-    if (carrito.length > 0) sincronizarCarrito(carrito);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Sincronizar carrito local con el contexto al montar
+  // (el sync real ocurre en el useEffect de [carrito] con skip-mount)
 
+  // Quitar de favoritos — misma firma que el catálogo (id + elemento para la animación)
   const toggleFavorito = (id) => {
     setFavoritos(prev => {
       const nuevo = new Set(prev);
@@ -69,21 +99,42 @@ function FavoritosInterno() {
       guardarFavoritos(nuevo);
       return nuevo;
     });
+    toast("Eliminado de favoritos", { icon: "🤍", id: `fav-${id}` });
   };
 
-  // Agregar al carrito con validación de stock (misma regla que el catálogo)
+  // Agregar al carrito — MISMA lógica de umbrales y modales que el catálogo:
+  // sin stock → aviso; se pasa del stock → ofrece el resto; cruza umbral (10/50/100…) → confirma.
   const agregar = (p) => {
     const existente = carrito.find(x => x.id === p.id);
     const cantActual = existente?.cant || 0;
-    const total = cantActual + (p.cant || 1);
+    const cantPedida = p.cant || 1;
+    const total = cantActual + cantPedida;
 
-    if (cantActual >= p.stock || total > p.stock) return;
+    if (cantActual >= p.stock) {
+      setConfirmPendiente({ tipo: "sinStock", producto: p });
+      return;
+    }
 
-    const nuevo = carrito.find(x => x.id === p.id)
-      ? carrito.map(x => x.id === p.id ? { ...x, cant: total } : x)
-      : [...carrito, { ...p, cant: p.cant || 1 }];
-    setCarrito(nuevo);
-    sincronizarCarrito(nuevo);
+    if (total > p.stock) {
+      const disponibleRestante = p.stock - cantActual;
+      setConfirmPendiente({ tipo: "limitado", producto: p, disponibleRestante });
+      return;
+    }
+
+    if (cruzaUmbral(cantActual, total)) {
+      setConfirmPendiente({ tipo: "masDeUno", producto: p, total });
+      return;
+    }
+
+    aplicarAgregar(p, cantPedida);
+  };
+
+  // Inserta definitivamente en el carrito local (el useEffect lo sube al contexto)
+  const aplicarAgregar = (p, cantPedida) => {
+    setCarrito(prev => prev.find(x => x.id === p.id)
+      ? prev.map(x => x.id === p.id ? { ...x, cant: (x.cant || 1) + cantPedida } : x)
+      : [...prev, { ...p, cant: cantPedida }]
+    );
   };
 
   const favoritosLista = productos.filter(p => favoritos.has(p.id));
@@ -125,7 +176,7 @@ function FavoritosInterno() {
                 <ProductoCard
                   key={p.id}
                   p={p}
-                  onAgregar={agregar}
+                  onAgregar={(prod) => agregar(prod)}
                   onVerDetalle={setDetalle}
                   cantidadEnCarrito={carrito.find(c => c.id === p.id)?.cant || 0}
                   esFavorito={favoritos.has(p.id)}
@@ -149,11 +200,23 @@ function FavoritosInterno() {
         )}
       </div>
 
+      {/* Modal: mismo comportamiento de umbrales que el catálogo */}
+      <ModalConfirmarCantidad
+        data={confirmPendiente}
+        onCancelar={() => setConfirmPendiente(null)}
+        onAceptar={() => {
+          const { tipo, producto, disponibleRestante } = confirmPendiente;
+          if (tipo === "limitado") aplicarAgregar(producto, disponibleRestante);
+          else if (tipo === "masDeUno") aplicarAgregar(producto, producto.cant || 1);
+          setConfirmPendiente(null);
+        }}
+      />
+
       {detalle && (
         <DetalleProducto
           p={detalle}
           onClose={() => setDetalle(null)}
-          onAgregar={agregar}
+          onAgregar={(prod) => agregar(prod)}
           esFavorito={favoritos.has(detalle.id)}
           onToggleFavorito={toggleFavorito}
           descuentosVolumen={descuentosVolumen}

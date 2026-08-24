@@ -77,6 +77,7 @@ function ClienteLayout() {
             <div className="relative hidden md:block" ref={cuentaRef}>
              <button
   type="button"
+  id="boton-cuenta-header"
   onClick={() => setCuentaOpen((o) => !o)}
                 className="w-9 h-9 rounded-full bg-[#6FA98C] text-white text-sm font-semibold flex items-center justify-center hover:bg-[#4F8A70] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6FA98C] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1a0a]"
               >
@@ -114,7 +115,7 @@ function ClienteLayout() {
             </div>
 
             {/* Hamburguesa móvil */}
-            <button type="button" className="md:hidden text-white/70 hover:text-white transition p-2" onClick={() => setMenuOpen((o) => !o)}> 
+            <button type="button" id="boton-menu-header" className="md:hidden text-white/70 hover:text-white transition p-2" onClick={() => setMenuOpen((o) => !o)}> 
               {menuOpen ? (
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                   <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
