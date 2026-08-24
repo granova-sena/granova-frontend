@@ -26,6 +26,7 @@ import RegistroDeVentas from './pages/RegistroDeVentas'
 import ReportesVentas from './pages/ReportesVentas'
 import Transportadoras from './pages/Transportadoras'
 import Catalogo from './pages/Catalogo'
+import Favoritos from './pages/Favoritos'
 import VerificarCuenta from './pages/VerificarCuenta'
 import ClienteLayout from './layouts/ClienteLayout'
 import ClienteInicio from './pages/ClienteInicio'
@@ -84,6 +85,7 @@ function App() {
         }>
           <Route index element={<ClienteInicio />} />
           <Route path="catalogo" element={<Catalogo />} />
+          <Route path="favoritos" element={<Favoritos />} />
           <Route path="pedidos" element={<MisPedidos />} />
           <Route path="pedidos/:id" element={<EstadoPedidoPage />} />
           <Route path="promociones" element={<Promociones />} />

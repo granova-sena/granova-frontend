@@ -97,7 +97,7 @@ function ClienteLayout() {
                   </button>
                   <button
   type="button"
-  onClick={() => { setCuentaOpen(false); navigate('/cliente/catalogo?seccion=favoritos') }}
+  onClick={() => { setCuentaOpen(false); navigate('/cliente/favoritos') }}
                     className="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-white transition"
                   >
                     Favoritos
@@ -157,7 +157,7 @@ function ClienteLayout() {
               </button>
               <button
   type="button"
-  onClick={() => { setMenuOpen(false); navigate('/cliente/catalogo?seccion=favoritos') }}
+  onClick={() => { setMenuOpen(false); navigate('/cliente/favoritos') }}
   className="text-left text-sm py-2.5 text-white/60"
               >
                 Favoritos

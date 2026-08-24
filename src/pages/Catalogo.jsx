@@ -72,7 +72,7 @@ function cruzaUmbral(cantActual, total) {
   return false;
 }
 
-function adaptarProducto(p) {
+export function adaptarProducto(p) {
   const stock = Number(p.stock) || 0;
   const esMaquina = (p.categoria_producto || (p.marca && p.modelo) || "") === "maquina";
   const formatos = (p.formatos || []).map(f => ({
@@ -128,7 +128,7 @@ function adaptarProducto(p) {
 // Quita productos con id repetido o sin id. Un id duplicado en la lista
 // hace que React confunda nodos del DOM al reconciliar (causa típica del
 // error "Failed to execute 'removeChild' on 'Node'").
-function eliminarDuplicados(productos) {
+export function eliminarDuplicados(productos) {
   const vistos = new Set();
   const limpios = [];
   for (const p of productos) {
@@ -141,10 +141,10 @@ function eliminarDuplicados(productos) {
 }
 
 // ── FAVORITOS Y VISTOS RECIENTEMENTE (localStorage) ────────
-const LS_FAVORITOS = "granova_favoritos";
+export const LS_FAVORITOS = "granova_favoritos";
 const LS_VISTOS = "granova_vistos";
 
-function cargarFavoritos() {
+export function cargarFavoritos() {
   try {
     const arr = JSON.parse(localStorage.getItem(LS_FAVORITOS)) || [];
     return new Set(arr);
@@ -153,7 +153,7 @@ function cargarFavoritos() {
   }
 }
 
-function guardarFavoritos(set) {
+export function guardarFavoritos(set) {
   try {
     localStorage.setItem(LS_FAVORITOS, JSON.stringify([...set]));
   } catch { /* localStorage no disponible, se ignora */ }
@@ -474,7 +474,7 @@ function iconoFormato(pesoKg) {
 }
 
 // ── DETALLE PRODUCTO ──────────────────────────────────────
-function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito, descuentosVolumen = [], esJuridica = false }) {
+export function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFavorito, descuentosVolumen = [], esJuridica = false }) {
   const [formatoSel, setFormatoSel] = useState(() => (p.formatos?.length > 0 ? p.formatos[0].id_formato : null));
   const [cant, setCant] = useState(1);
   useModalBehavior(onClose);
@@ -792,7 +792,7 @@ function CalculadoraRapida({ precio, stock }) {
   );
 }
 
-function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFavorito, onToggleFavorito, seleccionadoComparar, onToggleComparar, esJuridica = false }) {
+export function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFavorito, onToggleFavorito, seleccionadoComparar, onToggleComparar, esJuridica = false }) {
   const [feedback, setFeedback] = useState(false);
   const cardRef = useRef(null);
 
@@ -1009,7 +1009,6 @@ function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFav
 const SECCIONES = [
   { id: "cafe", label: "Café", icono: IconoTaza },
   { id: "maquinas", label: "Máquinas", icono: IconoMaquina },
-  { id: "favoritos", label: "Favoritos", icono: IconoCorazon },
 ];
 
 function CatalogoInterno() {
@@ -1019,8 +1018,8 @@ function CatalogoInterno() {
   const [searchParams, setSearchParams] = useSearchParams();
   const seccionParam = searchParams.get("seccion");
   // La URL es la única fuente de verdad de la pestaña activa:
-  // ?seccion=maquinas / ?seccion=favoritos (por defecto, café).
-  const seccion = ["cafe", "maquinas", "favoritos"].includes(seccionParam) ? seccionParam : "cafe";
+  // ?seccion=maquinas (por defecto, café). Favoritos vive en su propia página.
+  const seccion = ["cafe", "maquinas"].includes(seccionParam) ? seccionParam : "cafe";
   const cambiarSeccion = (id) => setSearchParams(id === "cafe" ? {} : { seccion: id }, { replace: true });
 
   useEffect(() => {
@@ -1214,7 +1213,7 @@ function CatalogoInterno() {
   const cafeProductos = useMemo(() => productos.filter(p => p.categoria === "cafe"), [productos]);
   const maquinasProductos = useMemo(() => productos.filter(p => p.categoria === "maquina"), [productos]);
 
-  const productosSeccion = seccion === "favoritos" ? productos : seccion === "maquinas" ? maquinasProductos : cafeProductos;
+  const productosSeccion = seccion === "maquinas" ? maquinasProductos : cafeProductos;
 
   const productoDelDia = useMemo(() => calcularProductoDelDia(cafeProductos), [cafeProductos]);
 
@@ -1226,8 +1225,7 @@ function CatalogoInterno() {
     const matchTipo = !filtros.tipo || p.tipo === filtros.tipo;
     const matchMarca = !filtros.marca || p.marca === filtros.marca;
     const matchDisp = !filtros.disp || p.stockLabel === filtros.disp;
-    const matchFav  = seccion !== "favoritos" || favoritos.has(p.id);
-    return matchBus && matchTipo && matchMarca && matchDisp && matchFav;
+    return matchBus && matchTipo && matchMarca && matchDisp;
   });
 
   const norm = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -1267,9 +1265,6 @@ function CatalogoInterno() {
     return true;
   }).slice(0, 8);
 
-  const numFavoritos = productos.filter(p => favoritos.has(p.id)).length;
-  const favoritosDisponibles = productos.filter(p => favoritos.has(p.id) && p.disponible).length;
-
   // ── Textos del hero según sección ──
   const heroTexto = {
     cafe: {
@@ -1283,12 +1278,6 @@ function CatalogoInterno() {
       titulo: "Cafeteras para tu café perfecto",
       subtitulo: "Máquinas de las mejores marcas, con garantía oficial y envío a todo el país.",
       stats: [[String(maquinasProductos.length), "Máquinas"], [String(marcasDisponibles.length), "Marcas"], ["12", "Meses de garantía"]],
-    },
-    favoritos: {
-      kicker: "Tus favoritos",
-      titulo: "Tu lista de favoritos",
-      subtitulo: "Los productos que guardaste con ♥ para encontrarlos más rápido.",
-      stats: [[String(numFavoritos), "Guardados"], [String(favoritosDisponibles), "Disponibles"], ["1 clic", "Para agregar"]],
     },
   }[seccion];
 
@@ -1327,13 +1316,13 @@ function CatalogoInterno() {
       <div className="px-4 sm:px-6 py-3 border-b border-white/[0.07] sticky top-16 z-30" style={{ background: "#0a1a0a" }}>
         <div className="max-w-6xl mx-auto flex items-center gap-3 flex-wrap">
 
-          {/* Pestañas: Café / Máquinas / Favoritos.
+          {/* Pestañas: Café / Máquinas.
               En móvil se deslizan horizontalmente (sin scrollbar visible) para
               que nunca desborden el borde de la pantalla. */}
           <div className="inline-flex p-1 rounded-xl gap-1 bg-[#0F1D13] border border-white/[0.08] shrink-0 w-full sm:w-auto overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {SECCIONES.map(s => {
               const activo = seccion === s.id;
-              const count = s.id === "favoritos" ? numFavoritos : s.id === "maquinas" ? maquinasProductos.length : cafeProductos.length;
+              const count = s.id === "maquinas" ? maquinasProductos.length : cafeProductos.length;
               const Icono = s.icono;
               return (
                 <button
@@ -1342,7 +1331,7 @@ function CatalogoInterno() {
                   onClick={() => cambiarSeccion(s.id)}
                   className={`px-3.5 sm:px-4 h-10 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shrink-0 whitespace-nowrap ${activo ? "bg-[#6FA98C] text-white shadow" : "text-white/50 hover:text-white hover:bg-white/[0.06]"}`}
                 >
-                  {s.id === "favoritos" ? <IconoCorazon lleno={activo} width={14} height={14} /> : <Icono width={14} height={14} />}
+                  <Icono width={14} height={14} />
                   {s.label}
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activo ? "bg-white/25 text-white" : "bg-white/[0.07] text-white/40"}`}>{count}</span>
                 </button>
@@ -1460,8 +1449,7 @@ function CatalogoInterno() {
       {/* CHIPS DE FILTRO (según sección).
           En móvil: una sola fila deslizable horizontalmente (patrón de apps de
           compras); en escritorio: wrap normal en varias líneas si hace falta. */}
-      {seccion !== "favoritos" && (
-        <div className="px-4 sm:px-6 py-3 border-b border-white/[0.07]">
+      <div className="px-4 sm:px-6 py-3 border-b border-white/[0.07]">
           <div className="max-w-6xl mx-auto flex items-center gap-2 flex-nowrap overflow-x-auto sm:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {chips.map(c => (
               <MagneticChip
@@ -1483,8 +1471,7 @@ function CatalogoInterno() {
               </MagneticChip>
             ))}
           </div>
-        </div>
-      )}
+      </div>
 
       {/* ESTADOS DE CARGA / ERROR */}
       {cargando && (
@@ -1510,7 +1497,7 @@ function CatalogoInterno() {
 
           {/* ── CARRUSEL CON PESTAÑAS (solo café) ── */}
           <FadeIn>
-          {seccion === "cafe" && (() => {
+          {seccion === "cafe" && !busqueda.trim() && (() => {
             const tabsCarousel = [
               { id: "ofertas",   label: "Ofertas",   emoji: "🏷️", items: carouselPromos },
               { id: "populares", label: "Populares", emoji: "🔥", items: carouselPopulares },
@@ -1566,7 +1553,7 @@ function CatalogoInterno() {
           </FadeIn>
 
           {/* ── SECCIÓN CAFÉ ── */}
-          {seccion === "cafe" && (
+          {seccion === "cafe" && !busqueda.trim() && (
             <>
               {/* PRODUCTO DEL DÍA */}
               {productoDelDia && <FadeIn><ProductoDelDiaBanner producto={productoDelDia} onAgregar={agregar} onVerDetalle={verDetalle} /></FadeIn>}
@@ -1588,7 +1575,7 @@ function CatalogoInterno() {
               </FadeIn>
 
               {/* RECOMENDADO PARA TI */}
-              {recomendaciones.length > 0 && (
+              {recomendaciones.some(p => p.categoria_producto === 'cafe') && (
                 <FadeIn>
                 <div>
             <div id="catalogo-resultados" className="flex items-center justify-between mb-4">
@@ -1603,7 +1590,7 @@ function CatalogoInterno() {
                     }} className="text-sm text-[#9DC9B4] hover:text-white transition">Ver todos →</button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {recomendaciones.map(p => (
+                    {recomendaciones.filter(p => p.categoria_producto === 'cafe').map(p => (
                       <ProductoCard
                         key={p.id_producto}
                         p={adaptarProducto(p)}
@@ -1625,6 +1612,7 @@ function CatalogoInterno() {
           )}
 
           {/* VISTOS RECIENTEMENTE */}
+          {!busqueda.trim() && (
           <FadeIn>
           {productosVistos.length > 0 && (
             <div>
@@ -1653,13 +1641,45 @@ function CatalogoInterno() {
             </div>
           )}
           </FadeIn>
+          )}
+
+          {/* RECOMENDADO PARA TI — MÁQUINAS */}
+          {seccion === "maquinas" && !busqueda.trim() && recomendaciones.some(p => p.categoria_producto === 'maquina') && (
+            <FadeIn>
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Personalizado</span>
+                  <h2 className="text-xl font-semibold text-white mt-1">Recomendado para ti</h2>
+                  <p className="text-sm text-white/40 mt-0.5">Máquinas que caben en tu presupuesto</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {recomendaciones.filter(p => p.categoria_producto === 'maquina').map(p => (
+                  <ProductoCard
+                    key={p.id_producto}
+                    p={adaptarProducto(p)}
+                    onAgregar={agregar}
+                    onVerDetalle={verDetalle}
+                    cantidadEnCarrito={carrito.find(c => c.id === p.id_producto)?.cant || 0}
+                    esFavorito={favoritos.has(p.id_producto)}
+                    onToggleFavorito={toggleFavorito}
+                    seleccionadoComparar={seleccionadosComparar.includes(p.id_producto)}
+                    onToggleComparar={() => alternarComparar(p.id_producto)}
+                    esJuridica={esJuridica}
+                  />
+                ))}
+              </div>
+            </div>
+            </FadeIn>
+          )}
 
           {/* GRID DE LA SECCIÓN */}
           <FadeIn>
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-white">
-                {seccion === "favoritos" ? "Tus favoritos" : seccion === "maquinas" ? "Máquinas de café" : "Todos los cafés"}
+                {seccion === "maquinas" ? "Máquinas de café" : "Todos los cafés"}
               </h2>
               <p className="text-sm text-white/40">{filtrados.length} {filtrados.length === 1 ? "producto" : "productos"}</p>
             </div>
@@ -1676,17 +1696,6 @@ function CatalogoInterno() {
                   />
                 ))}
               </div>
-            ) : seccion === "favoritos" ? (
-              <div className="text-center py-16 bg-[#0F1D13] border border-white/[0.08] rounded-2xl">
-                <div className="w-14 h-14 mx-auto rounded-full bg-[#14291B] flex items-center justify-center mb-3">
-                  <IconoCorazon className="text-white/25" width={22} height={22} />
-                </div>
-                <p className="text-white/60 text-sm font-medium">Aún no tienes productos favoritos.</p>
-                <p className="text-white/40 text-xs mt-1">Toca el corazón ♥ de un producto para guardarlo aquí.</p>
-                <button type="button" onClick={() => cambiarSeccion("cafe")} className="mt-5 h-10 px-6 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">
-                  Explorar el catálogo
-                </button>
-              </div>
             ) : (
               <div className="text-center py-16 text-white/40 bg-[#0F1D13] border border-white/[0.08] rounded-2xl">
                 <p className="text-sm">No se encontraron productos.</p>
@@ -1696,7 +1705,7 @@ function CatalogoInterno() {
           </FadeIn>
 
           {/* SECCIÓN DESTACADOS (solo café) */}
-          {seccion === "cafe" && (
+          {seccion === "cafe" && !busqueda.trim() && (
             <div>
               <div className="flex items-center justify-between mb-1">
                 <h2 className="text-xl font-semibold text-white">Productos destacados</h2>
