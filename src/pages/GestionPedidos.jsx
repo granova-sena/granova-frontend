@@ -26,12 +26,94 @@ function esAdmin() {
 const LIMITE = 10
 const MAX_MOTIVO = 500
 
+function FilaPedido({ p, esAdminUsuario, procesando, aceptarPedido, abrirModalRechazo, setFacturaId }) {
+  return (
+    <tr className="border-b border-gray-100 last:border-0">
+      <td className={`py-3 px-5 font-medium ${p.estado === 'Rechazado' ? 'text-red-500' : 'text-gray-600'}`}>{p.pedido}</td>
+      <td className="py-3 px-5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
+            {p.cliente.charAt(0)}
+          </div>
+          <div>
+            <p className="text-gray-800">{p.cliente}</p>
+            <p className="text-xs text-gray-400">{p.email}</p>
+          </div>
+        </div>
+      </td>
+      <td className="py-3 px-5">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg flex-shrink-0" style={{ backgroundColor: colorParaPedido(p.id) }}></div>
+          <span className="text-gray-600">{p.producto}</span>
+        </div>
+      </td>
+      <td className="py-3 px-5 text-xs text-gray-500">
+        {p.finca ? <>{p.finca}{p.lote && <><br />Lote {p.lote}</>}</> : '—'}
+      </td>
+      <td className="py-3 px-5 text-gray-600">{p.cantidad} kg</td>
+      <td className="py-3 px-5 text-gray-800 font-medium">{formatMoney(p.total)}</td>
+      <td className="py-3 px-5">
+        <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${estadoStyles[p.estado]}`}>
+          {p.estado}
+        </span>
+      </td>
+      <td className="py-3 px-5">
+        {esAdminUsuario ? (
+          <span className="text-xs text-gray-400">Solo lectura</span>
+        ) : p.estado === 'Pendiente' ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => aceptarPedido(p.id)}
+              disabled={procesando === p.id}
+              className="text-xs px-3 py-1.5 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition whitespace-nowrap disabled:opacity-50"
+            >
+              ✓ Aceptar
+            </button>
+            <button
+              type="button"
+              onClick={() => abrirModalRechazo(p.id)}
+              disabled={procesando === p.id}
+              className="text-xs px-3 py-1.5 rounded-lg border border-red-300 text-red-500 hover:bg-red-50 transition whitespace-nowrap disabled:opacity-50"
+            >
+              ✕ Rechazar
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setFacturaId(p.id)}
+            className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
+          >
+            Ver detalle
+          </button>
+        )}
+      </td>
+    </tr>
+  )
+}
+
+function FragmentoGrupo({ finca, filas, ...propsFila }) {
+  const totalGrupo = filas.reduce((s, f) => s + f.total, 0)
+  return (
+    <>
+      <tr className="bg-gray-50/70">
+        <td colSpan={8} className="py-2 px-5 text-xs font-medium text-gray-600">
+          {finca} — {filas.length} pedido{filas.length === 1 ? '' : 's'} · {formatMoney(totalGrupo)}
+        </td>
+      </tr>
+      {filas.map((p) => <FilaPedido key={p.id} p={p} {...propsFila} />)}
+    </>
+  )
+}
+
 function GestionPedidos() {
   const [tabActivo, setTabActivo] = useState('Todos')
   const [pagina, setPagina] = useState(1)
 
   const [resumen, setResumen] = useState(null)
   const [pedidos, setPedidos] = useState([])
+  const [agruparPorFinca, setAgruparPorFinca] = useState(true)
   const [totalPaginas, setTotalPaginas] = useState(1)
   const [totalFiltrados, setTotalFiltrados] = useState(0)
 
@@ -196,6 +278,15 @@ function GestionPedidos() {
         </div>
 
         <div className="overflow-x-auto">
+          <div className="flex justify-end px-1 pb-2">
+            <button
+              type="button"
+              onClick={() => setAgruparPorFinca((v) => !v)}
+              className="text-xs text-[#0F6E56] underline"
+            >
+              {agruparPorFinca ? 'Ver lista plana' : 'Agrupar por finca'}
+            </button>
+          </div>
           <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="text-left text-gray-500 bg-gray-50">
@@ -211,73 +302,40 @@ function GestionPedidos() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="py-6 px-5 text-center text-gray-400">Cargando pedidos...</td></tr>
+                <tr><td colSpan={8} className="py-6 px-5 text-center text-gray-400">Cargando pedidos...</td></tr>
               ) : pedidos.length === 0 ? (
-                <tr><td colSpan={7} className="py-6 px-5 text-center text-gray-400">No hay pedidos en esta categoría.</td></tr>
+                <tr><td colSpan={8} className="py-6 px-5 text-center text-gray-400">No hay pedidos en esta categoría.</td></tr>
+              ) : agruparPorFinca ? (
+                Object.entries(
+                  pedidos.reduce((grupos, p) => {
+                    const clave = p.finca || 'Sin finca'
+                    grupos[clave] = grupos[clave] || []
+                    grupos[clave].push(p)
+                    return grupos
+                  }, {})
+                ).map(([finca, filas]) => (
+                  <FragmentoGrupo
+                    key={finca}
+                    finca={finca}
+                    filas={filas}
+                    esAdminUsuario={esAdmin()}
+                    procesando={procesando}
+                    aceptarPedido={aceptarPedido}
+                    abrirModalRechazo={abrirModalRechazo}
+                    setFacturaId={setFacturaId}
+                  />
+                ))
               ) : (
                 pedidos.map((p) => (
-                  <tr key={p.id} className="border-b border-gray-100 last:border-0">
-                    <td className={`py-3 px-5 font-medium ${p.estado === 'Rechazado' ? 'text-red-500' : 'text-gray-600'}`}>{p.pedido}</td>
-                    <td className="py-3 px-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
-                          {p.cliente.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="text-gray-800">{p.cliente}</p>
-                          <p className="text-xs text-gray-400">{p.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg flex-shrink-0" style={{ backgroundColor: colorParaPedido(p.id) }}></div>
-                        <span className="text-gray-600">{p.producto}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-5 text-xs text-gray-500">
-                      {p.finca ? <>{p.finca}{p.lote && <><br />Lote {p.lote}</>}</> : '—'}
-                    </td>
-                    <td className="py-3 px-5 text-gray-600">{p.cantidad} kg</td>
-                    <td className="py-3 px-5 text-gray-800 font-medium">{formatMoney(p.total)}</td>
-                    <td className="py-3 px-5">
-                      <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${estadoStyles[p.estado]}`}>
-                        {p.estado}
-                      </span>
-                    </td>
-                    <td className="py-3 px-5">
-                      {esAdmin() ? (
-                        <span className="text-xs text-gray-400">Solo lectura</span>
-                      ) : p.estado === 'Pendiente' ? (
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => aceptarPedido(p.id)}
-                            disabled={procesando === p.id}
-                            className="text-xs px-3 py-1.5 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition whitespace-nowrap disabled:opacity-50"
-                          >
-                            ✓ Aceptar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => abrirModalRechazo(p.id)}
-                            disabled={procesando === p.id}
-                            className="text-xs px-3 py-1.5 rounded-lg border border-red-300 text-red-500 hover:bg-red-50 transition whitespace-nowrap disabled:opacity-50"
-                          >
-                            ✕ Rechazar
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setFacturaId(p.id)}
-                          className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
-                        >
-                          Ver detalle
-                        </button>
-                      )}
-                    </td>
-                  </tr>
+                  <FilaPedido
+                    key={p.id}
+                    p={p}
+                    esAdminUsuario={esAdmin()}
+                    procesando={procesando}
+                    aceptarPedido={aceptarPedido}
+                    abrirModalRechazo={abrirModalRechazo}
+                    setFacturaId={setFacturaId}
+                  />
                 ))
               )}
             </tbody>

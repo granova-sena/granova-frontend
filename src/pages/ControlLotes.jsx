@@ -12,6 +12,7 @@ const entregaVacia = { id_finca: '', id_lote: '', cantidad_kg: '', valor: '' }
 function ControlLotes() {
   const [entregas, setEntregas] = useState([])
   const [resumen, setResumen] = useState(null)
+  const [resumenPorFinca, setResumenPorFinca] = useState([])
   const [fincas, setFincas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -29,6 +30,7 @@ function ControlLotes() {
       .then(([entregasRes, fincasRes]) => {
         setEntregas(entregasRes.data.entregas)
         setResumen(entregasRes.data.resumen)
+        setResumenPorFinca(entregasRes.data.resumenPorFinca || [])
         setFincas(fincasRes.data.fincas)
       })
       .catch((err) => setError(err.response?.data?.error || err.message))
@@ -118,6 +120,23 @@ function ControlLotes() {
           <div className="bg-amber-50 rounded-xl p-4">
             <p className="text-xs text-amber-700">Pendiente</p>
             <p className="text-lg font-medium text-amber-800 mt-1">{formatMoney(resumen.total_pendiente)}</p>
+          </div>
+        </div>
+      )}
+
+      {resumenPorFinca.length > 0 && (
+        <div>
+          <h2 className="text-sm font-medium text-gray-700 mb-2">Cuánto le debemos a cada finca</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {resumenPorFinca.map((f) => (
+              <div key={f.id_finca} className="bg-white rounded-xl border border-amber-200 p-4">
+                <p className="text-sm font-medium text-gray-800">{f.finca_nombre}</p>
+                <p className="text-lg font-medium text-amber-700 mt-1">{formatMoney(f.pendiente)}</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {f.entregas_pendientes} entrega{f.entregas_pendientes === '1' ? '' : 's'} sin pagar
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       )}

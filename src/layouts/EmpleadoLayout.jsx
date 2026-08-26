@@ -19,6 +19,7 @@ function EmpleadoLayout() {
 
   useEffect(() => {
     localStorage.setItem('modoOscuro', String(modoOscuro))
+    document.documentElement.classList.toggle('dark', modoOscuro)
   }, [modoOscuro])
 
   const token = localStorage.getItem('token')
@@ -33,9 +34,12 @@ function EmpleadoLayout() {
 
   const menu = [
     { label: 'Control de inventario', path: '/panel-empleado' },
+    { label: 'Cosechas planeadas', path: '/panel-empleado/cosechas' },
     { label: 'Control de lotes', path: '/panel-empleado/lotes' },
     { label: 'Pedidos', path: '/panel-empleado/pedidos' },
     { label: 'Ventas', path: '/panel-empleado/ventas' },
+    { label: 'Transportadoras', path: '/panel-empleado/transportadoras' },
+    { label: 'Envíos', path: '/panel-empleado/envios' },
   ]
 
   function handleLogout() {

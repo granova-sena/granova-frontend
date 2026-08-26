@@ -22,9 +22,80 @@ function esAdmin() {
 
 const LIMITE = 10
 
+function FilaVenta({ v, menuAbierto, setMenuAbierto, confirmarVenta, confirmando }) {
+  const esPendiente = (v.estado || '').toLowerCase().startsWith('pend')
+  return (
+    <tr className="border-b border-gray-100 last:border-0">
+      <td className="py-3 px-5 text-gray-600">{v.factura}</td>
+      <td className="py-3 px-5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
+            {v.cliente.charAt(0)}
+          </div>
+          <div>
+            <p className="text-gray-800">{v.cliente}</p>
+            <p className="text-xs text-gray-400">{v.email}</p>
+          </div>
+        </div>
+      </td>
+      <td className="py-3 px-5 text-gray-600">{v.producto}</td>
+      <td className="py-3 px-5 text-xs text-gray-500">
+        {v.finca ? <>{v.finca}{v.lote && <><br />Lote {v.lote}</>}</> : '—'}
+      </td>
+      <td className="py-3 px-5 text-gray-600">{v.cantidad} {v.esMaquina ? 'unidades' : 'kg'}</td>
+      <td className="py-3 px-5 text-gray-800 font-medium">{formatMoney(v.total)}</td>
+      <td className="py-3 px-5 relative">
+        {esPendiente ? (
+          <div>
+            <button
+              type="button"
+              onClick={() => setMenuAbierto(menuAbierto === v.id ? null : v.id)}
+              className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex items-center gap-1 ${estadoStyle(v.estado)}`}
+            >
+              {v.estado} ▾
+            </button>
+            {menuAbierto === v.id && (
+              <div className="absolute left-5 top-8 bg-white rounded-lg shadow-lg border border-gray-100 py-1 w-36 z-10">
+                <button
+                  type="button"
+                  onClick={() => confirmarVenta(v.id)}
+                  disabled={confirmando === v.id}
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+                >
+                  {confirmando === v.id ? 'Confirmando...' : 'Confirmado'}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${estadoStyle(v.estado)}`}>
+            {v.estado}
+          </span>
+        )}
+      </td>
+      <td className="py-3 px-5 pr-8 text-gray-500">{formatFecha(v.fecha)}</td>
+    </tr>
+  )
+}
+
+function FragmentoGrupoVentas({ finca, filas, ...propsFila }) {
+  const totalGrupo = filas.reduce((s, f) => s + f.total, 0)
+  return (
+    <>
+      <tr className="bg-gray-50/70">
+        <td colSpan={8} className="py-2 px-5 text-xs font-medium text-gray-600">
+          {finca} — {filas.length} venta{filas.length === 1 ? '' : 's'} · {formatMoney(totalGrupo)}
+        </td>
+      </tr>
+      {filas.map((v) => <FilaVenta key={v.factura} v={v} {...propsFila} />)}
+    </>
+  )
+}
+
 function RegistroVentas() {
   const [resumen, setResumen] = useState(null)
   const [ventas, setVentas] = useState([])
+  const [agruparPorFinca, setAgruparPorFinca] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [pagina, setPagina] = useState(1)
   const [totalPaginas, setTotalPaginas] = useState(1)
@@ -184,6 +255,15 @@ function RegistroVentas() {
         </div>
 
         <div className="overflow-x-auto">
+          <div className="flex justify-end px-1 pb-2">
+            <button
+              type="button"
+              onClick={() => setAgruparPorFinca((v) => !v)}
+              className="text-xs text-[#0F6E56] underline"
+            >
+              {agruparPorFinca ? 'Ver lista plana' : 'Agrupar por finca'}
+            </button>
+          </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500 bg-gray-50">
@@ -200,68 +280,42 @@ function RegistroVentas() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-6 px-5 text-center text-gray-400">Cargando ventas...</td>
+                  <td colSpan={8} className="py-6 px-5 text-center text-gray-400">Cargando ventas...</td>
                 </tr>
               ) : ventas.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-6 px-5 text-center text-gray-400">No se encontraron ventas.</td>
+                  <td colSpan={8} className="py-6 px-5 text-center text-gray-400">No se encontraron ventas.</td>
                 </tr>
+              ) : agruparPorFinca ? (
+                Object.entries(
+                  ventas.reduce((grupos, v) => {
+                    const clave = v.finca || 'Sin finca'
+                    grupos[clave] = grupos[clave] || []
+                    grupos[clave].push(v)
+                    return grupos
+                  }, {})
+                ).map(([finca, filas]) => (
+                  <FragmentoGrupoVentas
+                    key={finca}
+                    finca={finca}
+                    filas={filas}
+                    menuAbierto={menuAbierto}
+                    setMenuAbierto={setMenuAbierto}
+                    confirmarVenta={confirmarVenta}
+                    confirmando={confirmando}
+                  />
+                ))
               ) : (
-                ventas.map((v) => {
-                  const esPendiente = (v.estado || '').toLowerCase().startsWith('pend')
-                  return (
-                    <tr key={v.factura} className="border-b border-gray-100 last:border-0">
-                      <td className="py-3 px-5 text-gray-600">{v.factura}</td>
-                      <td className="py-3 px-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
-                            {v.cliente.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="text-gray-800">{v.cliente}</p>
-                            <p className="text-xs text-gray-400">{v.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-5 text-gray-600">{v.producto}</td>
-                      <td className="py-3 px-5 text-xs text-gray-500">
-                        {v.finca ? <>{v.finca}{v.lote && <><br />Lote {v.lote}</>}</> : '—'}
-                      </td>
-                      <td className="py-3 px-5 text-gray-600">{v.cantidad} {v.esMaquina ? 'unidades' : 'kg'}</td>
-                      <td className="py-3 px-5 text-gray-800 font-medium">{formatMoney(v.total)}</td>
-                      <td className="py-3 px-5 relative">
-                        {esPendiente ? (
-                          <div>
-                            <button
-                              type="button"
-                              onClick={() => setMenuAbierto(menuAbierto === v.id ? null : v.id)}
-                              className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex items-center gap-1 ${estadoStyle(v.estado)}`}
-                            >
-                              {v.estado} ▾
-                            </button>
-                            {menuAbierto === v.id && (
-                              <div className="absolute left-5 top-8 bg-white rounded-lg shadow-lg border border-gray-100 py-1 w-36 z-10">
-                                <button
-                                  type="button"
-                                  onClick={() => confirmarVenta(v.id)}
-                                  disabled={confirmando === v.id}
-                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
-                                >
-                                  {confirmando === v.id ? 'Confirmando...' : 'Confirmado'}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${estadoStyle(v.estado)}`}>
-                            {v.estado}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-5 pr-8 text-gray-500">{formatFecha(v.fecha)}</td>
-                    </tr>
-                  )
-                })
+                ventas.map((v) => (
+                  <FilaVenta
+                    key={v.factura}
+                    v={v}
+                    menuAbierto={menuAbierto}
+                    setMenuAbierto={setMenuAbierto}
+                    confirmarVenta={confirmarVenta}
+                    confirmando={confirmando}
+                  />
+                ))
               )}
             </tbody>
           </table>

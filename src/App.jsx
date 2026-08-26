@@ -10,6 +10,7 @@ import DashboardLayout from './layouts/DashboardLayout'
 import EmpleadoLayout from './layouts/EmpleadoLayout'
 import ControlEmpleado from './pages/ControlEmpleado'
 import ControlLotes from './pages/ControlLotes'
+import CosechasPlaneadas from './pages/CosechasPlaneadas'
 import DashboardHome from './pages/DashboardHome'
 import Empleados from './pages/Empleados'
 import { Toaster } from 'react-hot-toast'
@@ -38,7 +39,6 @@ import ConfigurarPedidoPage from './pages/ConfigurarPedidoPage'
 import EstadoPedidoPage from './pages/EstadoPedidoPage'
 import TrazabilidadLotePage from './pages/TrazabilidadLotePage'
 import ComparacionPage from './pages/ComparacionPage'
-import Empresas from './pages/Empresas'
 
 function App() {
   return (
@@ -93,7 +93,6 @@ function App() {
           <Route path="configurar-pedido" element={<ConfigurarPedidoPage />} />
           <Route path="trazabilidad/:id" element={<TrazabilidadLotePage />} />
           <Route path="comparar" element={<ComparacionPage />} />
-          <Route path="empresas" element={<Empresas />} />
         </Route>
 
         {/* Compatibilidad: cualquier link viejo a /catalogo cae en la vista nueva */}
@@ -105,9 +104,12 @@ function App() {
           </RutaProtegida>
         }>
           <Route index element={<ControlEmpleado />} />
+          <Route path="cosechas" element={<CosechasPlaneadas />} />
           <Route path="lotes" element={<ControlLotes />} />
           <Route path="pedidos" element={<GestionPedidos />} />
           <Route path="ventas" element={<RegistroDeVentas />} />
+          <Route path="transportadoras" element={<Transportadoras />} />
+          <Route path="envios" element={<Envios />} />
         </Route>
 
         <Route path="/dashboard" element={
