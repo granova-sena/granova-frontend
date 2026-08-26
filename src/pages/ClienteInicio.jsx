@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import registerBg from '../assets/register-bg.mp4'
 import ImagenProducto from '../components/ImagenProducto'
 import MapaFincas from '../components/MapaFincas'
+import { SkeletonCard } from '../components/ui/Skeleton'
+import FadeIn from '../components/ui/FadeIn'
+import AuroraBackground from '../components/AuroraBackground'
+import { calcularNivel } from '../utils/lealtad'
 
 import { API_URL } from "../config";
 
@@ -44,7 +48,7 @@ const ACCESOS = [
   { to: '/cliente/cuenta', titulo: 'Mi cuenta' },
 ]
 
-const glass = { background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.15)' }
+const glass = { background: '#0F1D13', border: '1px solid rgba(255,255,255,0.08)' }
 
 function ClienteInicio() {
   const navigate = useNavigate()
@@ -59,6 +63,9 @@ function ClienteInicio() {
     }
   })()
 
+  const puntos = Number(cliente.puntos) || 0
+  const nivel = calcularNivel(puntos)
+
   useEffect(() => {
     let cancelado = false
     async function cargar() {
@@ -66,7 +73,15 @@ function ClienteInicio() {
         const res = await fetch(`${API_URL}/productos`)
         if (!res.ok) throw new Error()
         const data = await res.json()
-        if (!cancelado) setDestacados(data.slice(0, 3))
+        const cafes = (data.data || []).filter(p => (p.categoria_producto || 'cafe') === 'cafe').slice(0, 2)
+        const maquinas = (data.data || []).filter(p => p.categoria_producto === 'maquina').slice(0, 2)
+        // Intercala café → máquina → café → máquina para mostrar ambos mundos
+        const alternados = []
+        for (let i = 0; i < Math.max(cafes.length, maquinas.length); i++) {
+          if (cafes[i]) alternados.push(cafes[i])
+          if (maquinas[i]) alternados.push(maquinas[i])
+        }
+        if (!cancelado) setDestacados(alternados)
       } catch {
         if (!cancelado) setDestacados([])
       } finally {
@@ -82,6 +97,7 @@ function ClienteInicio() {
       {/* HERO DE BIENVENIDA */}
       <section className="relative overflow-hidden min-h-[520px] flex items-end">
         <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" src={registerBg} />
+        <AuroraBackground />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a1a0a] via-[#0a1a0a]/60 to-[#0a1a0a]/20"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-[#0a1a0a]/50 via-transparent to-transparent"></div>
 
@@ -89,6 +105,12 @@ function ClienteInicio() {
           <div className="flex items-center gap-2 mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-[#6FA98C]"></span>
             <span className="text-xs text-white/60 uppercase tracking-wide">{saludoSegunHora()}</span>
+            {cliente.nombre && puntos > 0 && (
+              <span className="ml-2 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-white/60">
+                <span>{nivel.icono}</span>
+                <span>{puntos.toLocaleString('es-CO')} pts</span>
+              </span>
+            )}
           </div>
           <h1 className="text-3xl sm:text-5xl font-medium leading-tight tracking-tight text-white max-w-xl">
             {cliente.nombre ? <>Hola, {cliente.nombre} ☕</> : 'Bienvenido a Granova'}
@@ -119,42 +141,39 @@ function ClienteInicio() {
       {/* FRANJA DE VALORES */}
       <section className="border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4">
-          {VALORES.map((v) => (
-            <div key={v.titulo} className="flex items-start gap-3">
-              <div className="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-[#9DC9B4]" style={{ background: 'rgba(111,169,140,0.15)' }}>
-                {v.icono}
+          {VALORES.map((v, i) => (
+            <FadeIn key={v.titulo} delay={i * 0.1}>
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-[#9DC9B4]" style={{ background: 'rgba(111,169,140,0.15)' }}>
+                  {v.icono}
+                </div>
+                <div>
+                  <p className="text-white text-sm font-medium">{v.titulo}</p>
+                  <p className="text-white/45 text-xs mt-0.5 leading-relaxed">{v.descripcion}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-white text-sm font-medium">{v.titulo}</p>
-                <p className="text-white/45 text-xs mt-0.5 leading-relaxed">{v.descripcion}</p>
-              </div>
-            </div>
+            </FadeIn>
           ))}
         </div>
       </section>
 
       {/* DESTACADOS DEL CATÁLOGO */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Del catálogo</span>
-            <h2 className="text-xl sm:text-2xl font-medium text-white mt-1">Café que podría gustarte</h2>
+      <FadeIn>
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Del catálogo</span>
+              <h2 className="text-xl sm:text-2xl font-medium text-white mt-1">Café y máquinas para ti</h2>
+            </div>
+            <button type="button" onClick={() => navigate('/cliente/catalogo')} className="text-sm text-white/60 hover:text-white shrink-0">
+              Ver todo →
+            </button>
           </div>
-          <button type="button" onClick={() => navigate('/cliente/catalogo')} className="text-sm text-white/60 hover:text-white shrink-0">
-            Ver todo →
-          </button>
-        </div>
 
         {cargando && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="rounded-2xl overflow-hidden" style={glass}>
-                <div className="h-48 bg-white/5 animate-pulse"></div>
-                <div className="p-4 flex flex-col gap-2.5">
-                  <div className="h-3.5 w-3/4 rounded bg-white/10 animate-pulse"></div>
-                  <div className="h-4 w-20 rounded bg-white/10 animate-pulse"></div>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCard key={i} imageAspect="h-48" hasButton={false} />
             ))}
           </div>
         )}
@@ -166,65 +185,74 @@ function ClienteInicio() {
         )}
 
         {!cargando && destacados.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            {destacados.map((p, i) => (
-              <div
-                key={p.id_producto}
-                role="button"
-                tabIndex={0}
-                aria-label={`Ver ${p.nombre} en el catálogo`}
-                onClick={() => navigate('/cliente/catalogo')}
-                onKeyDown={(e) => { if (e.key === 'Enter') navigate('/cliente/catalogo') }}
-                style={{ ...glass, animationDelay: `${i * 70}ms` }}
-                className="anim-pop group rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.12]"
-              >
-                <div className="h-48 bg-white/5 overflow-hidden">
-                  <ImagenProducto src={p.imagen_url} alt={p.nombre} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                </div>
-                <div className="p-4">
-                  <p className="text-sm font-medium text-white">{p.nombre}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <p className="text-white text-sm font-semibold">
-                      ${Number(p.precio || 0).toLocaleString('es-CO')} <span className="text-white/40 font-normal text-xs">/kg</span>
-                    </p>
-                    <span className="text-xs font-medium text-[#9DC9B4] group-hover:underline">Ver →</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {destacados.map((p, i) => {
+              const esMaquina = p.categoria_producto === 'maquina'
+              return (
+                <div
+                  key={p.id_producto}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Ver ${p.nombre} en el catálogo`}
+                  onClick={() => navigate(esMaquina ? '/cliente/catalogo?seccion=maquinas' : '/cliente/catalogo')}
+                  onKeyDown={(e) => { if (e.key === 'Enter') navigate(esMaquina ? '/cliente/catalogo?seccion=maquinas' : '/cliente/catalogo') }}
+                  style={{ ...glass, animationDelay: `${i * 70}ms` }}
+                  className="anim-pop group rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.12]"
+                >
+                  <div className="h-48 bg-white/5 overflow-hidden">
+                    <ImagenProducto src={p.imagen_url} alt={p.nombre} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  </div>
+                  <div className="p-4">
+                    <p className="text-[10px] font-medium text-[#9DC9B4] uppercase tracking-wide">{esMaquina ? 'Máquina' : 'Café'}</p>
+                    <p className="text-sm font-medium text-white mt-0.5 line-clamp-2">{p.nombre}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-white text-sm font-semibold">
+                        ${Number(p.precio || 0).toLocaleString('es-CO')} <span className="text-white/40 font-normal text-xs">/{esMaquina ? 'und' : 'kg'}</span>
+                      </p>
+                      <span className="text-xs font-medium text-[#9DC9B4] group-hover:underline">Ver →</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </section>
+      </FadeIn>
 
       {/* FINCAS CERCANAS */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20">
-        <div className="mb-6">
-          <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Origen</span>
-          <h2 className="text-xl sm:text-2xl font-medium text-white mt-1">Fincas cafeteras cerca de ti</h2>
-          <p className="text-white/45 text-sm mt-1">Conoce de dónde viene tu café antes de comprarlo.</p>
-        </div>
-        <div className="anim-pop rounded-2xl overflow-hidden" style={glass}>
-          <MapaFincas />
-        </div>
-      </section>
+      <FadeIn>
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20">
+          <div className="mb-6">
+            <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Origen</span>
+            <h2 className="text-xl sm:text-2xl font-medium text-white mt-1">Fincas cafeteras cerca de ti</h2>
+            <p className="text-white/45 text-sm mt-1">Conoce de dónde viene tu café antes de comprarlo.</p>
+          </div>
+          <div className="anim-pop rounded-2xl overflow-hidden" style={glass}>
+            <MapaFincas />
+          </div>
+        </section>
+      </FadeIn>
 
       {/* ACCESOS SECUNDARIOS */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
-        <div className="anim-pop rounded-2xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x sm:grid sm:grid-cols-3" style={{ ...glass, borderColor: 'rgba(255,255,255,0.1)' }}>
-          {ACCESOS.map((a) => (
-            <button
-              type="button"
-              key={a.to}
-              onClick={() => navigate(a.to)}
-              className="w-full text-left px-6 py-5 flex items-center justify-between hover:bg-white/[0.06] transition group"
-              style={{ borderColor: 'rgba(255,255,255,0.1)' }}
-            >
-              <span className="text-sm font-medium text-white">{a.titulo}</span>
-              <span className="text-white/30 group-hover:text-[#9DC9B4] group-hover:translate-x-0.5 transition-all">→</span>
-            </button>
-          ))}
-        </div>
-      </section>
+      <FadeIn>
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
+          <div className="anim-pop rounded-2xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x sm:grid sm:grid-cols-3" style={{ ...glass, borderColor: 'rgba(255,255,255,0.1)' }}>
+            {ACCESOS.map((a) => (
+              <button
+                type="button"
+                key={a.to}
+                onClick={() => navigate(a.to)}
+                className="w-full text-left px-6 py-5 flex items-center justify-between hover:bg-white/[0.06] transition group"
+                style={{ borderColor: 'rgba(255,255,255,0.1)' }}
+              >
+                <span className="text-sm font-medium text-white">{a.titulo}</span>
+                <span className="text-white/30 group-hover:text-[#9DC9B4] group-hover:translate-x-0.5 transition-all">→</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      </FadeIn>
     </div>
   )
 }

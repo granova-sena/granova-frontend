@@ -3,6 +3,9 @@ import { useState, useEffect } from 'react'
 import { API_URL } from "../config";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { SkeletonRow } from '../components/ui/Skeleton';
+import FadeIn from '../components/ui/FadeIn';
+import OrderStepper from '../components/ui/OrderStepper';
 
 const descargarFactura = async (id_pedido) => {
   try {
@@ -71,9 +74,11 @@ const descargarFactura = async (id_pedido) => {
     doc.text('Subtotal:', 130, finalY)
     doc.text(`$${Number(factura.subtotal).toLocaleString()}`, 175, finalY, { align: 'right' })
 
-    doc.setTextColor(200, 0, 0)
-    doc.text('IVA:', 130, finalY + 6)
-    doc.text(`$${Number(factura.impuestos).toLocaleString()}`, 175, finalY + 6, { align: 'right' })
+    if (factura.descuento > 0) {
+      doc.setTextColor(200, 0, 0)
+      doc.text('Descuento:', 130, finalY + 6)
+      doc.text(`-$${Number(factura.descuento).toLocaleString()}`, 175, finalY + 6, { align: 'right' })
+    }
 
     doc.setTextColor(0)
     doc.setFontSize(11)
@@ -88,13 +93,6 @@ const descargarFactura = async (id_pedido) => {
     alert('❌ No se pudo generar la factura')
   }
 }
-
-const PASOS = [
-  { titulo: 'Pedido confirmado', desc: 'Recibimos tu compra' },
-  { titulo: 'En preparación', desc: 'Tostamos y empacamos' },
-  { titulo: 'En camino', desc: 'Sale hacia tu ciudad' },
-  { titulo: 'Entregado', desc: 'Café en tu puerta' },
-]
 
 const estadoTexto = {
   pendiente: 'text-white/50',
@@ -128,6 +126,8 @@ function MisPedidos() {
   const [pedidos, setPedidos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
+  const [pagina, setPagina] = useState(1)
+  const [paginacion, setPaginacion] = useState({ totalPages: 1, totalRows: 0 })
 
   useEffect(() => {
     const id_cliente = obtenerIdCliente()
@@ -141,12 +141,15 @@ function MisPedidos() {
       try {
         setCargando(true)
         const token = localStorage.getItem('token')
-        const res = await fetch(`${API_URL}/api/pedidos/cliente/${id_cliente}`, {
+        const res = await fetch(`${API_URL}/api/pedidos/cliente/${id_cliente}?page=${pagina}&limit=10`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         })
         const json = await res.json()
         if (!json.ok) throw new Error(json.mensaje)
-        if (!cancelado) setPedidos(json.data)
+        if (!cancelado) {
+          setPedidos(json.data)
+          setPaginacion(json.paginacion || { totalPages: 1, totalRows: 0 })
+        }
       } catch (err) {
         if (!cancelado) setError(err.message)
       } finally {
@@ -155,7 +158,7 @@ function MisPedidos() {
     }
     cargarPedidos()
     return () => { cancelado = true }
-  }, [])
+  }, [pagina])
 
   const formatearFecha = (fecha) =>
     new Date(fecha).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -172,7 +175,7 @@ function MisPedidos() {
             {cargando && (
           <div className="rounded-2xl overflow-hidden bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm divide-y divide-white/10">
             {Array.from({ length: 4 }).map((_, i) => (
-              <PedidoSkeleton key={i} />
+              <SkeletonRow key={i} />
             ))}
           </div>
         )}
@@ -205,6 +208,7 @@ function MisPedidos() {
         )}
 
         {!cargando && !error && pedidos.length > 0 && (
+        <FadeIn>
         <div className="rounded-2xl overflow-hidden bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm divide-y divide-white/10">
           {pedidos.map((p) => (
             <div key={p.id_pedido} className="flex items-center justify-between px-5 sm:px-6 py-4 hover:bg-white/[0.06] transition">
@@ -220,6 +224,9 @@ function MisPedidos() {
               </button>
 
               <div className="flex items-center gap-4">
+                <div className="hidden sm:block">
+                  <OrderStepper estado={p.estado} compacto />
+                </div>
                 <div className="text-right">
                   <p className={`text-xs font-medium ${estadoTexto[p.estado] || 'text-white/50'}`}>
                     {estadoLabel[p.estado] || p.estado}
@@ -243,45 +250,39 @@ function MisPedidos() {
             </div>
           ))}
         </div>
-      )}
+        </FadeIn>
+        )}
 
-        <div className="mt-6 rounded-2xl p-6 sm:p-8 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
-          <p className="text-sm font-semibold text-white mb-6">Así se ve un pedido en camino</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-            {PASOS.map((paso, i) => (
-              <div key={paso.titulo} className="relative">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-6 h-6 rounded-full bg-white/10 text-white/40 text-[11px] font-semibold flex items-center justify-center shrink-0">{i + 1}</span>
-                  {i < PASOS.length - 1 && <span className="hidden sm:block flex-1 h-px bg-white/10"></span>}
-                </div>
-                <p className="text-xs font-medium text-white/70">{paso.titulo}</p>
-                <p className="text-[11px] text-white/35 mt-0.5">{paso.desc}</p>
-              </div>
-            ))}
+        {paginacion.totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 px-1">
+            <button
+              type="button"
+              onClick={() => setPagina(p => Math.max(1, p - 1))}
+              disabled={pagina <= 1}
+              className="px-4 py-2 rounded-xl text-sm font-medium bg-white/[0.08] text-white/70 hover:bg-white/[0.15] disabled:opacity-30 disabled:cursor-not-allowed transition"
+            >
+              ← Anterior
+            </button>
+            <span className="text-xs text-white/40">
+              Página {pagina} de {paginacion.totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPagina(p => Math.min(paginacion.totalPages, p + 1))}
+              disabled={pagina >= paginacion.totalPages}
+              className="px-4 py-2 rounded-xl text-sm font-medium bg-white/[0.08] text-white/70 hover:bg-white/[0.15] disabled:opacity-30 disabled:cursor-not-allowed transition"
+            >
+              Siguiente →
+            </button>
           </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+        )}
 
-function PedidoSkeleton() {
-  return (
-    <div className="flex items-center justify-between px-5 sm:px-6 py-4 animate-pulse">
-      {/* Lado izquierdo — número de pedido y fecha */}
-      <div className="space-y-2">
-        <div className="h-4 bg-white/10 rounded w-32" />
-        <div className="h-3 bg-white/10 rounded w-20" />
-      </div>
-
-      {/* Lado derecho — estado y monto */}
-      <div className="flex items-center gap-4">
-        <div className="space-y-2 text-right">
-          <div className="h-3 bg-white/10 rounded w-16" />
-          <div className="h-4 bg-white/10 rounded w-24" />
+        <FadeIn>
+        <div className="mt-6 rounded-2xl p-6 sm:p-8 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
+          <p className="text-sm font-semibold text-white mb-6">Así se ve el seguimiento de tu pedido</p>
+          <OrderStepper estado="enviado" />
         </div>
-        {/* Botón de descarga */}
-        <div className="w-8 h-8 bg-white/10 rounded-lg" />
+        </FadeIn>
       </div>
     </div>
   )

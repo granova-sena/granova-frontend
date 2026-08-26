@@ -17,7 +17,7 @@ const metodosPago = [
 const camposObligatorios = ['nombre', 'correo', 'telefono', 'direccion', 'ciudad']
 
 function ResumenLateral() {
-  const { subtotal, descuentoMonto, total, DESCUENTO, productos, descuentoFuente } = useCarrito()
+  const { subtotal, subtotalBase, descuentoProductos, descuentoCuponMonto, total, DESCUENTO, esMayorista, productos, cuponPct } = useCarrito()
 
   return (
     <div className="w-full lg:w-72 shrink-0 flex flex-col gap-4">
@@ -29,14 +29,20 @@ function ResumenLateral() {
         <div className="flex flex-col gap-3 text-sm border-t border-white/10 pt-3">
           <div className="flex justify-between">
             <span className="text-white/60">Subtotal</span>
-            <span className="text-white">${subtotal.toLocaleString()}</span>
+            <span className="text-white">${subtotalBase.toLocaleString()}</span>
           </div>
-          {descuentoFuente && (
+          {descuentoProductos > 0 && (
             <div className="flex justify-between">
               <span className="text-white/60">
-                {descuentoFuente === 'volumen' ? '📦 Descuento por volumen' : descuentoFuente === 'empresa' ? '🏢 Descuento empresa' : descuentoFuente === 'cupon' ? '🎟️ Cupón' : descuentoFuente === 'promo' ? '🏷️ Promoción' : '🎉 Descuento'} ({(DESCUENTO * 100).toFixed(0)}%)
+                {esMayorista ? '🏢 Descuento empresa' : 'Descuento por volumen'}
               </span>
-              <span className="text-[#9DC9B4]">- ${descuentoMonto.toLocaleString()}</span>
+              <span className="text-[#9DC9B4]">- ${descuentoProductos.toLocaleString()}</span>
+            </div>
+          )}
+          {cuponPct > 0 && (
+            <div className="flex justify-between">
+              <span className="text-white/60">🎟️ Cupón ({cuponPct}%)</span>
+              <span className="text-[#9DC9B4]">- ${descuentoCuponMonto.toLocaleString()}</span>
             </div>
           )}
           <div className="flex justify-between border-t border-white/10 pt-3">
@@ -76,7 +82,7 @@ function ResumenLateral() {
 
 function ConfigurarPedidoPage() {
   const navigate = useNavigate()
-  const { guardarDatosCliente, confirmarPedido, actualizarPerfilCliente, validarCupon, cuponValidado } = useCarrito()
+  const { guardarDatosCliente, confirmarPedido, actualizarPerfilCliente, cuponValidado, validarCupon } = useCarrito()
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
   const [idPedido, setIdPedido] = useState(null)

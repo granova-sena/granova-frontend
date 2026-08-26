@@ -8,7 +8,7 @@ const badgeColor = {
   "Top ventas": "bg-[#6FA98C] text-white",
 }
 
-export default function ProductoCardMini({ p, onVerDetalle }) {
+export default function ProductoCardMini({ p, onVerDetalle, onAgregar }) {
   const [feedback, setFeedback] = useState(false)
 
   const handleClick = () => {
@@ -85,6 +85,25 @@ export default function ProductoCardMini({ p, onVerDetalle }) {
             : "text-[#D85A30]"
           }`}>{p.stockLabel}</span>
         </div>
+
+        {onAgregar && p.disponible !== false && (
+          <div className="flex gap-1.5 mt-2">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onVerDetalle(p); }}
+              className="flex-1 py-1.5 rounded-lg border border-white/15 text-white/60 text-xs font-medium hover:bg-white/[0.06] transition"
+            >
+              Ver detalles
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onAgregar({ ...p, cant: 1 }); }}
+              className="flex-1 py-1.5 rounded-lg bg-[#6FA98C] text-white text-xs font-semibold hover:bg-[#4F8A70] transition"
+            >
+              Agregar
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

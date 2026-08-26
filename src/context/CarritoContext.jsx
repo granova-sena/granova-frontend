@@ -1,21 +1,35 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { API_URL } from "../config";
 const CarritoContext = createContext()
 
-const productosIniciales = []
+const STORAGE_KEY = 'granova_carrito'
 
-// Frente 1 (Jhon): descuento diferenciado por tipo de cliente y volumen.
-// Minorista: 6% solo si lleva 5+ unidades en el carrito.
-// Mayorista: 12% siempre. Ajustar valores según política comercial.
+function cargarCarrito() {
+  try {
+    const guardado = localStorage.getItem(STORAGE_KEY)
+    if (!guardado) return []
+    const raw = JSON.parse(guardado)
+    if (!Array.isArray(raw)) return []
+    return raw
+      .map(p => ({
+        ...p,
+        cantidad: Number.isFinite(Number(p.cantidad)) && Number(p.cantidad) > 0
+          ? Number(p.cantidad)
+          : Number.isFinite(Number(p.cant)) && Number(p.cant) > 0
+            ? Number(p.cant)
+            : 1,
+      }))
+      .filter(p => p.id != null)
+  } catch {
+    return []
+  }
+}
+
+// Descuentos: mayorista siempre, minorista solo si lleva 5+ unidades
 const DESCUENTO_MINORISTA = 0.06
 const DESCUENTO_MAYORISTA = 0.12
 const UNIDADES_MINIMAS_DESCUENTO_MINORISTA = 5
 const IVA = 0.19
-
-// ── CONFIG API ────────────────────────────────────────────
-// Sigue la misma convención que el resto del proyecto (sin prefijo /api),
-// coincidiendo con cómo servidor.js monta app.use("/pedidos", pedidosRoutes)
-
 
 function obtenerIdCliente() {
   try {
@@ -23,6 +37,14 @@ function obtenerIdCliente() {
     return cliente?.id ?? null
   } catch {
     return null
+  }
+}
+
+function obtenerCliente() {
+  try {
+    return JSON.parse(localStorage.getItem('cliente')) || {}
+  } catch {
+    return {}
   }
 }
 
@@ -36,10 +58,13 @@ function obtenerTipoCliente() {
 }
 
 export function CarritoProvider({ children }) {
-  const [productos, setProductos] = useState(productosIniciales)
+  const [productos, setProductos] = useState(cargarCarrito)
   const [datosCliente, setDatosCliente] = useState(null)
+  const [clienteActual, setClienteActual] = useState(() => obtenerCliente())
 
-  const confirmarPedido = async (datosFormulario, metodoPago) => {
+  const esJuridica = clienteActual?.tipo_persona === 'juridica'
+
+  const confirmarPedido = async (datosFormulario, metodoPago, codigoCupon = null) => {
     try {
       const id_cliente = obtenerIdCliente()
 
@@ -47,22 +72,31 @@ export function CarritoProvider({ children }) {
         return { ok: false, mensaje: 'Debes iniciar sesión para confirmar un pedido' }
       }
 
+      const itemsValidos = productos.filter(p =>
+        p.id != null && Number.isFinite(Number(p.cantidad)) && Number(p.cantidad) > 0
+      )
+
+      if (itemsValidos.length === 0) {
+        return { ok: false, mensaje: 'El carrito no tiene productos válidos' }
+      }
+
       const body = {
         id_cliente,
         metodo_pago: metodoPago,
         direccion_envio: datosFormulario.direccion,
         ciudad_envio: datosFormulario.ciudad,
-        productos: productos.map(p => ({
+        productos: itemsValidos.map(p => ({
           id_producto: p.id,
-          cantidad: p.cantidad,
-          // Se envía el precio efectivo (con descuento si aplica) para que
-          // el total guardado en el pedido coincida con lo que paga el cliente.
-          precio_unitario: Math.round(p.precio * (1 - DESCUENTO)),
+          cantidad: Math.floor(Number(p.cantidad)),
+          ...(p.id_formato ? { id_formato: p.id_formato } : {}),
+          ...(p.precio ? { precio_unitario: p.precio } : {}),
         })),
       }
 
-      const res = await fetch(`${API_URL}/api/pedidos`,
-         {        method: 'POST',
+      if (codigoCupon) body.codigo_cupon = String(codigoCupon).trim()
+
+      const res = await fetch(`${API_URL}/api/pedidos`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
@@ -71,11 +105,45 @@ export function CarritoProvider({ children }) {
 
       if (!json.ok) throw new Error(json.mensaje)
 
-      return { ok: true, id_pedido: json.data.id_pedido }
+      localStorage.removeItem(STORAGE_KEY)
+      setProductos([])
+      setCuponValidado(null)
+
+      // Refrescar perfil del cliente para actualizar puntos
+      try {
+        const token = localStorage.getItem('token')
+        if (token && id_cliente) {
+          const r = await fetch(`${API_URL}/api/clientes/${id_cliente}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          const pj = await r.json()
+          if (pj.ok) {
+            setClienteActual(prev => ({ ...prev, ...pj.data }))
+            localStorage.setItem('cliente', JSON.stringify({ ...obtenerCliente(), ...pj.data }))
+          }
+        }
+      } catch { /* best effort */ }
+
+      return {
+        ok: true,
+        id_pedido: json.data.id_pedido,
+        descuento_aplicado: json.data?.descuento_aplicado ?? 0,
+        descuento_fuente: json.data?.descuento_fuente ?? null,
+        puntos_ganados: json.data?.puntos_ganados ?? 0,
+      }
     } catch (error) {
       console.error('Error confirmando pedido:', error.message)
       return { ok: false, mensaje: error.message }
     }
+  }
+
+  const agregarAlCarrito = (item) => {
+    const cantNueva = item.cant || item.cantidad || 1
+    setProductos(prev => {
+      const existe = prev.find(x => x.id === item.id)
+      if (existe) return prev.map(x => x.id === item.id ? { ...x, cantidad: (x.cantidad || 1) + cantNueva } : x)
+      return [...prev, { ...item, cantidad: cantNueva }]
+    })
   }
 
   const sincronizarCarrito = (productosExternos) => {
@@ -85,6 +153,13 @@ export function CarritoProvider({ children }) {
       presentacion: p.origen || '',
       precio: p.precio,
       cantidad: p.cant || 1,
+      img: p.img || '',
+      unidad: p.unidad || 'kg',
+      id_formato: p.id_formato ?? null,
+      etiqueta_formato: p.etiqueta_formato || '',
+      peso_kg: p.peso_kg ?? null,
+      promo_pct: p.promoPct ?? null,
+      iva_pct: p.iva_pct == null ? 5 : Number(p.iva_pct),
     }))
     setProductos(productosAdaptados)
   }
@@ -109,8 +184,73 @@ export function CarritoProvider({ children }) {
     setDatosCliente(datos)
   }
 
-  const subtotal = productos.reduce((acc, p) => acc + p.precio * p.cantidad, 0)
-  const totalUnidades = productos.reduce((acc, p) => acc + p.cantidad, 0)
+  // Persistir carrito en localStorage cada vez que cambia
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(productos))
+  }, [productos])
+
+  // Sincronizar perfil del cliente desde el backend
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    const id = obtenerIdCliente()
+    if (!token || !id) return
+
+    fetch(`${API_URL}/api/clientes/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(json => {
+        if (json.ok) {
+          setClienteActual(prev => ({ ...prev, ...json.data }))
+          localStorage.setItem('cliente', JSON.stringify({ ...obtenerCliente(), ...json.data }))
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const actualizarPerfilCliente = (datos) => {
+    setClienteActual(prev => ({ ...prev, ...datos }))
+    localStorage.setItem('cliente', JSON.stringify({ ...obtenerCliente(), ...datos }))
+  }
+
+  const [cuponValidado, setCuponValidado] = useState(null)
+
+  // ── Limpiar sesión (logout): resetea todo el estado React ──
+  const limpiarSesion = () => {
+    setClienteActual({})
+    setProductos([])
+    setCuponValidado(null)
+    setDatosCliente(null)
+    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem('token')
+    localStorage.removeItem('cliente')
+  }
+
+  // ── Re-sincronizar sesión (login): re-lee localStorage + fetch perfil ──
+  const sincronizarSesion = async () => {
+    const nuevoCliente = obtenerCliente()
+    setClienteActual(nuevoCliente)
+    setCuponValidado(null)
+    setDatosCliente(null)
+
+    const token = localStorage.getItem('token')
+    const id = nuevoCliente?.id
+    if (!token || !id) return
+
+    try {
+      const res = await fetch(`${API_URL}/api/clientes/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json()
+      if (json.ok) {
+        setClienteActual(prev => ({ ...prev, ...json.data }))
+        localStorage.setItem('cliente', JSON.stringify({ ...obtenerCliente(), ...json.data }))
+      }
+    } catch { /* best effort */ }
+  }
+
+  // ── Totales: per-item "mayor gana" + cupón + IVA extraído ──
+  const totalUnidades = productos.reduce((acc, p) => acc + Number(p.cantidad || 0), 0)
   const esMayorista = obtenerTipoCliente() === 'mayorista'
   const DESCUENTO = esMayorista
     ? DESCUENTO_MAYORISTA
@@ -118,13 +258,74 @@ export function CarritoProvider({ children }) {
   const unidadesFaltantes = esMayorista
     ? 0
     : Math.max(0, UNIDADES_MINIMAS_DESCUENTO_MINORISTA - totalUnidades)
-  const descuentoMonto = Math.round(subtotal * DESCUENTO)
-  const ivaMonto = Math.round((subtotal - descuentoMonto) * IVA)
-  const total = subtotal - descuentoMonto + ivaMonto
+
+  // Descuento por volumen/mayorista como porcentaje
+  const pctVolumen = DESCUENTO * 100
+
+  // Subtotal base (sin ningún descuento)
+  const subtotalBase = productos.reduce((acc, p) => {
+    return acc + (Number(p.precio) || 0) * (Number(p.cantidad) || 0)
+  }, 0)
+
+  // Cada producto gana: mayor entre promo y volumen → subtotal con descuento de producto
+  const subtotalConDescuento = productos.reduce((acc, p) => {
+    const precio = Number(p.precio) || 0
+    const cant = Number(p.cantidad) || 0
+    const pctGanador = Math.max(Number(p.promo_pct) || 0, pctVolumen)
+    return acc + Math.round(precio * (1 - pctGanador / 100)) * cant
+  }, 0)
+
+  // Descuento por productos (volumen/promo) — separado para mostrar en resumen
+  const descuentoProductos = subtotalBase - subtotalConDescuento
+
+  // Cupón: descuento adicional sobre el subtotal ya con descuento de producto/volumen
+  const cuponPct = Number(cuponValidado?.pct) || 0
+  const descuentoCuponMonto = cuponPct > 0 ? Math.round(subtotalConDescuento * cuponPct / 100) : 0
+
+  const subtotal = Math.max(0, subtotalConDescuento - descuentoCuponMonto)
+  const descuentoMonto = descuentoProductos + descuentoCuponMonto
+
+  // IVA: se EXTRAe de los precios (ya incluyen IVA). Tasa real por producto.
+  const ivaMonto = Math.round(productos.reduce((acc, p) => {
+    const precio = Number(p.precio) || 0
+    const cant = Number(p.cantidad) || 0
+    const pctGanador = Math.max(Number(p.promo_pct) || 0, pctVolumen)
+    const precioFinal = Math.round(precio * (1 - pctGanador / 100))
+    const tasa = Number(p.iva_pct ?? 5)
+    return acc + (precioFinal * cant * tasa) / (100 + tasa)
+  }, 0))
+
+  const total = subtotal
+
+  const validarCupon = async (codigo) => {
+    const token = localStorage.getItem('token')
+    if (!token) return { ok: false, mensaje: 'Debes iniciar sesión para usar un cupón' }
+    try {
+      const res = await fetch(`${API_URL}/api/cupones/validar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ codigo: String(codigo).trim() }),
+      })
+      const json = await res.json()
+      if (!json.ok) return { ok: false, mensaje: json.mensaje || 'Cupón inválido' }
+      const cupon = { ...json.data, pct: Number(json.data.descuento_pct) || 0 }
+      setCuponValidado(cupon)
+      return { ok: true, pct: cupon.pct }
+    } catch {
+      return { ok: false, mensaje: 'No se pudo validar el cupón' }
+    }
+  }
+
+  const tienePremio = false
+  const descuentoFuente = DESCUENTO > 0 ? (esMayorista ? 'empresa' : 'volumen') : (cuponPct > 0 ? 'cupon' : null)
 
   return (
     <CarritoContext.Provider value={{
       productos,
+      agregarAlCarrito,
       aumentarCantidad,
       disminuirCantidad,
       eliminarProducto,
@@ -132,8 +333,13 @@ export function CarritoProvider({ children }) {
       datosCliente,
       guardarDatosCliente,
       confirmarPedido,
+      cliente: clienteActual,
+      esJuridica,
       subtotal,
+      subtotalBase,
       descuentoMonto,
+      descuentoProductos,
+      descuentoCuponMonto,
       ivaMonto,
       total,
       DESCUENTO,
@@ -141,13 +347,22 @@ export function CarritoProvider({ children }) {
       esMayorista,
       totalUnidades,
       unidadesFaltantes,
+      descuentoFuente,
+      tienePremio,
+      validarCupon,
+      cuponValidado,
+      cuponPct,
+      descuentoCuponMonto,
+      actualizarPerfilCliente,
+      limpiarSesion,
+      sincronizarSesion,
     }}>
       {children}
     </CarritoContext.Provider>
   )
 }
 
-// eslint-disable-next-line react-refresh/only-export-components -- patrón estándar Context+Provider+hook en un solo archivo; separarlo rompería los imports existentes sin beneficio real.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCarrito() {
   return useContext(CarritoContext)
 }
