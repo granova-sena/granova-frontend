@@ -14,6 +14,23 @@ const clienteSesion = (() => {
     return null
   }
 })()
+
+// Datos de envío unificados: prioriza lo capturado en "Configurar pedido" y completa con la cuenta
+const datosEnvio = (() => {
+  const d = datosCliente || {}
+  const s = clienteSesion || {}
+  return {
+    nombre:       d.nombre || [s.nombre, s.apellido].filter(Boolean).join(' ') || '',
+    correo:       d.correo || s.email || s.correo || '',
+    telefono:     d.telefono || s.telefono || '',
+    telefonoAlt:  d.telefonoAlt || '',
+    direccion:    d.direccion || s.direccion || '',
+    ciudad:       d.ciudad || s.ciudad || '',
+    departamento: d.departamento || s.departamento || '',
+    observaciones: d.observaciones || '',
+  }
+})()
+
   const generarPDF = () => {
   const doc = new jsPDF()
 
@@ -30,15 +47,33 @@ const clienteSesion = (() => {
 
   doc.setFontSize(10)
   doc.setTextColor(0)
-  doc.text('Datos del cliente', 15, 45)
+  doc.text('Datos de envío', 15, 45)
   doc.setFontSize(9)
   doc.setTextColor(80)
 
-  if (datosCliente) {
-    doc.text(`Nombre: ${datosCliente.nombre}`,     15, 52)
-    doc.text(`Correo: ${datosCliente.correo}`,     15, 57)
-    doc.text(`Teléfono: ${datosCliente.telefono}`, 15, 62)
-    doc.text(`Ciudad: ${datosCliente.ciudad}`,     15, 67)
+  // Columna izquierda: datos de envío (Nombre, Correo, Teléfono, Dirección, Ciudad, Departamento, ...)
+  let yIzq = 52
+  const lineasIzq = [
+    datosEnvio.nombre       && `Nombre: ${datosEnvio.nombre}`,
+    datosEnvio.correo       && `Correo: ${datosEnvio.correo}`,
+    datosEnvio.telefono     && `Teléfono: ${datosEnvio.telefono}`,
+    datosEnvio.telefonoAlt  && `Tel. alternativo: ${datosEnvio.telefonoAlt}`,
+    datosEnvio.direccion    && `Dirección: ${datosEnvio.direccion}`,
+    datosEnvio.ciudad       && `Ciudad: ${datosEnvio.ciudad}`,
+    datosEnvio.departamento && `Departamento: ${datosEnvio.departamento}`,
+  ].filter(Boolean)
+  lineasIzq.forEach(linea => {
+    doc.text(linea, 15, yIzq)
+    yIzq += 5
+  })
+
+  // Observaciones (se ajusta en varias líneas si es necesario)
+  if (datosEnvio.observaciones) {
+    doc.splitTextToSize(`Observaciones: ${datosEnvio.observaciones}`, 90)
+      .forEach(linea => {
+        doc.text(linea, 15, yIzq)
+        yIzq += 5
+      })
   }
 
   doc.setFontSize(10)
@@ -51,7 +86,7 @@ const clienteSesion = (() => {
   doc.text('• Sujeto a disponibilidad de inventario.',         110, 62)
 
   autoTable(doc, {
-    startY: 75,
+    startY: Math.max(yIzq + 5, 75),
     head: [['Producto', 'Presentación', 'Cantidad', 'Precio Unitario', 'Subtotal']],
     body: productos.map(p => [
       p.nombre,
@@ -110,6 +145,16 @@ const enviarPorCorreo = async () => {
           cantidad:     p.cantidad,
           precio:       p.precio,
         })),
+        datosEnvio: {
+          nombre:       datosEnvio.nombre,
+          correo:       datosEnvio.correo,
+          telefono:     datosEnvio.telefono,
+          telefonoAlt:  datosEnvio.telefonoAlt,
+          direccion:    datosEnvio.direccion,
+          ciudad:       datosEnvio.ciudad,
+          departamento: datosEnvio.departamento,
+          observaciones: datosEnvio.observaciones,
+        },
         subtotal,
         descuento: descuentoMonto,
         iva:       ivaMonto,
@@ -158,30 +203,18 @@ const enviarPorCorreo = async () => {
           </div>
         </div>
 
-        {/* Datos cliente */}
+        {/* Datos de envío */}
         <div className="flex gap-8 mb-8">
           <div className="flex-1 text-xs text-[#3D3D3D] flex flex-col gap-1">
-            <p className="font-semibold mb-1">Datos del cliente</p>
-            {(() => {
-  const cliente = datosCliente || clienteSesion
-  return cliente ? (
-    <>
-      <p>Nombre: {cliente.nombre} {cliente.apellido || ''}</p>
-      <p>Correo: {cliente.email || cliente.correo || '—'}</p>
-      <p>Teléfono: {datosCliente?.telefono || '—'}</p>
-      <p>Dirección: {datosCliente?.direccion || '—'}</p>
-      <p>Ciudad: {datosCliente?.ciudad || '—'}</p>
-    </>
-  ) : (
-    <>
-      <p>Nombre: —</p>
-      <p>Correo: —</p>
-      <p>Teléfono: —</p>
-      <p>Dirección: —</p>
-      <p>Ciudad: —</p>
-    </>
-  )
-})()}
+            <p className="font-semibold mb-1">Datos de envío</p>
+            <p>Nombre: {datosEnvio.nombre || '—'}</p>
+            <p>Correo: {datosEnvio.correo || '—'}</p>
+            <p>Teléfono: {datosEnvio.telefono || '—'}</p>
+            {datosEnvio.telefonoAlt && <p>Tel. alternativo: {datosEnvio.telefonoAlt}</p>}
+            <p>Dirección: {datosEnvio.direccion || '—'}</p>
+            <p>Ciudad: {datosEnvio.ciudad || '—'}</p>
+            <p>Departamento: {datosEnvio.departamento || '—'}</p>
+            {datosEnvio.observaciones && <p>Observaciones: {datosEnvio.observaciones}</p>}
           </div>
         </div>
 
