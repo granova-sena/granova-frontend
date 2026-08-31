@@ -6,6 +6,7 @@ import registerBg from '../assets/register-bg.mp4'
 import toast from 'react-hot-toast'
 import { API_URL, FRONTEND_URL } from "../config";
 import { useCarrito } from '../context/CarritoContext'
+import { setClienteToken } from '../services/session'
 
 function Login() {
   const navigate = useNavigate()
@@ -74,7 +75,7 @@ function Login() {
 
       toast.dismiss()
 
-      localStorage.setItem('token', datos.token)
+      setClienteToken(datos.token)
       localStorage.setItem(
         'cliente',
         JSON.stringify(datos.cliente)
@@ -110,8 +111,25 @@ function Login() {
       return
     }
 
+    // El popup puede aterrizar en www.granovaoficial.com / granovaoficial.com
+    // o en un puerto distinto en local; la comparación exacta de origen era
+    // demasiado estricta y hacía que el mensaje se ignorara en silencio.
+    function esOrigenValido(origin) {
+      if (origin === FRONTEND_URL || origin === window.location.origin) return true
+      try {
+        const a = new URL(origin).hostname.replace(/^www\./, '')
+        const b = [
+          new URL(FRONTEND_URL).hostname,
+          window.location.hostname,
+        ].map((h) => h.replace(/^www\./, ''))
+        return a !== '' && b.includes(a)
+      } catch {
+        return false
+      }
+    }
+
     function manejarMensaje(evento) {
-      if (evento.origin !== FRONTEND_URL) return
+      if (!esOrigenValido(evento.origin)) return
 
       const { token, cliente, error } = evento.data
 
@@ -127,7 +145,7 @@ function Login() {
       }
 
       if (token && cliente) {
-        localStorage.setItem('token', token)
+        setClienteToken(token)
         localStorage.setItem('cliente', cliente)
 
         window.removeEventListener(
@@ -299,7 +317,7 @@ function Login() {
               value={formData.contraseña}
               onChange={handleChange}
               placeholder="••••••••"
-              className="w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition pr-10"
+              className="input-glow w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition pr-10"
               style={{
                 background: 'rgba(255,255,255,0.08)',
                 border: '1px solid rgba(255,255,255,0.15)'
@@ -311,6 +329,7 @@ function Login() {
               onClick={() =>
                 setVerContraseña(!verContraseña)
               }
+              aria-label={verContraseña ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               className="absolute right-3 top-9 text-white/40 hover:text-white/80 transition"
             >
               {verContraseña ? (

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import ImagenProducto from './ImagenProducto'
 
 const badgeColor = {
@@ -9,8 +8,6 @@ const badgeColor = {
 }
 
 export default function ProductoCardMini({ p, onVerDetalle, onAgregar }) {
-  const [feedback, setFeedback] = useState(false)
-
   const handleClick = () => {
     onVerDetalle(p)
   }

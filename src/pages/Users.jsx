@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { API_URL } from "../config";
+import toast from 'react-hot-toast'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
+import { PageHeader, StatCard, PanelCard, EmptyState } from '../components/ui/panel/PanelKit'
 
 
 const ROLES_DISPONIBLES = ['admin', 'gerente', 'empleado']
@@ -37,6 +40,7 @@ function Users() {
 
   const [idEnProceso, setIdEnProceso] = useState(null)
   const [errorAccion, setErrorAccion] = useState('')
+  const [eliminandoUsuario, setEliminandoUsuario] = useState(null)
 
   const [importando, setImportando] = useState(false)
   const [resumenImportacion, setResumenImportacion] = useState(null)
@@ -44,7 +48,7 @@ function Users() {
 
   async function cargarUsuarios() {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('token_empleado')
       const respuesta = await fetch(`${API_URL}/usuarios`, {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -59,7 +63,7 @@ function Users() {
 
   async function cargarMetricas() {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('token_empleado')
       const respuesta = await fetch(`${API_URL}/usuarios/metricas`, {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -111,7 +115,7 @@ function Users() {
     setGuardando(true)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('token_empleado')
       const respuesta = await fetch(`${API_URL}/usuarios`, {
         method: 'POST',
         headers: {
@@ -145,7 +149,7 @@ function Users() {
     setIdEnProceso(usuario.id_usuario)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('token_empleado')
       const respuesta = await fetch(`${API_URL}/usuarios/${usuario.id_usuario}/estado`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
@@ -175,7 +179,7 @@ function Users() {
     setIdEnProceso(usuario.id_usuario)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('token_empleado')
       const respuesta = await fetch(`${API_URL}/usuarios/${usuario.id_usuario}/rol`, {
         method: 'PATCH',
         headers: {
@@ -202,17 +206,16 @@ function Users() {
     }
   }
 
-  async function eliminarUsuarioAccion(usuario) {
-    const confirmado = window.confirm(
-      `¿Eliminar a ${usuario.nombre} ${usuario.apellido}? Podrás recuperarlo desde la base de datos si es necesario, pero dejará de aparecer aquí.`
-    )
-    if (!confirmado) return
+  async function eliminarUsuarioAccion() {
+    const usuario = eliminandoUsuario
+    setEliminandoUsuario(null)
+    if (!usuario) return
 
     setErrorAccion('')
     setIdEnProceso(usuario.id_usuario)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('token_empleado')
       const respuesta = await fetch(`${API_URL}/usuarios/${usuario.id_usuario}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
@@ -222,14 +225,17 @@ function Users() {
 
       if (!respuesta.ok) {
         setErrorAccion(datos.error || 'No se pudo eliminar el usuario')
+        toast.error(datos.error || 'No se pudo eliminar el usuario')
         return
       }
 
       await Promise.all([cargarUsuarios(), cargarMetricas()])
+      toast.success('Usuario eliminado')
 
     } catch (error) {
       console.error('Error en Users:', error)
       setErrorAccion('Error de conexión con el servidor')
+      toast.error('Error de conexión con el servidor')
     } finally {
       setIdEnProceso(null)
     }
@@ -248,7 +254,7 @@ function Users() {
     setImportando(true)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('token_empleado')
       const formData = new FormData()
       formData.append('archivo', archivo)
 
@@ -303,173 +309,103 @@ function Users() {
     }
   }
 
-  const glass = {
-    background: 'rgba(255,255,255,0.92)',
-    border: '1px solid rgba(20,40,32,0.14)',
-    backdropFilter: 'blur(20px) saturate(160%)',
-    WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-    boxShadow: '0 8px 28px rgba(20,40,32,0.14), inset 0 1px 0 rgba(255,255,255,0.9)',
-  }
-
   return (
-    <div className="min-h-full">
+    <div className="space-y-6">
 
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-[#1F2A24]">Usuarios</h1>
-        <p className="text-[#1F2A24]/45 text-sm mt-1">Gestiona el personal interno de Granova</p>
-      </div>
+      <PageHeader
+        titulo="Usuarios"
+        subtitulo="Gestiona el personal interno de Granova"
+      />
 
       {/* Métricas */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <div className="rounded-2xl p-5 flex items-center gap-4" style={glass}>
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'rgba(29,158,117,0.10)', color: '#1D9E75' }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <div>
-            <p className="text-2xl font-semibold text-[#1F2A24]">{cargandoMetricas ? '—' : metricas?.total ?? 0}</p>
-            <p className="text-xs text-[#1F2A24]/50 mt-0.5">Total de usuarios</p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl p-5 flex items-center gap-4" style={glass}>
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'rgba(29,158,117,0.10)', color: '#1D9E75' }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
-              <path d="M8.5 12.5l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <div>
-            <p className="text-2xl font-semibold text-[#1F2A24]">{cargandoMetricas ? '—' : metricas?.activos ?? 0}</p>
-            <p className="text-xs text-[#1F2A24]/50 mt-0.5">Activos</p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl p-5 flex items-center gap-4" style={glass}>
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'rgba(220,38,38,0.08)', color: '#dc2626' }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
-              <path d="M9.5 9.5l5 5M14.5 9.5l-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <div>
-            <p className="text-2xl font-semibold text-[#1F2A24]">{cargandoMetricas ? '—' : metricas?.inactivos ?? 0}</p>
-            <p className="text-xs text-[#1F2A24]/50 mt-0.5">Inactivos</p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl p-5" style={glass}>
-          <p className="text-xs text-[#1F2A24]/50 mb-2">Por rol</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icono="👥" label="Total de usuarios" value={cargandoMetricas ? '—' : String(metricas?.total ?? 0)} tono="cielo" delay="panel-come-d1" />
+        <StatCard icono="✅" label="Activos" value={cargandoMetricas ? '—' : String(metricas?.activos ?? 0)} tono="verde" delay="panel-come-d2" />
+        <StatCard icono="⛔" label="Inactivos" value={cargandoMetricas ? '—' : String(metricas?.inactivos ?? 0)} tono="rojo" delay="panel-come-d3" />
+        <PanelCard className="p-5 panel-come panel-come-d4" animado={false}>
+          <p className="text-xs text-gray-500 mb-2">Por rol</p>
           {cargandoMetricas ? (
-            <p className="text-sm text-[#1F2A24]/40">—</p>
+            <p className="text-sm text-gray-400">—</p>
           ) : metricas?.por_rol?.length ? (
             <div className="flex flex-wrap gap-1.5">
               {metricas.por_rol.map((item) => (
                 <span
                   key={item.rol}
-                  className="text-xs px-2.5 py-1 rounded-full capitalize"
-                  style={{ background: 'rgba(20,40,32,0.06)', border: '1px solid rgba(20,40,32,0.12)', color: 'rgba(31,42,36,0.7)' }}
+                  className="text-xs px-2.5 py-1 rounded-full capitalize bg-gray-100 border border-gray-200 text-gray-600"
                 >
                   {item.rol}: {item.cantidad}
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-[#1F2A24]/40">Sin datos</p>
+            <p className="text-sm text-gray-400">Sin datos</p>
           )}
-        </div>
+        </PanelCard>
       </div>
 
       {/* Barra de búsqueda y acciones */}
-      <div
-        className="rounded-2xl p-4 mb-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between"
-        style={glass}
-      >
-        <div className="relative flex-1 w-full sm:max-w-xs">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1F2A24]/30" width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
-            <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          <input
-            type="text"
-            placeholder="Buscar por nombre o correo..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl text-sm text-[#1F2A24] placeholder-[#1F2A24]/30 focus:outline-none transition"
-            style={{
-              background: 'rgba(20,40,32,0.06)',
-              border: '1px solid rgba(20,40,32,0.14)',
-            }}
-            onFocus={(e) => { e.currentTarget.style.border = '1px solid rgba(29,158,117,0.4)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(29,158,117,0.12)' }}
-            onBlur={(e) => { e.currentTarget.style.border = '1px solid rgba(20,40,32,0.10)'; e.currentTarget.style.boxShadow = 'none' }}
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <span
-            className="text-xs px-2.5 py-1 rounded-full text-[#1F2A24]/50"
-            style={{ background: 'rgba(20,40,32,0.07)', border: '1px solid rgba(20,40,32,0.14)' }}
-          >
-            {usuariosFiltrados.length} usuario{usuariosFiltrados.length !== 1 ? 's' : ''}
-          </span>
-          <button
-            type="button"
-            onClick={abrirModal}
-            className="flex items-center gap-1.5 text-xs font-medium px-3.5 py-2 rounded-xl text-white transition-transform duration-150 hover:-translate-y-0.5"
-            style={{ background: '#1D9E75', boxShadow: '0 4px 14px rgba(29,158,117,0.3)' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+      <PanelCard animado={false} className="p-4 panel-come">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="relative flex-1 w-full sm:max-w-xs">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+              <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
-            Agregar usuario
-          </button>
+            <input
+              type="text"
+              placeholder="Buscar por nombre o correo..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl text-sm bg-gray-50 border border-gray-200 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:bg-white focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/10 transition"
+            />
+          </div>
 
-          <input
-            ref={inputArchivoRef}
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={manejarImportarExcel}
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={abrirSelectorArchivo}
-            disabled={importando}
-            className="flex items-center gap-1.5 text-xs font-medium px-3.5 py-2 rounded-xl transition disabled:opacity-60 disabled:cursor-wait"
-            style={{ background: 'rgba(20,40,32,0.06)', border: '1px solid rgba(20,40,32,0.14)', color: 'rgba(31,42,36,0.7)' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            {importando ? 'Importando...' : 'Importar Excel'}
-          </button>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-gray-100 border border-gray-200 text-gray-500">
+              {usuariosFiltrados.length} usuario{usuariosFiltrados.length !== 1 ? 's' : ''}
+            </span>
+            <button
+              type="button"
+              onClick={abrirModal}
+              className="flex items-center gap-1.5 text-xs font-medium px-3.5 py-2 rounded-xl text-white bg-[#1D9E75] hover:bg-[#178a64] transition-shadow shadow-sm shadow-[#1D9E75]/20"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+              </svg>
+              Agregar usuario
+            </button>
+
+            <input
+              ref={inputArchivoRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={manejarImportarExcel}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={abrirSelectorArchivo}
+              disabled={importando}
+              className="flex items-center gap-1.5 text-xs font-medium px-3.5 py-2 rounded-xl bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-wait"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {importando ? 'Importando...' : 'Importar Excel'}
+            </button>
+          </div>
         </div>
-      </div>
+      </PanelCard>
 
       {/* Tabla */}
       {resumenImportacion && (
         <div
-          className="rounded-xl mb-3 p-4"
-          style={{ background: 'rgba(29,158,117,0.08)', border: '1px solid rgba(29,158,117,0.2)' }}
+          className="panel-come rounded-xl mb-3 p-4 bg-emerald-50 border border-emerald-200"
         >
           <div className="flex items-start justify-between gap-3">
-            <p className="text-sm text-[#1F2A24]">{resumenImportacion.mensaje}</p>
-            <button type="button" onClick={() => setResumenImportacion(null)} className="text-[#1F2A24]/40 hover:text-[#1F2A24] flex-shrink-0">
+            <p className="text-sm text-emerald-700">{resumenImportacion.mensaje}</p>
+            <button type="button" onClick={() => setResumenImportacion(null)} className="text-gray-400 hover:text-gray-600 flex-shrink-0 transition">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
@@ -478,7 +414,7 @@ function Users() {
           {resumenImportacion.errores?.length > 0 && (
             <ul className="mt-2 space-y-1">
               {resumenImportacion.errores.map((err, i) => (
-                <li key={i} className="text-xs text-[#dc2626]">
+                <li key={i} className="text-xs text-red-600">
                   Fila {err.fila}: {err.motivo}
                 </li>
               ))}
@@ -488,22 +424,20 @@ function Users() {
       )}
       {errorAccion && (
         <div
-          className="text-xs px-4 py-2.5 rounded-xl mb-3 flex items-center justify-between"
-          style={{ background: 'rgba(220,38,38,0.08)', color: '#dc2626' }}
+          className="panel-come text-xs px-4 py-2.5 rounded-xl mb-3 flex items-center justify-between bg-red-50 text-red-600 border border-red-200"
         >
           <span>{errorAccion}</span>
-          <button type="button" onClick={() => setErrorAccion('')} className="opacity-60 hover:opacity-100">
+          <button type="button" onClick={() => setErrorAccion('')} className="opacity-60 hover:opacity-100 transition">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </button>
         </div>
       )}
-      <div className="rounded-2xl overflow-hidden" style={glass}>
+      <PanelCard animado={false} className="overflow-hidden">
         {/* Header tabla (oculto en móvil, la vista de tarjetas no lo necesita) */}
         <div
-          className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3 text-xs text-[#1F2A24]/40 uppercase tracking-wider"
-          style={{ borderBottom: '1px solid rgba(20,40,32,0.12)', background: 'rgba(20,40,32,0.045)' }}
+          className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3 text-xs text-gray-500 uppercase tracking-wider border-b border-gray-200 bg-gray-50/70"
         >
           <div className="col-span-1">#</div>
           <div className="col-span-4">Usuario</div>
@@ -517,51 +451,40 @@ function Users() {
         {cargando ? (
           <div className="py-16 text-center">
             <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-            <p className="text-[#1F2A24]/40 text-sm">Cargando usuarios...</p>
+            <p className="text-gray-500 text-sm">Cargando usuarios...</p>
           </div>
         ) : usuariosFiltrados.length === 0 ? (
-          <div className="py-16 text-center">
-            <svg className="mx-auto mb-3 text-[#1F2A24]/20" width="40" height="40" viewBox="0 0 24 24" fill="none">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            <p className="text-[#1F2A24]/40 text-sm">
-              {busqueda ? 'No se encontraron resultados' : 'No hay usuarios registrados'}
-            </p>
-          </div>
+          <EmptyState
+            icono={busqueda ? '🔍' : '👤'}
+            titulo={busqueda ? 'Sin resultados' : 'Sin usuarios'}
+            descripcion={busqueda ? 'No se encontraron usuarios que coincidan con tu búsqueda.' : 'No hay usuarios registrados todavía.'}
+          />
         ) : (
           <div>
             {usuariosFiltrados.map((usuario, i) => (
               <div key={usuario.id_usuario}>
                 {/* Fila de escritorio (sm y mayor) */}
                 <div
-                  className="hidden sm:grid grid-cols-12 gap-4 px-6 py-4 items-center transition-all duration-200 hover:bg-[#1D9E75]/[0.04] group"
-                  style={{ borderBottom: i < usuariosFiltrados.length - 1 ? '1px solid rgba(20,40,32,0.06)' : 'none' }}
+                  className="hidden sm:grid grid-cols-12 gap-4 px-6 py-4 items-center transition-colors duration-200 hover:bg-[#1D9E75]/[0.04] group border-b border-gray-100 last:border-0"
                 >
                   {/* Número */}
-                  <div className="col-span-1 text-xs text-[#1F2A24]/30">{i + 1}</div>
+                  <div className="col-span-1 text-xs text-gray-400">{i + 1}</div>
 
                   {/* Usuario */}
                   <div className="col-span-4 flex items-center gap-3">
                     <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
-                      style={{
-                        background: 'rgba(29,158,117,0.12)',
-                        color: '#1D9E75',
-                      }}
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 bg-[#1D9E75]/10 text-[#1D9E75]"
                     >
                       {usuario.nombre?.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm text-[#1F2A24]/85 font-medium">{usuario.nombre} {usuario.apellido}</p>
+                      <p className="text-sm text-gray-800 font-medium">{usuario.nombre} {usuario.apellido}</p>
                     </div>
                   </div>
 
                   {/* Correo */}
                   <div className="col-span-2">
-                    <p className="text-sm text-[#1F2A24]/50 truncate">{usuario.email}</p>
+                    <p className="text-sm text-gray-500 truncate">{usuario.email}</p>
                   </div>
 
                   {/* Rol */}
@@ -610,9 +533,9 @@ function Users() {
                   <div className="col-span-1 flex justify-end">
                     <button
                       type="button"
-                      onClick={() => eliminarUsuarioAccion(usuario)}
+                      onClick={() => setEliminandoUsuario(usuario)}
                       disabled={idEnProceso === usuario.id_usuario}
-                      className="p-1.5 rounded-lg text-[#1F2A24]/30 hover:text-[#dc2626] hover:bg-[#dc2626]/[0.08] transition disabled:opacity-40 disabled:cursor-wait"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition disabled:opacity-40 disabled:cursor-wait"
                       title="Eliminar usuario"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -624,25 +547,23 @@ function Users() {
 
                 {/* Tarjeta de móvil (oculta en sm y mayor) */}
                 <div
-                  className="sm:hidden px-4 py-4 flex flex-col gap-3"
-                  style={{ borderBottom: i < usuariosFiltrados.length - 1 ? '1px solid rgba(20,40,32,0.06)' : 'none' }}
+                  className="sm:hidden px-4 py-4 flex flex-col gap-3 border-b border-gray-100 last:border-0"
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
-                      style={{ background: 'rgba(29,158,117,0.12)', color: '#1D9E75' }}
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 bg-[#1D9E75]/10 text-[#1D9E75]"
                     >
                       {usuario.nombre?.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm text-[#1F2A24]/85 font-medium truncate">{usuario.nombre} {usuario.apellido}</p>
-                      <p className="text-xs text-[#1F2A24]/45 truncate">{usuario.email}</p>
+                      <p className="text-sm text-gray-800 font-medium truncate">{usuario.nombre} {usuario.apellido}</p>
+                      <p className="text-xs text-gray-500 truncate">{usuario.email}</p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => eliminarUsuarioAccion(usuario)}
+                      onClick={() => setEliminandoUsuario(usuario)}
                       disabled={idEnProceso === usuario.id_usuario}
-                      className="p-2 -mr-2 rounded-lg text-[#1F2A24]/30 hover:text-[#dc2626] hover:bg-[#dc2626]/[0.08] transition disabled:opacity-40 disabled:cursor-wait flex-shrink-0"
+                      className="p-2 -mr-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition disabled:opacity-40 disabled:cursor-wait flex-shrink-0"
                       title="Eliminar usuario"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -693,13 +614,12 @@ function Users() {
             ))}
           </div>
         )}
-      </div>
+      </PanelCard>
 
       {/* Modal: Agregar usuario */}
       {modalAbierto && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(20,40,32,0.35)', backdropFilter: 'blur(4px)' }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
           role="button"
           tabIndex={0}
           aria-label="Cerrar"
@@ -707,15 +627,14 @@ function Users() {
           onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') cerrarModal() }}
         >
           <div
-            className="w-full max-w-md rounded-2xl p-6"
-            style={{ ...glass, background: 'rgba(255,255,255,0.98)' }}
+            className="w-full max-w-md rounded-2xl p-6 bg-white panel-come"
             role="presentation"
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-semibold text-[#1F2A24]">Agregar usuario</h2>
-              <button type="button" onClick={cerrarModal} className="text-[#1F2A24]/40 hover:text-[#1F2A24] transition">
+              <h2 className="text-lg font-semibold text-admin-heading">Agregar usuario</h2>
+              <button type="button" onClick={cerrarModal} className="text-gray-400 hover:text-gray-600 transition">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
@@ -725,46 +644,43 @@ function Users() {
             <form onSubmit={manejarCrearUsuario} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="nombre-nuevo-usuario" className="text-xs text-[#1F2A24]/50 mb-1 block">Nombre</label>
+                  <label htmlFor="nombre-nuevo-usuario" className="text-xs text-gray-500 mb-1 block">Nombre</label>
                   <input
                     id="nombre-nuevo-usuario"
                     required
                     type="text"
                     value={formulario.nombre}
                     onChange={(e) => actualizarCampo('nombre', e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl text-sm text-[#1F2A24] focus:outline-none"
-                    style={{ background: 'rgba(20,40,32,0.06)', border: '1px solid rgba(20,40,32,0.14)' }}
+                    className="w-full px-3 py-2 rounded-xl text-sm text-gray-800 focus:outline-none bg-gray-50 border border-gray-200 focus:border-[#1D9E75] focus:bg-white focus:ring-2 focus:ring-[#1D9E75]/10 transition"
                   />
                 </div>
                 <div>
-                  <label htmlFor="apellido-nuevo-usuario" className="text-xs text-[#1F2A24]/50 mb-1 block">Apellido</label>
+                  <label htmlFor="apellido-nuevo-usuario" className="text-xs text-gray-500 mb-1 block">Apellido</label>
                   <input
                     id="apellido-nuevo-usuario"
                     required
                     type="text"
                     value={formulario.apellido}
                     onChange={(e) => actualizarCampo('apellido', e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl text-sm text-[#1F2A24] focus:outline-none"
-                    style={{ background: 'rgba(20,40,32,0.06)', border: '1px solid rgba(20,40,32,0.14)' }}
+                    className="w-full px-3 py-2 rounded-xl text-sm text-gray-800 focus:outline-none bg-gray-50 border border-gray-200 focus:border-[#1D9E75] focus:bg-white focus:ring-2 focus:ring-[#1D9E75]/10 transition"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="email-nuevo-usuario" className="text-xs text-[#1F2A24]/50 mb-1 block">Correo</label>
+                <label htmlFor="email-nuevo-usuario" className="text-xs text-gray-500 mb-1 block">Correo</label>
                 <input
                   id="email-nuevo-usuario"
                   required
                   type="email"
                   value={formulario.email}
                   onChange={(e) => actualizarCampo('email', e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl text-sm text-[#1F2A24] focus:outline-none"
-                  style={{ background: 'rgba(20,40,32,0.06)', border: '1px solid rgba(20,40,32,0.14)' }}
+                  className="w-full px-3 py-2 rounded-xl text-sm text-gray-800 focus:outline-none bg-gray-50 border border-gray-200 focus:border-[#1D9E75] focus:bg-white focus:ring-2 focus:ring-[#1D9E75]/10 transition"
                 />
               </div>
 
               <div>
-                <label htmlFor="password-nuevo-usuario" className="text-xs text-[#1F2A24]/50 mb-1 block">Contraseña</label>
+                <label htmlFor="password-nuevo-usuario" className="text-xs text-gray-500 mb-1 block">Contraseña</label>
                 <input
                   id="password-nuevo-usuario"
                   required
@@ -774,8 +690,7 @@ function Users() {
                   onChange={(e) => actualizarCampo('contraseña', e.target.value)}
                   onFocus={() => setContraseñaFocus(true)}
                   onBlur={() => setContraseñaFocus(false)}
-                  className="w-full px-3 py-2 rounded-xl text-sm text-[#1F2A24] focus:outline-none"
-                  style={{ background: 'rgba(20,40,32,0.06)', border: '1px solid rgba(20,40,32,0.14)' }}
+                  className="w-full px-3 py-2 rounded-xl text-sm text-gray-800 focus:outline-none bg-gray-50 border border-gray-200 focus:border-[#1D9E75] focus:bg-white focus:ring-2 focus:ring-[#1D9E75]/10 transition"
                 />
                 {(() => {
                   const contraseñaValida = Object.values(reglasContraseña).every(Boolean)
@@ -809,13 +724,12 @@ function Users() {
               </div>
 
               <div>
-                <label htmlFor="rol-nuevo-usuario" className="text-xs text-[#1F2A24]/50 mb-1 block">Rol</label>
+                <label htmlFor="rol-nuevo-usuario" className="text-xs text-gray-500 mb-1 block">Rol</label>
                 <select
                   id="rol-nuevo-usuario"
                   value={formulario.rol}
                   onChange={(e) => actualizarCampo('rol', e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl text-sm text-[#1F2A24] focus:outline-none capitalize"
-                  style={{ background: 'rgba(20,40,32,0.06)', border: '1px solid rgba(20,40,32,0.14)' }}
+                  className="w-full px-3 py-2 rounded-xl text-sm text-gray-800 focus:outline-none bg-gray-50 border border-gray-200 focus:border-[#1D9E75] focus:bg-white focus:ring-2 focus:ring-[#1D9E75]/10 transition capitalize"
                 >
                   {ROLES_DISPONIBLES.map((rol) => (
                     <option key={rol} value={rol} className="capitalize">{rol}</option>
@@ -824,7 +738,7 @@ function Users() {
               </div>
 
               {errorFormulario && (
-                <p className="text-xs px-3 py-2 rounded-xl" style={{ background: 'rgba(220,38,38,0.08)', color: '#dc2626' }}>
+                <p className="text-xs px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-600">
                   {errorFormulario}
                 </p>
               )}
@@ -833,16 +747,14 @@ function Users() {
                 <button
                   type="button"
                   onClick={cerrarModal}
-                  className="flex-1 text-sm px-4 py-2.5 rounded-xl text-[#1F2A24]/60 transition"
-                  style={{ background: 'rgba(20,40,32,0.06)' }}
+                  className="flex-1 text-sm px-4 py-2.5 rounded-xl text-gray-600 bg-gray-100 border border-gray-200 hover:bg-gray-50 transition"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={guardando || !Object.values(reglasContraseña).every(Boolean)}
-                  className="flex-1 text-sm font-medium px-4 py-2.5 rounded-xl text-white transition disabled:opacity-60"
-                  style={{ background: '#1D9E75' }}
+                  className="flex-1 text-sm font-medium px-4 py-2.5 rounded-xl text-white bg-[#1D9E75] hover:bg-[#178a64] transition disabled:opacity-60"
                 >
                   {guardando ? 'Creando...' : 'Crear usuario'}
                 </button>
@@ -851,6 +763,15 @@ function Users() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        abierto={!!eliminandoUsuario}
+        titulo="¿Eliminar usuario?"
+        mensaje={eliminandoUsuario ? `¿Eliminar a ${eliminandoUsuario.nombre} ${eliminandoUsuario.apellido}? Podrás recuperarlo desde la base de datos si es necesario, pero dejará de aparecer aquí.` : ''}
+        confirmarTexto="Eliminar"
+        onConfirmar={eliminarUsuarioAccion}
+        onCancelar={() => setEliminandoUsuario(null)}
+      />
 
     </div>
   )

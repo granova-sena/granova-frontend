@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import api from '../services/api'
 import { formatMoney } from '../utils/format'
+import { bloquearEntero, manejarEntero, normalizarEntero, normalizarTexto } from '../utils/validacion'
+import ErrorModal from './ui/ErrorModal'
 
 const formVacio = {
   categoria_producto: 'cafe',
@@ -19,14 +21,6 @@ const formVacio = {
   stock: '',
   descripcion: '',
   imagen_url: '',
-}
-
-// Bloquea letras, símbolos y notación científica (e/+/-) en inputs numéricos.
-// Los inputs type="number" del navegador igual dejan escribir "e", "+" y "-".
-function bloquearNoNumerico(e) {
-  if (['e', 'E', '+', '-'].includes(e.key)) {
-    e.preventDefault()
-  }
 }
 
 function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
@@ -244,14 +238,14 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
             <button
               type="button"
               onClick={() => setModo('individual')}
-              className={`flex-1 text-sm py-2 rounded-lg transition ${modo === 'individual' ? 'bg-[#1D9E75] text-white' : 'bg-gray-100 text-gray-600'}`}
+              className={`flex-1 text-sm py-2 rounded-lg transition ${modo === 'individual' ? 'bg-[#6FA98C] text-white' : 'bg-gray-100 text-gray-600'}`}
             >
               Un producto
             </button>
             <button
               type="button"
               onClick={() => setModo('excel')}
-              className={`flex-1 text-sm py-2 rounded-lg transition ${modo === 'excel' ? 'bg-[#1D9E75] text-white' : 'bg-gray-100 text-gray-600'}`}
+              className={`flex-1 text-sm py-2 rounded-lg transition ${modo === 'excel' ? 'bg-[#6FA98C] text-white' : 'bg-gray-100 text-gray-600'}`}
             >
               Importar desde Excel
             </button>
@@ -292,7 +286,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
 
             {resultadoImport && (
               <div className="text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 space-y-2">
-                <p className="text-[#1D9E75] font-medium">{resultadoImport.creados} producto(s) creado(s) correctamente.</p>
+                <p className="text-[#6FA98C] font-medium">{resultadoImport.creados} producto(s) creado(s) correctamente.</p>
                 {resultadoImport.errores.length > 0 && (
                   <div>
                     <p className="text-red-600 font-medium mb-1">{resultadoImport.errores.length} fila(s) con error:</p>
@@ -314,7 +308,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                 type="button"
                 onClick={importarExcel}
                 disabled={filasExcel.length === 0 || importando}
-                className="px-4 py-2 text-sm rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition disabled:opacity-50"
+                className="px-4 py-2 text-sm rounded-lg bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition disabled:opacity-50"
               >
                 {importando ? 'Importando...' : `Importar ${filasExcel.length || ''}`}
               </button>
@@ -322,11 +316,6 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
           </div>
         ) : (
           <form onSubmit={intentarGuardar} className="p-6 space-y-4">
-            {error && (
-              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                {error}
-              </div>
-            )}
 
             <div>
               <span className="block text-sm text-gray-600 mb-1">¿Qué estás agregando? *</span>
@@ -334,14 +323,14 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                 <button
                   type="button"
                   onClick={() => cambiarCampo('categoria_producto', 'cafe')}
-                  className={`flex-1 text-sm py-2 rounded-lg border transition ${!esMaquina ? 'bg-[#1D9E75] text-white border-[#1D9E75]' : 'border-gray-200 text-gray-600'}`}
+                  className={`flex-1 text-sm py-2 rounded-lg border transition ${!esMaquina ? 'bg-[#6FA98C] text-white border-[#6FA98C]' : 'border-gray-200 text-gray-600'}`}
                 >
                   ☕ Café
                 </button>
                 <button
                   type="button"
                   onClick={() => cambiarCampo('categoria_producto', 'maquina')}
-                  className={`flex-1 text-sm py-2 rounded-lg border transition ${esMaquina ? 'bg-[#1D9E75] text-white border-[#1D9E75]' : 'border-gray-200 text-gray-600'}`}
+                  className={`flex-1 text-sm py-2 rounded-lg border transition ${esMaquina ? 'bg-[#6FA98C] text-white border-[#6FA98C]' : 'border-gray-200 text-gray-600'}`}
                 >
                   ⚙️ Máquina de café
                 </button>
@@ -354,8 +343,8 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                 id="nombre-producto"
                 type="text"
                 value={form.nombre}
-                onChange={(e) => cambiarCampo('nombre', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                onChange={(e) => cambiarCampo('nombre', normalizarTexto(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#6FA98C]"
                 placeholder={esMaquina ? 'Ej: Cafetera espresso automática' : 'Ej: Café Huila Especial'}
               />
             </div>
@@ -370,8 +359,8 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                       type="text"
                       list="lista-marcas"
                       value={form.marca}
-                      onChange={(e) => cambiarCampo('marca', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                      onChange={(e) => cambiarCampo('marca', normalizarTexto(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#6FA98C]"
                       placeholder="Ej: DeLonghi"
                     />
                     <datalist id="lista-marcas">
@@ -385,8 +374,8 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                       type="text"
                       maxLength={20}
                       value={form.modelo}
-                      onChange={(e) => cambiarCampo('modelo', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                      onChange={(e) => cambiarCampo('modelo', normalizarTexto(e.target.value).slice(0, 20))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#6FA98C]"
                       placeholder="Ej: EC685M (máx. 20 caracteres)"
                     />
                   </div>
@@ -397,10 +386,10 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                     id="garantia-meses"
                     type="number"
                     min="0"
-                    onKeyDown={bloquearNoNumerico}
+                    onKeyDown={bloquearEntero}
                     value={form.garantia_meses}
-                    onChange={(e) => cambiarCampo('garantia_meses', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                    onChange={manejarEntero((valor) => cambiarCampo('garantia_meses', valor))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#6FA98C]"
                     placeholder="Ej: 12"
                   />
                   {sugerenciasGarantia.length > 0 && (
@@ -411,7 +400,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                           key={g}
                           type="button"
                           onClick={() => cambiarCampo('garantia_meses', String(g))}
-                          className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 hover:bg-[#1D9E75]/10 hover:text-[#1D9E75] transition"
+                          className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 hover:bg-[#6FA98C]/10 hover:text-[#6FA98C] transition"
                         >
                           {g} meses
                         </button>
@@ -428,7 +417,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                     id="lote-origen"
                     value={form.id_lote}
                     onChange={(e) => cambiarCampo('id_lote', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#6FA98C]"
                     disabled={cargandoLotes}
                   >
                     <option value="">{cargandoLotes ? 'Cargando lotes...' : 'Selecciona un lote'}</option>
@@ -448,8 +437,8 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                       type="text"
                       list="lista-categorias"
                       value={form.tipo_cafe}
-                      onChange={(e) => cambiarCampo('tipo_cafe', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                      onChange={(e) => cambiarCampo('tipo_cafe', normalizarTexto(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#6FA98C]"
                       placeholder="Ej: Especiales"
                     />
                     <datalist id="lista-categorias">
@@ -466,7 +455,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                         cambiarCampo('id_presentacion', e.target.value)
                         cambiarCampo('presentacion', pres ? pres.nombre : '')
                       }}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#6FA98C]"
                     >
                       <option value="">Selecciona una presentación</option>
                       {presentaciones.map((p) => (
@@ -480,16 +469,17 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="precio-producto" className="block text-sm text-gray-600 mb-1">Precio {esMaquina ? '' : 'por kg'} *</label>
+                <label htmlFor="precio-producto" className="block text-sm text-gray-600 mb-1">Precio {esMaquina ? '(unidad)' : '(por bolsa)'} *</label>
                 <input
                   id="precio-producto"
                   ref={precioRef}
                   type="number"
                   min="0"
+                  onKeyDown={bloquearEntero}
                   value={form.precio}
-                  onChange={(e) => { cambiarCampo('precio', e.target.value); setConfirmarPrecioBajo(false); setConfirmarPrecioAlto(false) }}
+                  onChange={(e) => { cambiarCampo('precio', normalizarEntero(e.target.value)); setConfirmarPrecioBajo(false); setConfirmarPrecioAlto(false) }}
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none transition ${
-                    confirmarPrecioBajo || confirmarPrecioAlto ? 'border-amber-400 ring-2 ring-amber-200 scale-105' : 'border-gray-200 focus:border-[#1D9E75]'
+                    confirmarPrecioBajo || confirmarPrecioAlto ? 'border-amber-400 ring-2 ring-amber-200 scale-105' : 'border-gray-200 focus:border-[#6FA98C]'
                   }`}
                   placeholder="28500"
                 />
@@ -501,7 +491,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                         key={p}
                         type="button"
                         onClick={() => cambiarCampo('precio', String(p))}
-                        className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 hover:bg-[#1D9E75]/10 hover:text-[#1D9E75] transition"
+                        className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 hover:bg-[#6FA98C]/10 hover:text-[#6FA98C] transition"
                       >
                         {formatMoney(p)}
                       </button>
@@ -510,14 +500,15 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                 )}
               </div>
               <div>
-                <label htmlFor="costo-producto" className="block text-sm text-gray-600 mb-1">Costo {esMaquina ? '' : 'por kg'}</label>
+                <label htmlFor="costo-producto" className="block text-sm text-gray-600 mb-1">Costo {esMaquina ? '(unidad)' : '(por bolsa)'}</label>
                 <input
                   id="costo-producto"
                   type="number"
                   min="0"
+                  onKeyDown={bloquearEntero}
                   value={form.costo_unitario}
-                  onChange={(e) => cambiarCampo('costo_unitario', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75] transition"
+                  onChange={manejarEntero((valor) => cambiarCampo('costo_unitario', valor))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#6FA98C] transition"
                   placeholder="Lo que costó comprarlo"
                 />
                 <p className="text-xs text-gray-400 mt-1">Se usa para calcular la ganancia real en el dashboard.</p>
@@ -529,23 +520,25 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                     id="precio-mayorista-producto"
                     type="number"
                     min="0"
+                    onKeyDown={bloquearEntero}
                     value={form.precio_mayorista}
-                    onChange={(e) => cambiarCampo('precio_mayorista', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75] transition"
+                    onChange={manejarEntero((valor) => cambiarCampo('precio_mayorista', valor))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#6FA98C] transition"
                     placeholder="Lo que le cobras a Mercacentro, etc."
                   />
                   <p className="text-xs text-gray-400 mt-1">El precio público no puede quedar por debajo del margen mínimo sobre este valor.</p>
                 </div>
               )}
               <div>
-                <label htmlFor="stock-producto" className="block text-sm text-gray-600 mb-1">Stock {esMaquina ? '(unidades)' : 'inicial (kg)'} *</label>
+                <label htmlFor="stock-producto" className="block text-sm text-gray-600 mb-1">Stock {esMaquina ? '(unidades)' : 'inicial (bolsas)'} *</label>
                 <input
                   id="stock-producto"
                   type="number"
                   min="0"
+                  onKeyDown={bloquearEntero}
                   value={form.stock}
-                  onChange={(e) => cambiarCampo('stock', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                  onChange={manejarEntero((valor) => cambiarCampo('stock', valor))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#6FA98C]"
                   placeholder={esMaquina ? '10' : '320'}
                 />
               </div>
@@ -606,7 +599,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                 value={form.descripcion}
                 onChange={(e) => cambiarCampo('descripcion', e.target.value)}
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#6FA98C]"
                 placeholder="Opcional"
               />
             </div>
@@ -618,7 +611,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                 type="text"
                 value={form.imagen_url}
                 onChange={(e) => cambiarCampo('imagen_url', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#6FA98C]"
                 placeholder="Opcional"
               />
             </div>
@@ -634,7 +627,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
               <button
                 type="submit"
                 disabled={guardando || cargandoProducto}
-                className="px-4 py-2 text-sm rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition disabled:opacity-50"
+                className="px-4 py-2 text-sm rounded-lg bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition disabled:opacity-50"
               >
                 {guardando ? 'Guardando...' : producto ? 'Guardar cambios' : 'Crear producto'}
               </button>
@@ -642,6 +635,8 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
           </form>
         )}
       </div>
+
+      <ErrorModal mensaje={error} onClose={() => setError(null)} />
     </div>
   )
 }

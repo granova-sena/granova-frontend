@@ -146,6 +146,26 @@ html {
 .dark .bg-red-50 { background-color: rgba(239,68,68,0.10) !important; }
 .dark .bg-amber-50 { background-color: rgba(245,158,11,0.10) !important; }
 
+/* Badges de color que el override anterior no cubría (emerald/sky/violet/blue/purple):
+   se oscurecen igual que los de arriba para no "brillar" dentro del tema oscuro */
+.dark .bg-emerald-100 { background-color: rgba(16,185,129,0.14) !important; }
+.dark .bg-sky-100 { background-color: rgba(14,165,233,0.14) !important; }
+.dark .bg-violet-100 { background-color: rgba(139,92,246,0.16) !important; }
+.dark .bg-blue-100 { background-color: rgba(59,130,246,0.14) !important; }
+.dark .bg-purple-100 { background-color: rgba(168,85,247,0.16) !important; }
+
+/* Filas de agrupación de tablas que usan la variante /70, distinta de .bg-gray-50 */
+.dark .bg-gray-50\/70 { background-color: rgba(13,21,18,0.7) !important; }
+
+/* Textos fijos (hex arbitrarios) que los overrides de Tailwind no alcanzan:
+   áreas que quedaban ilegibles en modo oscuro (Users, DashboardHome, Empleados,
+   PromocionesAdmin, ResenasAdmin, modal de reportes del layout empleado) */
+.dark .text-\[\#1F2A24\] { color: #eafff2 !important; }
+
+/* Panel "Solo claro" de ReportesVentas: el contenedor beige se adapta al tema
+   oscuro para no dejar una franja clara dentro del panel */
+.dark .bg-\[\#F4F1EC\] { background-color: #0d1512 !important; }
+
 /* Títulos y etiquetas que antes tenían el verde oscuro (#0d4d33) fijo por
    inline style: en modo oscuro ese verde queda casi invisible sobre las
    tarjetas oscurecidas (#111c17). Con esta clase el color se adapta. */

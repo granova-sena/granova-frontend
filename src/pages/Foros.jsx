@@ -48,7 +48,7 @@ function ForosInterno() {
       try {
         setCargando(true);
         setError(null);
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token_cliente');
         const res = await fetch(`${API_URL}/foros`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
@@ -66,11 +66,19 @@ function ForosInterno() {
     return () => { cancelado = true; };
   }, []);
 
-  // Filtra las reseñas dentro de cada hilo según calificación mínima
+  // Filtra las reseñas dentro de cada hilo según calificación mínima.
+  // Number() porque el backend devuelve valores numeric como string.
+  // Al filtrar también se recalculan promedio y total del hilo para que
+  // la cabecera siempre coincida con lo que se está viendo.
   const hilosFiltrados = useMemo(() => {
-    if (filtro === 0) return hilos;
+    if (filtro === 0) return hilos.map(h => ({ ...h, resenas: h.resenas || [] }));
     return hilos
-      .map(h => ({ ...h, resenas: h.resenas.filter(r => r.calificacion >= filtro) }))
+      .map(h => {
+        const filtradas = (h.resenas || []).filter(r => Number(r.calificacion) >= filtro);
+        const total = filtradas.length;
+        const promedio = total > 0 ? filtradas.reduce((s, r) => s + Number(r.calificacion), 0) / total : 0;
+        return { ...h, resenas: filtradas, total_resenas: total, promedio };
+      })
       .filter(h => h.resenas.length > 0);
   }, [hilos, filtro]);
 
@@ -114,12 +122,25 @@ function ForosInterno() {
           </div>
         ) : hilosFiltrados.length === 0 ? (
           <div className="mt-10 rounded-2xl bg-[#0F1D13] border border-white/[0.08] py-16 text-center">
-            <p className="text-3xl mb-3">🌱</p>
-            <p className="text-white/60 text-sm font-medium">Aún no hay reseñas aquí.</p>
-            <p className="text-white/40 text-xs mt-1">Las reseñas nacen de compras entregadas — sé el primero en dejar una desde tus pedidos.</p>
-            <button type="button" onClick={() => navigate('/cliente/pedidos')} className="mt-5 h-10 px-6 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">
-              Ir a mis pedidos
-            </button>
+            {filtro !== 0 ? (
+              <>
+                <p className="text-3xl mb-3">🔍</p>
+                <p className="text-white/60 text-sm font-medium">Ninguna reseña coincide con este filtro.</p>
+                <p className="text-white/40 text-xs mt-1">Prueba con otra calificación.</p>
+                <button type="button" onClick={() => setFiltro(0)} className="mt-5 h-10 px-6 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">
+                  Ver todas las reseñas
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-3xl mb-3">🌱</p>
+                <p className="text-white/60 text-sm font-medium">Aún no hay reseñas aquí.</p>
+                <p className="text-white/40 text-xs mt-1">Las reseñas nacen de compras entregadas — sé el primero en dejar una desde tus pedidos.</p>
+                <button type="button" onClick={() => navigate('/cliente/pedidos')} className="mt-5 h-10 px-6 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">
+                  Ir a mis pedidos
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <div className="mt-8 space-y-4">

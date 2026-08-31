@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useCarrito } from "../context/CarritoContext";
 import { API_URL as BASE_API_URL } from "../config";
 import FadeIn from "../components/ui/FadeIn";
@@ -27,13 +27,17 @@ function IconoCorazon({ className = "", width = 20, height = 20, lleno = false }
 }
 
 function FavoritosInterno() {
-  const navigate = useNavigate();
   const { cliente, sincronizarCarrito, productos: productosContexto } = useCarrito();
   const esJuridica = cliente?.tipo_persona === 'juridica';
 
   const [productos, setProductos] = useState([]);
   const [descuentosVolumen, setDescuentosVolumen] = useState([]);
   const [favoritos, setFavoritos] = useState(() => cargarFavoritos());
+  // Cambio de sesión: recargar favoritos del usuario activo sin recargar la página
+  const uidSesion = cliente?.id ?? "invitado";
+  useEffect(() => {
+    setFavoritos(cargarFavoritos());
+  }, [uidSesion]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [detalle, setDetalle] = useState(null);
@@ -201,16 +205,18 @@ function FavoritosInterno() {
       </div>
 
       {/* Modal: mismo comportamiento de umbrales que el catálogo */}
-      <ModalConfirmarCantidad
-        data={confirmPendiente}
-        onCancelar={() => setConfirmPendiente(null)}
-        onAceptar={() => {
-          const { tipo, producto, disponibleRestante } = confirmPendiente;
-          if (tipo === "limitado") aplicarAgregar(producto, disponibleRestante);
-          else if (tipo === "masDeUno") aplicarAgregar(producto, producto.cant || 1);
-          setConfirmPendiente(null);
-        }}
-      />
+      {confirmPendiente && (
+        <ModalConfirmarCantidad
+          data={confirmPendiente}
+          onCancelar={() => setConfirmPendiente(null)}
+          onAceptar={() => {
+            const { tipo, producto, disponibleRestante } = confirmPendiente;
+            if (tipo === "limitado") aplicarAgregar(producto, disponibleRestante);
+            else if (tipo === "masDeUno") aplicarAgregar(producto, producto.cant || 1);
+            setConfirmPendiente(null);
+          }}
+        />
+      )}
 
       {detalle && (
         <DetalleProducto

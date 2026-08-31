@@ -1,15 +1,6 @@
 import { useState } from 'react'
 import { API_URL } from "../config";
 
-function obtenerIdCliente() {
-  try {
-    const cliente = JSON.parse(localStorage.getItem('cliente'))
-    return cliente?.id ?? null
-  } catch {
-    return null
-  }
-}
-
 // Ahora es "controlado": el padre decide si está abierto (onCerrar lo cierra).
 // Este componente ya no maneja su propio "abierto" — solo el contenido del formulario.
 function FormularioResena({ id_detalle, producto_nombre, onCerrar, onEnviado }) {
@@ -31,7 +22,7 @@ function FormularioResena({ id_detalle, producto_nombre, onCerrar, onEnviado }) 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token_cliente')}`,
         },
         body: JSON.stringify({
           id_detalle,

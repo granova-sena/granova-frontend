@@ -1,21 +1,43 @@
 import { motion } from "framer-motion";
 
 const PASOS = [
-  { id: "pendiente",   label: "Pedido recibido",  icono: "🕐", desc: "Estamos procesando tu compra" },
-  { id: "en_proceso",  label: "En preparación",   icono: "📦", desc: "Tostamos y empacamos tu café" },
+  { id: "pendiente",   label: "Confirmado",       icono: "✅", desc: "Tu pedido quedó confirmado" },
+  { id: "en_proceso",  label: "Empacando",        icono: "📦", desc: "Tostamos y empacamos tu café" },
   { id: "enviado",     label: "En camino",        icono: "🚚", desc: "Va hacia tu ciudad" },
   { id: "entregado",   label: "Entregado",        icono: "🏠", desc: "¡Café en tu puerta!" },
 ];
 
 // Mapea el estado del backend al índice del stepper
-// Backend tiene "confirmado" pero ya no lo mostramos como paso separado
 function estadoAIndice(estado) {
-  const mapa = { pendiente: 0, confirmado: 0, en_proceso: 1, enviado: 2, entregado: 3 };
+  const mapa = { pendiente: 0, confirmado: 0, en_proceso: 1, empacando: 1, enviado: 2, en_camino: 2, entregado: 3 };
   return mapa[estado] ?? -1;
 }
 
-export default function OrderStepper({ estado, compacto = false, fechaPedido = null }) {
+export default function OrderStepper({ estado, compacto = false, fechaPedido = null, pagado = false }) {
   const indexActual = estadoAIndice(estado);
+  const cancelado = estado === "cancelado" || estado === "rechazado";
+
+  if (cancelado) {
+    return (
+      <div className={`flex items-center gap-2 ${compacto ? "" : "justify-center"}`}>
+        <span
+          className="inline-flex items-center justify-center rounded-full shrink-0"
+          style={{ background: "rgba(216,93,48,0.15)", color: "#D85A30" }}
+          aria-hidden="true"
+        >
+          <span className={compacto ? "text-sm w-5 h-5 flex items-center justify-center" : "text-lg w-10 h-10"}>✕</span>
+        </span>
+        <div>
+          <p className={`font-medium ${compacto ? "text-xs" : "text-sm"}`} style={{ color: "#D85A30" }}>
+            Cancelado
+          </p>
+          {!compacto && (
+            <p className="text-[11px] text-white/50">Este pedido fue cancelado o rechazado.</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (compacto) {
     return (
@@ -63,13 +85,17 @@ export default function OrderStepper({ estado, compacto = false, fechaPedido = n
             <p className={`text-xs mt-2 text-center font-medium ${
               i <= indexActual ? "text-white" : "text-white/40"
             }`}>
-              {paso.label}
+              {paso.id === "pendiente" && pagado ? "Pagado" : paso.label}
             </p>
             {i === 0 && fechaPedido && (
               <p className="text-[10px] text-white/30">{fechaPedido}</p>
             )}
             {i > indexActual && (
-              <p className="text-[10px] text-white/30">{paso.desc}</p>
+              <p className="text-[10px] text-white/30">
+                {paso.id === "pendiente" && pagado
+                  ? "Tu pago fue recibido. Tu pedido será enviado en menos de 2 días."
+                  : paso.desc}
+              </p>
             )}
           </div>
           {i < PASOS.length - 1 && (

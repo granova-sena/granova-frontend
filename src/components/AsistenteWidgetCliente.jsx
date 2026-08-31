@@ -52,7 +52,7 @@ function normalizarRuta(ruta) {
 function obtenerClienteSesion() {
   try {
     const cliente = JSON.parse(localStorage.getItem('cliente'))
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token_cliente')
     if (cliente?.email && token) return cliente
   } catch {
     // localStorage corrupto o inaccesible: tratamos como cliente no identificado
@@ -286,6 +286,7 @@ function AsistenteWidgetCliente() {
           }
           setAbierto((v) => !v)
         }}
+        aria-label={abierto ? 'Cerrar chat de asistente' : 'Abrir chat de asistente'}
         className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-full transition-all duration-300 hover:scale-105 relative"
         style={{
           background: 'radial-gradient(circle at 30% 30%, #0f2b1c, #04140c)',

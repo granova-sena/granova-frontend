@@ -61,14 +61,14 @@ function RecomendadorModal({ onClose, onRecomendaciones }) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${localStorage.getItem('token_cliente')}`,
           },
           body: JSON.stringify({ ...nuevasRespuestas })
         })
 
         // Obtener recomendaciones
         const res = await fetch(`${API_URL}/api/preferencias/${id_cliente}/recomendaciones`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+          headers: { Authorization: `Bearer ${localStorage.getItem('token_cliente')}` },
         })
         const json = await res.json()
         if (json.ok) onRecomendaciones(json.data)

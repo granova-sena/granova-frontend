@@ -3,21 +3,32 @@ import { useState } from 'react'
 import { useCarrito } from '../context/CarritoContext'
 import toast from 'react-hot-toast'
 import { API_URL } from "../config";
+import { idDeTokenCliente } from '../services/session'
 
 const pasos = ['Datos y dirección', 'Método de pago', 'Confirmación']
 
 const metodosPago = [
-  { id: 'pse', nombre: 'PSE', descripcion: 'Pagos en línea de forma segura.', badge: 'PSE', badgeColor: 'bg-[#6FA98C]' },
-  { id: 'nequi', nombre: 'Nequi', descripcion: 'Paga fácilmente desde tu cuenta Nequi.', badge: 'NEQUI', badgeColor: 'bg-[#7B2D8B]' },
-  { id: 'daviplata', nombre: 'Daviplata', descripcion: 'Paga fácilmente tu cuenta Daviplata.', badge: 'Daviplata', badgeColor: 'bg-[#C8102E]' },
-  { id: 'transferencia', nombre: 'Transferencia bancaria', descripcion: 'Te enviaremos los datos para realizar la transferencia.', badge: null, icono: '🏦' },
-  { id: 'efectivo', nombre: 'Pago contra entrega', descripcion: 'Pagas cuando recibas tu pedido.', badge: null, icono: '🚚' },
+  { id: 'tarjeta', nombre: 'Tarjeta de crédito/débito', descripcion: 'Visa, Mastercard o American Express.', icono: '💳', pasarela: true, color: '#2F5CD0' },
+  { id: 'pse', nombre: 'PSE', descripcion: 'Paga directo desde tu banco.', icono: '🏦', pasarela: true, color: '#009B3A' },
+  { id: 'nequi', nombre: 'Nequi', descripcion: 'Paga al instante desde tu app Nequi.', icono: '📱', pasarela: true, color: '#9C0BBA' },
+  { id: 'daviplata', nombre: 'Daviplata', descripcion: 'Paga con tu app Daviplata.', icono: '📲', pasarela: true, color: '#E4002B' },
+  { id: 'transferencia', nombre: 'Transferencia bancaria', descripcion: 'Te enviaremos los datos para realizar la transferencia.', icono: '🏦', pasarela: false },
+  { id: 'efectivo', nombre: 'Efectivo', descripcion: 'Te enviaremos los datos para pagar en efectivo.', icono: '💵', pasarela: false },
+  { id: 'contra_entrega', nombre: 'Pago contra entrega', descripcion: 'Pagas cuando recibas tu pedido.', icono: '🚚', pasarela: false },
 ]
 
 const camposObligatorios = ['nombre', 'correo', 'telefono', 'direccion', 'ciudad']
 
+function methodEtiquetaPasarela() {
+  return <span className="text-white text-xs px-2 py-1 rounded font-bold bg-[#6FA98C] shrink-0">En línea</span>
+}
+
+function formatearIdPedido(id) {
+  return `PED-${new Date().getFullYear()}-${String(id).padStart(4, '0')}`
+}
+
 function ResumenLateral() {
-  const { subtotal, subtotalBase, descuentoProductos, descuentoCuponMonto, total, DESCUENTO, esMayorista, productos, cuponPct } = useCarrito()
+  const { subtotalBase, descuentoProductos, descuentoCuponMonto, total, esMayorista, productos, cuponPct } = useCarrito()
 
   return (
     <div className="w-full lg:w-72 shrink-0 flex flex-col gap-4">
@@ -82,7 +93,7 @@ function ResumenLateral() {
 
 function ConfigurarPedidoPage() {
   const navigate = useNavigate()
-  const { guardarDatosCliente, confirmarPedido, actualizarPerfilCliente, cuponValidado, validarCupon } = useCarrito()
+  const { guardarDatosCliente, confirmarPedido, actualizarPerfilCliente, cuponValidado, validarCupon, esJuridica } = useCarrito()
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
   const [idPedido, setIdPedido] = useState(null)
@@ -126,6 +137,12 @@ function ConfigurarPedidoPage() {
   const [premioGanado, setPremioGanado] = useState(false)
   const [puntosGanados, setPuntosGanados] = useState(0)
 
+  // Resultado post-confirmación según método de pago:
+  // 'pasarela' → se redirige a /pagar (pantalla aparte).
+  // 'verificacion' → transferencia/efectivo (pago pendiente de revisión).
+  // 'contra_entrega' → se cobra al entregar.
+  const [pagoResultado, setPagoResultado] = useState(null)
+
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
@@ -161,15 +178,9 @@ function ConfigurarPedidoPage() {
   // y actualiza el estado del carrito al instante (si se identifica como empresa,
   // el 10% de empresa se refleja en el resumen de inmediato).
   async function guardarFacturacion() {
-    const clienteGuardado = (() => {
-      try {
-        return JSON.parse(localStorage.getItem('cliente')) || {}
-      } catch {
-        return {}
-      }
-    })()
+    const idCliente = idDeTokenCliente()
 
-    if (!clienteGuardado.id) {
+    if (!idCliente) {
       return { ok: false, mensaje: 'Debes iniciar sesión para facturar' }
     }
 
@@ -186,10 +197,10 @@ function ConfigurarPedidoPage() {
       }
     }
 
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token_cliente')
 
     try {
-      const respuesta = await fetch(`${API_URL}/api/clientes/${clienteGuardado.id}`, {
+      const respuesta = await fetch(`${API_URL}/api/clientes/${idCliente}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -224,6 +235,66 @@ function ConfigurarPedidoPage() {
     telefono: !/^\d{7,15}$/.test(form.telefono.replace(/\s/g, '')),
     direccion: form.direccion.trim() === '',
     ciudad: form.ciudad.trim() === '',
+  }
+
+  // Crea el pedido (POST /api/pedidos) y según el método:
+  // - pasarela (tarjeta/pse/nequi/daviplata) → redirige a /pagar, donde se abre
+  //   el medio de pago (Wompi) automáticamente.
+  // - transferencia/efectivo → pantalla de verificación.
+  // - contra_entrega → se cobra al entregar.
+  async function confirmarYProcesar(metodo = metodoPago) {
+    if (cargando) return
+    setCargando(true)
+    setError(null)
+    try {
+      if (necesitaFactura && !tieneFacturacionGuardada) {
+        const resultadoFactura = await guardarFacturacion()
+        if (!resultadoFactura.ok) {
+          setError(resultadoFactura.mensaje)
+          return
+        }
+        toast.success('Datos de facturación guardados')
+      }
+
+      const resultado = await confirmarPedido(form, metodo, cuponCodigo)
+      if (resultado.ok) {
+        setIdPedido(resultado.id_pedido)
+        if (resultado.descuento_empresa) {
+          toast.success('🏢 ¡Descuento de empresa aplicado en tu pedido!')
+        }
+        if (resultado.descuento_fuente === 'cupon') {
+          toast.success('🎟️ ¡Cupón aplicado en tu pedido!')
+        }
+        if (resultado.descuento_ganado) {
+          setPremioGanado(true)
+          toast.success('🎉 ¡Ganaste 10% de descuento en tu próxima compra!')
+        } else if (!resultado.descuento_empresa && resultado.unidades_acumuladas > 0) {
+          toast.success(`🏆 Llevas ${resultado.unidades_acumuladas} de 5 productos para tu premio del 10%`)
+        }
+        if (resultado.puntos_ganados > 0) {
+          setPuntosGanados(resultado.puntos_ganados)
+          toast.success(`🎉 ¡Ganaste ${resultado.puntos_ganados} puntos de lealtad!`)
+        }
+
+        const metodoActual = metodosPago.find(mm => mm.id === metodo)
+        const totalFinal = resultado.total ?? 0
+        if (metodoActual?.pasarela) {
+          navigate(`/cliente/pagar?ref=${encodeURIComponent(resultado.pago?.referencia || '')}&id_pedido=${resultado.id_pedido}`)
+          return
+        }
+        if (metodo === 'contra_entrega') {
+          setPagoResultado({ tipo: 'contra_entrega', total: totalFinal })
+        } else {
+          setPagoResultado({ tipo: 'verificacion', total: totalFinal })
+        }
+      } else {
+        setError(resultado.mensaje)
+      }
+    } catch {
+      setError('No se pudo procesar el pedido. Revisa tu conexión e inténtalo de nuevo.')
+    } finally {
+      setCargando(false)
+    }
   }
 
   const formularioValido = camposObligatorios.every(campo => !errores[campo])
@@ -463,7 +534,8 @@ function ConfigurarPedidoPage() {
                   )}
                 </div>
 
-                {/* Cupón de lealtad (Frente D) */}
+                {/* Cupón de lealtad (Frente D) — solo personas naturales */}
+                {!esJuridica && (
                 <div className="col-span-1 sm:col-span-2 flex flex-col gap-1 border-t border-white/10 pt-4">
                   <label htmlFor="cupon-checkout" className="text-xs text-white/60">Cupón de lealtad (opcional)</label>
                   <div className="flex gap-2">
@@ -491,6 +563,7 @@ function ConfigurarPedidoPage() {
                   )}
                   <p className="text-xs text-white/40 mt-1">🎟️ Canjea puntos en Mi cuenta y aplica tu código aquí</p>
                 </div>
+                )}
 
               </div>
             </div>
@@ -500,27 +573,64 @@ function ConfigurarPedidoPage() {
           {pasoActual === 1 && (
             <div className="w-full min-w-0 flex-1 rounded-xl p-4 sm:p-6 lg:p-8 border border-white/15 bg-white/[0.08] backdrop-blur-xl">
               <h2 className="text-xl font-semibold text-white mb-1">Selecciona tu método de pago</h2>
-              <p className="text-xs text-white/40 mb-6">Elige la opción que más te convenga.</p>
+              <p className="text-xs text-white/40 mb-6">Elige la opción que más te convenga. Si pagas en línea, se abrirá el medio de pago seguro.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {metodosPago.map(m => (
-                  <button type="button" key={m.id} onClick={() => setMetodoPago(m.id)}
-                    className={`flex items-start justify-between p-4 rounded-xl border-2 text-left transition-colors
-                      ${metodoPago === m.id ? 'border-[#6FA98C] bg-[#6FA98C]/10' : 'border-white/15 bg-white/[0.04] hover:border-[#6FA98C]/50'}`}>
-                    <div className="flex items-start gap-3">
-                      <div className={`w-4 h-4 mt-1 rounded-full border-2 flex-shrink-0 flex items-center justify-center
-                        ${metodoPago === m.id ? 'border-[#6FA98C]' : 'border-white/30'}`}>
-                        {metodoPago === m.id && <div className="w-2 h-2 rounded-full bg-[#6FA98C]" />}
+                {metodosPago.map(m => {
+                  const seleccionado = metodoPago === m.id
+                  return (
+                    <div
+                      key={m.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setMetodoPago(m.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMetodoPago(m.id) } }}
+                      className={`flex flex-col justify-between p-4 rounded-xl border-2 text-left transition-all cursor-pointer
+                        ${m.pasarela
+                          ? (seleccionado
+                              ? 'bg-white/[0.07] shadow-lg'
+                              : 'bg-white/[0.04] hover:bg-white/[0.06]')
+                          : (seleccionado
+                              ? 'border-[#6FA98C] bg-[#6FA98C]/10'
+                              : 'border-white/15 bg-white/[0.04] hover:border-[#6FA98C]/50')}
+                        ${m.pasarela && seleccionado ? '' : m.pasarela ? 'border-white/15 hover:border-white/30' : ''}`}
+                      style={m.pasarela && seleccionado ? { borderColor: m.color } : undefined}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-4 h-4 mt-1 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${seleccionado ? 'border-[#6FA98C]' : 'border-white/30'}`}>
+                          {seleccionado && <div className="w-2 h-2 rounded-full bg-[#6FA98C]" />}
+                        </div>
+                        <span
+                          className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-lg"
+                          style={{ backgroundColor: m.color ? `${m.color}22` : 'rgba(255,255,255,0.06)', border: m.color ? `1px solid ${m.color}55` : '1px solid rgba(255,255,255,0.1)' }}
+                        >
+                          {m.icono}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white">{m.nombre}</p>
+                          <p className="text-xs text-white/40 mt-1">{m.descripcion}</p>
+                        </div>
+                        {m.pasarela && methodEtiquetaPasarela(m.id)}
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-white">{m.nombre}</p>
-                        <p className="text-xs text-white/40 mt-1">{m.descripcion}</p>
-                      </div>
+
+                      {/* Botón de cobro real: se abre el medio de pago al instante */}
+                      {m.pasarela && seleccionado && (
+                        <button
+                          type="button"
+                          disabled={cargando}
+                          onClick={(e) => { e.stopPropagation(); confirmarYProcesar(m.id) }}
+                          className="mt-4 w-full text-white text-sm font-semibold px-5 py-3 rounded-xl transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60 disabled:pointer-events-none"
+                          style={{ backgroundColor: m.color }}
+                        >
+                          {cargando ? 'Creando el pedido...' : `💳 Pagar con ${m.nombre}`}
+                        </button>
+                      )}
                     </div>
-                    {m.badge && <span className={`text-white text-xs px-2 py-1 rounded font-bold ${m.badgeColor}`}>{m.badge}</span>}
-                    {m.icono && <span className="text-xl">{m.icono}</span>}
-                  </button>
-                ))}
+                  )
+                })}
               </div>
+              <p className="text-[11px] text-white/40 mt-4">
+                🔒 Pagos procesados de forma segura por Wompi. Alcanza el botón del método para pagar en línea.
+              </p>
             </div>
           )}
 
@@ -534,55 +644,67 @@ function ConfigurarPedidoPage() {
                   </div>
                   <h2 className="text-xl font-semibold text-white">Confirmar pedido</h2>
                   <p className="text-sm text-white/50 text-center max-w-xs">
-                    Método de pago: <span className="font-semibold text-white">{metodoPago}</span>
+                    Método de pago:{' '}
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-white">
+                      {metodosPago.find(mm => mm.id === metodoPago)?.icono}{' '}
+                      {metodosPago.find(mm => mm.id === metodoPago)?.nombre || metodoPago}
+                    </span>
                   </p>
                   {error && (
                     <p className="text-sm text-[#D85A30] text-center">{error}</p>
                   )}
                   <button
                     type="button"
-                    onClick={async () => {
-                      setCargando(true)
-                      setError(null)
-
-                      if (necesitaFactura && !tieneFacturacionGuardada) {
-                        const resultadoFactura = await guardarFacturacion()
-                        if (!resultadoFactura.ok) {
-                          setError(resultadoFactura.mensaje)
-                          setCargando(false)
-                          return
-                        }
-                        toast.success('Datos de facturación guardados')
-                      }
-
-                      const resultado = await confirmarPedido(form, metodoPago, cuponCodigo)
-                      if (resultado.ok) {
-                        setIdPedido(resultado.id_pedido)
-                        if (resultado.descuento_empresa) {
-                          toast.success('🏢 ¡Descuento de empresa aplicado en tu pedido!')
-                        }
-                        if (resultado.descuento_fuente === 'cupon') {
-                          toast.success('🎟️ ¡Cupón aplicado en tu pedido!')
-                        }
-                        if (resultado.descuento_ganado) {
-                          setPremioGanado(true)
-                          toast.success('🎉 ¡Ganaste 10% de descuento en tu próxima compra!')
-                        } else if (!resultado.descuento_empresa && resultado.unidades_acumuladas > 0) {
-                          toast.success(`🏆 Llevas ${resultado.unidades_acumuladas} de 5 productos para tu premio del 10%`)
-                        }
-                        if (resultado.puntos_ganados > 0) {
-                          setPuntosGanados(resultado.puntos_ganados)
-                          toast.success(`🎉 ¡Ganaste ${resultado.puntos_ganados} puntos de lealtad!`)
-                        }
-                      } else {
-                        setError(resultado.mensaje)
-                      }
-                      setCargando(false)
-                    }}
+                    onClick={() => confirmarYProcesar(metodoPago)}
                     disabled={cargando}
                     className="mt-4 bg-[#6FA98C] text-white text-sm px-10 py-3 rounded-xl hover:bg-[#4F8A70] transition-colors disabled:opacity-50"
                   >
-                    {cargando ? 'Procesando...' : 'Confirmar pedido'}
+                    {cargando ? 'Creando el pedido...' : 'Confirmar pedido'}
+                  </button>
+                </>
+              ) : pagoResultado?.tipo === 'verificacion' ? (
+                <>
+                  <div className="w-16 h-16 bg-[#D8A92E]/15 rounded-full flex items-center justify-center text-3xl">
+                    ⏳
+                  </div>
+                  <h2 className="text-xl font-semibold text-white">Pedido en verificación de pago</h2>
+                  <p className="text-sm text-white/50 text-center max-w-sm">
+                    Tu pedido <span className="font-semibold text-white">#{formatearIdPedido(idPedido)}</span> quedó creado, pero el pago de{' '}
+                    <span className="font-semibold text-white">${Number(pagoResultado.total).toLocaleString()}</span> está pendiente de
+                    verificación. Nuestro equipo revisará el pago y confirmará tu pedido en breve.
+                  </p>
+                  <div className="w-full max-w-sm rounded-xl border border-[#D8A92E]/30 bg-[#D8A92E]/10 px-4 py-3 text-left text-xs text-amber-100/80">
+                    <p className="font-semibold text-amber-200 mb-1">💡 Recuerda</p>
+                    <p>Para <span className="font-semibold">transferencia</span> o <span className="font-semibold">efectivo</span>, el pago debe
+                    aprobarse manualmente antes de que el pedido avance.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/cliente/pedidos')}
+                    className="mt-4 bg-[#6FA98C] text-white text-sm px-10 py-3 rounded-xl hover:bg-[#4F8A70] transition-colors"
+                  >
+                    Ver mis pedidos
+                  </button>
+                </>
+              ) : pagoResultado?.tipo === 'contra_entrega' ? (
+                <>
+                  <div className="w-16 h-16 bg-[#1D9E75]/15 rounded-full flex items-center justify-center text-3xl">
+                    🚚
+                  </div>
+                  <h2 className="text-xl font-semibold text-white">Pagas al recibir</h2>
+                  <p className="text-sm text-white/50 text-center max-w-sm">
+                    Tu pedido <span className="font-semibold text-white">#{formatearIdPedido(idPedido)}</span> de{' '}
+                    <span className="font-semibold text-white">${Number(pagoResultado.total).toLocaleString()}</span> está confirmado.
+                  </p>
+                  <p className="text-xs text-white/40 text-center max-w-xs">
+                    💵 Se cobra al momento de la entrega. No necesitas pagar ahora.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/cliente/pedidos')}
+                    className="mt-4 bg-[#6FA98C] text-white text-sm px-10 py-3 rounded-xl hover:bg-[#4F8A70] transition-colors"
+                  >
+                    Ver mis pedidos
                   </button>
                 </>
               ) : (
@@ -631,9 +753,11 @@ function ConfigurarPedidoPage() {
             <button
               type="button"
               onClick={siguientePaso}
+              disabled={pasoActual === 0 && intentoContinuar && !formularioValido}
+              aria-disabled={pasoActual === 0 && intentoContinuar && !formularioValido}
               className={`w-full sm:w-auto text-white text-sm px-8 sm:px-16 py-3 rounded-xl transition-colors
                 ${pasoActual === 0 && intentoContinuar && !formularioValido
-                  ? 'bg-white/15 cursor-not-allowed'
+                  ? 'bg-white/15 cursor-not-allowed opacity-60'
                   : 'bg-[#6FA98C] hover:bg-[#4F8A70]'
                 }`}
             >

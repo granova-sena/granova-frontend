@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
+import toast from 'react-hot-toast'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
+import { existeDuplicado } from '../utils/validacion'
+import { PageHeader, StatCard, PanelCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
 
 const ROLES = ['empleado', 'gerente', 'admin']
 
 const rolLabel = { admin: 'Admin', gerente: 'Gerente', empleado: 'Empleado' }
 const rolBadge = {
-  admin: 'bg-[#e8f9ee] text-[#2c7b4b]',
-  gerente: 'bg-[#eef2fb] text-[#3a4fb0]',
-  empleado: 'bg-[#f1f5f2] text-[#5f7268]',
+  admin: 'bg-green-100 text-green-700',
+  gerente: 'bg-sky-100 text-sky-700',
+  empleado: 'bg-gray-100 text-gray-600',
 }
 
 function formatFecha(fecha) {
@@ -22,6 +26,8 @@ function Inventario() {
 
   const [showModal, setShowModal] = useState(false)
   const [menuOpenId, setMenuOpenId] = useState(null)
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState(false)
+  const [eliminandoId, setEliminandoId] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [formError, setFormError] = useState(null)
   const [form, setForm] = useState({ nombre: '', apellido: '', email: '', contraseña: '', rol: 'empleado' })
@@ -43,19 +49,21 @@ function Inventario() {
       const res = await api.patch(`/usuarios/${id}/estado`)
       setUsers(prev => prev.map(u => u.id_usuario === id ? { ...u, estado: res.data.usuario.estado } : u))
     } catch (err) {
-      alert(err.response?.data?.error || 'No se pudo cambiar el estado.')
+      toast.error(err.response?.data?.error || 'No se pudo cambiar el estado.')
     }
   }
 
-  const deleteUser = async (id) => {
-    setMenuOpenId(null)
-    if (!confirm('¿Eliminar este usuario? Podrás verlo de nuevo solo si lo restauras desde la base de datos.')) return
+  const deleteUser = async () => {
+    setConfirmandoEliminar(false)
+    if (!eliminandoId) return
     try {
-      await api.delete(`/usuarios/${id}`)
-      setUsers(prev => prev.filter(u => u.id_usuario !== id))
+      await api.delete(`/usuarios/${eliminandoId}`)
+      setUsers(prev => prev.filter(u => u.id_usuario !== eliminandoId))
+      toast.success('Usuario eliminado')
     } catch (err) {
-      alert(err.response?.data?.error || 'No se pudo eliminar el usuario.')
+      toast.error(err.response?.data?.error || 'No se pudo eliminar el usuario.')
     }
+    setEliminandoId(null)
   }
 
   const crearUsuario = async (e) => {
@@ -64,6 +72,10 @@ function Inventario() {
 
     if (!form.nombre || !form.apellido || !form.email || !form.contraseña) {
       setFormError('Completa todos los campos.')
+      return
+    }
+    if (existeDuplicado(users, 'email', form.email)) {
+      setFormError('Ya existe un usuario con ese correo.')
       return
     }
 
@@ -80,8 +92,11 @@ function Inventario() {
     }
   }
 
+  const activos = users.filter(u => u.estado === 'activo').length
+  const administradores = users.filter(u => u.rol === 'admin').length
+
   return (
-    <div>
+    <div className="space-y-6">
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(-8px); }
@@ -98,94 +113,91 @@ function Inventario() {
         .toggle-dot { transition: transform 0.25s ease; }
       `}</style>
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-[#f7fffb]">Gestión de usuarios</h1>
-          <p className="text-[#5f7268] mt-1 text-sm">Administra los usuarios y sus roles dentro de Granova</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition w-full sm:w-auto"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          Agregar usuario
-        </button>
-      </div>
+      <PageHeader
+        titulo="Gestión de usuarios"
+        subtitulo="Administra los usuarios y sus roles dentro de Granova."
+        acciones={
+          <BotonPrimario onClick={() => setShowModal(true)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            Agregar usuario
+          </BotonPrimario>
+        }
+      />
 
       {error && (
-        <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 panel-come">
           Error al cargar usuarios: {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
-        <div className="panel-card rounded-xl p-4">
-          <p className="text-xs text-[#5f7268]">Total usuarios</p>
-          <p className="text-2xl font-semibold text-[#11261d] mt-1">{users.length}</p>
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className={`bg-white rounded-2xl border border-gray-200 p-5 h-24 animate-pulse ${i ? 'hidden sm:block' : ''}`}></div>
+          ))}
         </div>
-        <div className="panel-card rounded-xl p-4">
-          <p className="text-xs text-[#5f7268]">Activos</p>
-          <p className="text-2xl font-semibold text-[#16a65a] mt-1">{users.filter(u => u.estado === 'activo').length}</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <StatCard icono="👥" label="Total usuarios" value={String(users.length)} sub="en el sistema" tono="verde" delay="panel-come-d1" />
+          <StatCard icono="✅" label="Activos" value={String(activos)} sub="cuentas operativas" tono="cielo" delay="panel-come-d2" />
+          <StatCard icono="🛡️" label="Administradores" value={String(administradores)} sub="con acceso total" tono="violeta" delay="panel-come-d3" />
         </div>
-        <div className="panel-card rounded-xl p-4">
-          <p className="text-xs text-[#5f7268]">Administradores</p>
-          <p className="text-2xl font-semibold text-[#11261d] mt-1">{users.filter(u => u.rol === 'admin').length}</p>
-        </div>
-      </div>
+      )}
 
-      <div className="panel-card rounded-xl overflow-x-auto">
-        <table className="w-full text-sm min-w-[760px]">
-          <thead>
-            <tr className="border-b border-[#e7f0e8] bg-[rgba(247,255,249,0.8)]">
-              <th className="text-left px-6 py-3 font-medium text-[#5f7268]">Nombre</th>
-              <th className="text-left px-6 py-3 font-medium text-[#5f7268]">Correo</th>
-              <th className="text-left px-6 py-3 font-medium text-[#5f7268]">Rol</th>
-              <th className="text-left px-6 py-3 font-medium text-[#5f7268]">Estado</th>
-              <th className="text-left px-6 py-3 font-medium text-[#5f7268]">Registro</th>
-              <th className="text-right px-6 py-3 font-medium text-[#5f7268]">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="py-6 px-6 text-center text-[#5f7268]">Cargando usuarios...</td>
+      <PanelCard className="overflow-x-auto">
+        {loading ? (
+          <div className="p-5"><PanelSkeleton filas={4} columnas={5} /></div>
+        ) : users.length === 0 ? (
+          <EmptyState
+            icono="👥"
+            titulo="No hay usuarios registrados"
+            descripcion="Crea el primer usuario para comenzar a gestionar acceso al panel."
+          />
+        ) : (
+          <table className="w-full text-sm min-w-[760px]">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50 text-left text-gray-500">
+                <th className="px-5 py-3 font-medium">Nombre</th>
+                <th className="px-5 py-3 font-medium">Correo</th>
+                <th className="px-5 py-3 font-medium">Rol</th>
+                <th className="px-5 py-3 font-medium">Estado</th>
+                <th className="px-5 py-3 font-medium">Registro</th>
+                <th className="px-5 py-3 font-medium text-right">Acciones</th>
               </tr>
-            ) : users.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-6 px-6 text-center text-[#5f7268]">No hay usuarios registrados.</td>
-              </tr>
-            ) : (
-              users.map((user) => (
-                <tr key={user.id_usuario} className="row-hover border-b border-[#eef4ef] transition-colors">
-                  <td className="px-6 py-3.5 text-[#11261d] font-medium">{user.nombre} {user.apellido}</td>
-                  <td className="px-6 py-3.5 text-[#5f7268]">{user.email}</td>
-                  <td className="px-6 py-3.5">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${rolBadge[user.rol] || 'bg-[#f1f5f2] text-[#5f7268]'}`}>
+            </thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user.id_usuario} className="row-hover border-b border-gray-100 last:border-0 transition-colors">
+                  <td className="px-5 py-3.5 text-gray-800 font-medium">{user.nombre} {user.apellido}</td>
+                  <td className="px-5 py-3.5 text-gray-500">{user.email}</td>
+                  <td className="px-5 py-3.5">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${rolBadge[user.rol] || 'bg-gray-100 text-gray-600'}`}>
                       {rolLabel[user.rol] || user.rol}
                     </span>
                   </td>
-                  <td className="px-6 py-3.5">
+                  <td className="px-5 py-3.5">
                     <button
                       type="button"
                       onClick={() => toggleStatus(user.id_usuario)}
                       className="toggle-bg relative w-11 h-6 rounded-full"
                       style={{ background: user.estado === 'activo' ? '#2fe37e' : '#d1d5db' }}
-                    > 
+                      title={user.estado === 'activo' ? 'Activo — clic para desactivar' : 'Inactivo — clic para activar'}
+                    >
                       <span
                         className="toggle-dot absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow"
                         style={{ transform: user.estado === 'activo' ? 'translateX(20px)' : 'translateX(0)' }}
                       ></span>
                     </button>
                   </td>
-                  <td className="px-6 py-3.5 text-[#5f7268]">{formatFecha(user.fecha_creacion)}</td>
-                  <td className="px-6 py-3.5 text-right relative">
+                  <td className="px-5 py-3.5 text-gray-500">{formatFecha(user.fecha_creacion)}</td>
+                  <td className="px-5 py-3.5 text-right relative">
                     <button
                       type="button"
                       onClick={() => setMenuOpenId(menuOpenId === user.id_usuario ? null : user.id_usuario)}
-                      className="p-1.5 hover:bg-[#f2f7f2] rounded-lg transition"
+                      className="p-1.5 hover:bg-gray-50 rounded-lg transition"
+                      title="Opciones"
                     >
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                         <circle cx="12" cy="6" r="1.5" fill="#6b7280"/>
@@ -195,11 +207,11 @@ function Inventario() {
                     </button>
 
                     {menuOpenId === user.id_usuario && (
-                      <div className="fade-in absolute right-6 top-10 bg-white rounded-xl shadow-lg border border-[#e7f0e8] py-1 w-36 z-10 text-left">
+                      <div className="fade-in absolute right-6 top-10 bg-white rounded-xl shadow-lg border border-gray-200 py-1 w-36 z-10 text-left">
                         <button
                           type="button"
-                          onClick={() => deleteUser(user.id_usuario)}
-                          className="w-full text-left px-4 py-2 text-sm text-[#A32D2D] hover:bg-red-50 transition"
+                          onClick={() => { setMenuOpenId(null); setEliminandoId(user.id_usuario); setConfirmandoEliminar(true) }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition"
                         >
                           Eliminar
                         </button>
@@ -207,11 +219,11 @@ function Inventario() {
                     )}
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </PanelCard>
 
       {showModal && (
         <div
@@ -226,9 +238,9 @@ function Inventario() {
             role="presentation"
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
-            className="modal-in panel-card rounded-2xl p-6 w-full max-w-md"
+            className="modal-in panel-card bg-white rounded-2xl border border-gray-200 p-6 w-full max-w-md"
           >
-            <h3 className="text-lg font-semibold text-[#11261d] mb-4">Agregar nuevo usuario</h3>
+            <h3 className="text-lg font-semibold text-admin-heading mb-4">Agregar nuevo usuario</h3>
 
             <form onSubmit={crearUsuario}>
               {formError && (
@@ -239,70 +251,70 @@ function Inventario() {
 
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label htmlFor="nombre-usuario" className="block text-sm text-[#5f7268] mb-1.5">Nombre</label>
+                  <label htmlFor="nombre-usuario" className="block text-sm text-gray-600 mb-1.5">Nombre</label>
                   <input
                     id="nombre-usuario"
                     type="text"
                     placeholder="Nombre"
                     value={form.nombre}
                     onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                    className="input-field w-full px-4 py-2.5 rounded-xl text-sm transition"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:border-[#1D9E75] transition placeholder:text-gray-400"
                   />
                 </div>
                 <div>
-                  <label htmlFor="apellido-usuario" className="block text-sm text-[#5f7268] mb-1.5">Apellido</label>
+                  <label htmlFor="apellido-usuario" className="block text-sm text-gray-600 mb-1.5">Apellido</label>
                   <input
                     id="apellido-usuario"
                     type="text"
                     placeholder="Apellido"
                     value={form.apellido}
                     onChange={(e) => setForm({ ...form, apellido: e.target.value })}
-                    className="input-field w-full px-4 py-2.5 rounded-xl text-sm transition"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:border-[#1D9E75] transition placeholder:text-gray-400"
                   />
                 </div>
               </div>
 
               <div className="mb-3">
-                <label htmlFor="email-usuario" className="block text-sm text-[#5f7268] mb-1.5">Correo electrónico</label>
+                <label htmlFor="email-usuario" className="block text-sm text-gray-600 mb-1.5">Correo electrónico</label>
                 <input
                   id="email-usuario"
                   type="email"
                   placeholder="correo@ejemplo.com"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="input-field w-full px-4 py-2.5 rounded-xl text-sm transition"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:border-[#1D9E75] transition placeholder:text-gray-400"
                 />
               </div>
 
               <div className="mb-3">
-                <label htmlFor="password-usuario" className="block text-sm text-[#5f7268] mb-1.5">Contraseña</label>
+                <label htmlFor="password-usuario" className="block text-sm text-gray-600 mb-1.5">Contraseña</label>
                 <input
                   id="password-usuario"
                   type="password"
                   placeholder="Mínimo 6 caracteres"
                   value={form.contraseña}
                   onChange={(e) => setForm({ ...form, contraseña: e.target.value })}
-                  className="input-field w-full px-4 py-2.5 rounded-xl text-sm transition"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:border-[#1D9E75] transition placeholder:text-gray-400"
                 />
               </div>
 
               <div className="mb-5">
-                <label htmlFor="rol-usuario" className="block text-sm text-[#5f7268] mb-1.5">Rol</label>
+                <label htmlFor="rol-usuario" className="block text-sm text-gray-600 mb-1.5">Rol</label>
                 <select
                   id="rol-usuario"
                   value={form.rol}
                   onChange={(e) => setForm({ ...form, rol: e.target.value })}
-                  className="input-field w-full px-4 py-2.5 rounded-xl text-sm transition"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:border-[#1D9E75] transition"
                 >
                   {ROLES.map(r => <option key={r} value={r}>{rolLabel[r]}</option>)}
                 </select>
               </div>
 
               <div className="flex gap-3">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1 py-2.5 rounded-xl text-sm font-medium transition">
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition">
                   Cancelar
                 </button>
-                <button type="submit" disabled={guardando} className="btn-primary flex-1 py-2.5 rounded-xl text-sm font-medium transition disabled:opacity-50">
+                <button type="submit" disabled={guardando} className="flex-1 py-2.5 rounded-xl bg-[#1D9E75] text-white text-sm font-medium hover:bg-[#178a64] transition disabled:opacity-50">
                   {guardando ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
@@ -310,6 +322,15 @@ function Inventario() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        abierto={confirmandoEliminar}
+        titulo="¿Eliminar este usuario?"
+        mensaje="Podrás verlo de nuevo solo si lo restauras desde la base de datos."
+        confirmarTexto="Eliminar"
+        onConfirmar={deleteUser}
+        onCancelar={() => { setConfirmandoEliminar(false); setEliminandoId(null) }}
+      />
     </div>
   )
 }

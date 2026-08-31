@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import logo from '../assets/logo.png'
 import AsistenteWidgetCliente from '../components/AsistenteWidgetCliente'
+import CampanitaNotificaciones from '../components/CampanitaNotificaciones'
+import ModalResenaPedido from '../components/ModalResenaPedido'
 import { useCarrito } from '../context/CarritoContext'
 
 const ENLACES = [
@@ -17,6 +19,7 @@ function ClienteLayout() {
   const { limpiarSesion } = useCarrito()
   const [menuOpen, setMenuOpen] = useState(false)
   const [cuentaOpen, setCuentaOpen] = useState(false)
+  const [resenaPedido, setResenaPedido] = useState(null)
   const cuentaRef = useRef(null)
 
   const cliente = (() => {
@@ -74,6 +77,8 @@ function ClienteLayout() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Notificaciones 🔔 */}
+            <CampanitaNotificaciones onAbrirResena={(idPedido) => setResenaPedido(idPedido)} />
             {/* Cuenta (desktop) */}
             <div className="relative hidden md:block" ref={cuentaRef}>
              <button
@@ -174,6 +179,11 @@ function ClienteLayout() {
 
       <Outlet />
       <AsistenteWidgetCliente />
+
+      {/* Modal reseña desde notificación */}
+      {resenaPedido && (
+        <ModalResenaPedido pedidoId={resenaPedido} onClose={() => setResenaPedido(null)} />
+      )}
     </div>
   )
 }

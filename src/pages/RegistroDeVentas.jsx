@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 import api from '../services/api'
 import { formatMoney, formatFecha } from '../utils/format'
 import VentaModal from '../components/VentaModal'
+import { PageHeader, StatCard, PanelCard, EmptyState, BotonPrimario, Paginado, FilaGrupo } from '../components/ui/panel/PanelKit'
 
 function estadoStyle(estado) {
   const e = (estado || '').toLowerCase()
@@ -80,15 +82,29 @@ function FilaVenta({ v, menuAbierto, setMenuAbierto, confirmarVenta, confirmando
 
 function FragmentoGrupoVentas({ finca, filas, ...propsFila }) {
   const totalGrupo = filas.reduce((s, f) => s + f.total, 0)
-  return (
-    <>
-      <tr className="bg-gray-50/70">
-        <td colSpan={8} className="py-2 px-5 text-xs font-medium text-gray-600">
-          {finca} — {filas.length} venta{filas.length === 1 ? '' : 's'} · {formatMoney(totalGrupo)}
+  const lotes = filas.reduce((grupos, v) => {
+    const clave = v.lote || 'Sin lote'
+    grupos[clave] = grupos[clave] || []
+    grupos[clave].push(v)
+    return grupos
+  }, {})
+  const filasConLotes = Object.entries(lotes).flatMap(([lote, filasLote]) => {
+    const totalLote = filasLote.reduce((s, f) => s + f.total, 0)
+    return [
+      <tr key={`lote-${lote}`} className="bg-emerald-50/60">
+        <td colSpan={8} className="py-1.5 px-5 pl-9 text-xs font-medium text-[#178a64]">
+          ◆ {lote} — {filasLote.length} venta{filasLote.length === 1 ? '' : 's'} · {formatMoney(totalLote)}
         </td>
-      </tr>
-      {filas.map((v) => <FilaVenta key={v.factura} v={v} {...propsFila} />)}
-    </>
+      </tr>,
+      ...filasLote.map((v) => <FilaVenta key={v.factura} v={v} {...propsFila} />),
+    ]
+  })
+  return (
+    <FilaGrupo
+      span={8}
+      datos={`${finca} — ${filas.length} venta${filas.length === 1 ? '' : 's'} · ${formatMoney(totalGrupo)}`}
+      filas={filasConLotes}
+    />
   )
 }
 
@@ -102,7 +118,6 @@ function RegistroVentas() {
   const [totalFiltrados, setTotalFiltrados] = useState(0)
 
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [mostrarModal, setMostrarModal] = useState(false)
   const [exportando, setExportando] = useState(false)
   const [menuAbierto, setMenuAbierto] = useState(null)
@@ -111,7 +126,7 @@ function RegistroVentas() {
   const cargarResumen = () => {
     api.get('/ventas/resumen')
       .then(res => setResumen(res.data))
-      .catch(err => setError(err.message))
+      .catch(err => toast.error('Error al cargar resumen: ' + err.message))
   }
 
   const cargarVentas = () => {
@@ -122,7 +137,7 @@ function RegistroVentas() {
         setTotalPaginas(res.data.totalPaginas)
         setTotalFiltrados(res.data.totalFiltrados)
       })
-      .catch(err => setError(err.message))
+      .catch(err => toast.error('Error al cargar ventas: ' + err.message))
       .finally(() => setLoading(false))
   }
 
@@ -152,8 +167,9 @@ function RegistroVentas() {
       setMenuAbierto(null)
       cargarResumen()
       cargarVentas()
+      toast.success('Venta confirmada')
     } catch (err) {
-      alert(err.response?.data?.error || 'No se pudo confirmar la venta.')
+      toast.error(err.response?.data?.error || 'No se pudo confirmar la venta.')
     } finally {
       setConfirmando(null)
     }
@@ -178,65 +194,64 @@ function RegistroVentas() {
       XLSX.utils.book_append_sheet(libro, hoja, 'Ventas')
       XLSX.writeFile(libro, `registro-ventas-pagina-${pagina}.xlsx`)
     } catch (err) {
-      alert('No se pudo generar el Excel: ' + err.message)
+      toast.error('No se pudo generar el Excel: ' + err.message)
     } finally {
       setExportando(false)
     }
   }
 
-  if (error) return <p className="text-red-500">Error al cargar ventas: {error}</p>
-
   const stats = resumen ? [
-    { label: 'Ventas del mes', value: formatMoney(resumen.ventasDelMes), change: `${resumen.cambioVentas >= 0 ? '↑ +' : ''}${resumen.cambioVentas}% vs mes anterior`, changeClass: 'text-[#1D9E75]' },
-    { label: 'Clientes activos', value: String(resumen.clientesActivos), change: `↑ +${resumen.clientesNuevos} nuevos este mes`, changeClass: 'text-[#1D9E75]' },
-    { label: 'Kg vendidos', value: resumen.kgVendidos.toLocaleString('es-CO'), change: '↑ este mes', changeClass: 'text-[#1D9E75]' },
-    { label: 'Facturas emitidas', value: String(resumen.facturasEmitidas), change: 'este mes', changeClass: 'text-gray-400' },
+    { label: 'Ventas del mes', value: formatMoney(resumen.ventasDelMes), sub: `${resumen.cambioVentas >= 0 ? '↑ +' : ''}${resumen.cambioVentas}% vs mes anterior`, tono: 'verde', icono: '💰' },
+    { label: 'Clientes activos', value: String(resumen.clientesActivos), sub: `↑ +${resumen.clientesNuevos} nuevos este mes`, tono: 'cielo', icono: '👥' },
+    { label: 'Kg vendidos', value: resumen.kgVendidos.toLocaleString('es-CO'), sub: '↑ este mes', tono: 'ambar', icono: '⚖️' },
+    { label: 'Facturas emitidas', value: String(resumen.facturasEmitidas), sub: 'este mes', tono: 'violeta', icono: '🧾' },
   ] : []
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Registro de ventas"
+        subtitulo="Ventas de mostrador y su confirmación."
+        acciones={(
+          <>
+            <button
+              type="button"
+              onClick={exportarExcel}
+              disabled={exportando}
+              className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg border border-gray-300 bg-[#1D9E75] text-white hover:bg-[#178a64] transition disabled:opacity-50"
+            >
+              ↓ {exportando ? 'Generando...' : `Exportar página ${pagina}`}
+            </button>
+            {!esAdmin() && (
+              <BotonPrimario onClick={() => setMostrarModal(true)}>+ Nueva venta</BotonPrimario>
+            )}
+          </>
+        )}
+      />
+
       {!resumen ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 h-20 animate-pulse"></div>
+            <div key={i} className={`bg-white rounded-2xl border border-gray-200 p-5 h-24 animate-pulse ${i ? 'hidden sm:block' : ''}`}></div>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => (
-            <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5">
-              <p className="text-sm text-gray-500">{stat.label}</p>
-              <p className="text-2xl font-semibold text-gray-800 mt-1">{stat.value}</p>
-              <p className={`text-xs mt-1 ${stat.changeClass}`}>{stat.change}</p>
-            </div>
+          {stats.map((stat, i) => (
+            <StatCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              sub={stat.sub}
+              tono={stat.tono}
+              icono={stat.icono}
+              delay={i ? `panel-come-d${i + 1}` : ''}
+            />
           ))}
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-admin-heading">Registro de ventas</h2>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={exportarExcel}
-            disabled={exportando}
-            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition disabled:opacity-50"
-          >
-            ↓ {exportando ? 'Generando...' : `Exportar página ${pagina}`}
-          </button>
-          {!esAdmin() && (
-            <button
-              type="button"
-              onClick={() => setMostrarModal(true)}
-              className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition"
-            >
-              + Nueva venta
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-200 lg:mr-20">
+      <PanelCard animado={false} className="overflow-hidden">
         <div className="p-4 border-b border-gray-100">
           <p className="text-sm font-medium mb-1.5 text-admin-heading">Buscar</p>
           <div className="relative max-w-md">
@@ -249,13 +264,13 @@ function RegistroVentas() {
               value={busqueda}
               onChange={(e) => cambiarBusqueda(e.target.value)}
               placeholder="Buscar cliente, producto o factura..."
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 rounded-lg text-sm focus:outline-none focus:bg-white focus:border focus:border-[#1D9E75] transition placeholder:text-[#5c7a6b] text-admin-heading"
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 rounded-lg text-sm focus:outline-none focus:bg-white focus:border focus:border-[#1D9E75] transition placeholder:text-gray-400 text-admin-heading"
             />
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <div className="flex justify-end px-1 pb-2">
+          <div className="flex justify-end px-1 pb-2 pt-3">
             <button
               type="button"
               onClick={() => setAgruparPorFinca((v) => !v)}
@@ -264,7 +279,7 @@ function RegistroVentas() {
               {agruparPorFinca ? 'Ver lista plana' : 'Agrupar por finca'}
             </button>
           </div>
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="text-left text-gray-500 bg-gray-50">
                 <th className="py-3 px-5 font-medium">Factura</th>
@@ -284,7 +299,9 @@ function RegistroVentas() {
                 </tr>
               ) : ventas.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-6 px-5 text-center text-gray-400">No se encontraron ventas.</td>
+                  <td colSpan={8} className="px-5">
+                    <EmptyState icono="💳" titulo="No se encontraron ventas" descripcion="Prueba con otro término de búsqueda o registra una nueva venta." />
+                  </td>
                 </tr>
               ) : agruparPorFinca ? (
                 Object.entries(
@@ -325,22 +342,9 @@ function RegistroVentas() {
           <p className="text-sm text-gray-500">
             Mostrando {ventas.length} de {totalFiltrados} ventas
           </p>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
-              <button
-                type="button"
-                key={n}
-                onClick={() => setPagina(n)}
-                className={`w-8 h-8 rounded-lg text-sm transition ${
-                  n === pagina ? 'bg-[#1D9E75]/10 text-[#1D9E75] font-medium' : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
+          <Paginado pagina={pagina} totalPaginas={totalPaginas} onChange={setPagina} />
         </div>
-      </div>
+      </PanelCard>
 
       {mostrarModal && (
         <VentaModal

@@ -3,6 +3,18 @@ import { useState, useEffect } from 'react'
 import { API_URL } from "../config";
 import FormularioResena from '../components/FormularioResena'
 import OrderStepper from '../components/ui/OrderStepper'
+import EstadoPagoBadge from '../components/ui/EstadoPagoBadge'
+
+const METODOS_PASARELA = ['tarjeta', 'pse', 'nequi', 'daviplata']
+const esMetodoPasarela = (metodo) => METODOS_PASARELA.includes(String(metodo || '').toLowerCase())
+
+// Solo se permite pagar mientras el pago siga pendiente. Si el pago falló, la
+// venta fue rechazada: el cliente hace una compra nueva.
+function necesitaPagar(estadoPago, metodoPago) {
+  // Pendiente con método de pasarela (online): el cliente aún debe pagar.
+  if (estadoPago === 'pendiente' && esMetodoPasarela(metodoPago)) return true
+  return false
+}
 
 function EstadoPedidoPage() {
   const navigate = useNavigate()
@@ -16,7 +28,7 @@ function EstadoPedidoPage() {
     async function cargarPedido() {
       try {
         setCargando(true)
-        const token = localStorage.getItem('token')
+        const token = localStorage.getItem('token_cliente')
         const res = await fetch(`${API_URL}/pedidos/${id}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         })
@@ -54,27 +66,72 @@ function EstadoPedidoPage() {
 
   const productoEnResena = pedido.productos?.find(p => p.id_detalle === resenaAbierta)
 
+  const estadoVisible = pedido.estado_pago === 'pagado'
+    ? 'Pagado'
+    : (pedido.estado === 'en_proceso' ? 'En preparación' : pedido.estado)
+
   return (
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
       <div className="max-w-5xl mx-auto px-4 sm:px-8 py-10 text-white">
 
         {/* Encabezado */}
         <h1 className="text-2xl sm:text-3xl font-semibold mb-1 tracking-tight">Estado del pedido</h1>
-        <div className="flex items-center gap-3 mb-1">
+        <div className="flex flex-wrap items-center gap-3 mb-1">
           <span className="text-sm font-medium text-white">
             Pedido #{formatearNumero(pedido.id_pedido)}
           </span>
-          <span className="bg-[#6FA98C] text-white text-xs px-3 py-1 rounded-full font-medium">
-            {pedido.estado === 'en_proceso' ? 'En preparación' : pedido.estado}
+          <span className="bg-[#6FA98C] text-white text-xs px-3 py-1 rounded-full font-medium capitalize">
+            {estadoVisible}
           </span>
+          <EstadoPagoBadge estadoPago={pedido.estado_pago} />
         </div>
-        <p className="text-xs text-white/40 mb-8">
+        <p className="text-xs text-white/40 mb-4">
           Realizado el {formatearFecha(pedido.fecha_pedido)}
         </p>
 
-        {/* Timeline */}
+        {/* Aviso + botón "Pagar ahora" si el pago quedó pendiente de pasarela */}
+        {necesitaPagar(pedido.estado_pago, pedido.metodo_pago) && (
+          <div className="rounded-xl border border-[#D8A92E]/30 bg-[#D8A92E]/10 px-5 py-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-white">
+                🕘 Tu pedido está pendiente de pago.
+              </p>
+              <p className="text-xs text-white/50">
+                Completa el pago para confirmar el pedido.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate(`/cliente/pagar?ref=&id_pedido=${pedido.id_pedido}`)}
+              className="shrink-0 px-6 py-2.5 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition"
+            >
+              💳 Pagar ahora
+            </button>
+          </div>
+        )}
+
+        {/* Pago */}
         <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl p-6 sm:p-8 mb-6">
-          <OrderStepper estado={pedido.estado} fechaPedido={formatearFecha(pedido.fecha_pedido)} />
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-white">Pago</h2>
+            <EstadoPagoBadge estadoPago={pedido.estado_pago} />
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-xs">
+            <div className="flex-1 flex flex-wrap gap-2">
+              <span className="text-white/40">Método:</span>
+              <span className="text-white capitalize">{pedido.metodo_pago || '—'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-white/40">Total:</span>
+              <span className="text-white font-semibold">${Number(pedido.total).toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Timeline (Entrega) */}
+        <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl p-6 sm:p-8 mb-6">
+          <p className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-4">Entrega</p>
+          <OrderStepper estado={pedido.estado} pagado={pedido.estado_pago === 'pagado'} fechaPedido={formatearFecha(pedido.fecha_pedido)} />
         </div>
 
         {/* Cards info */}
@@ -152,9 +209,9 @@ function EstadoPedidoPage() {
                 <p className="text-white/40">Ciudad</p>
                 <p className="text-white font-semibold mt-1">{pedido.ciudad_envio}</p>
               </div>
-              <button type="button" className="mt-2 w-full border border-white/15 rounded-xl py-2 text-xs text-white flex items-center justify-center gap-2 hover:bg-white/10 transition-colors">
-                📍 Rastrear envío
-              </button>
+              <div className="mt-2 w-full border border-white/15 rounded-xl py-2 text-xs text-white/60 flex items-center justify-center gap-2 bg-white/[0.03]">
+                📍 El rastreo se te enviará por correo al despachar tu pedido
+              </div>
             </div>
           </div>
 

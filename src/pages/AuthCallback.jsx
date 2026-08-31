@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FRONTEND_URL } from '../config';
 
 function AuthCallback() {
     const navigate = useNavigate();
@@ -16,10 +15,13 @@ function AuthCallback() {
         const error = params.get('error');
 
         // Caso éxito: se lo pasamos a la ventana que abrió el popup.
+        // Se publica con '*' porque FRONTEND_URL configurado (env) y el host
+        // real pueden diferir (www vs no-www, puerto en local); la ventana
+        // receptora valida el origen con comparación tolerante.
         if (token && clienteData && window.opener) {
             window.opener.postMessage(
                 { token, cliente: clienteData },
-                FRONTEND_URL
+                '*'
             );
             window.close();
             return;
@@ -31,7 +33,7 @@ function AuthCallback() {
         if (error && window.opener) {
             window.opener.postMessage(
                 { error },
-                FRONTEND_URL
+                '*'
             );
             window.close();
             return;

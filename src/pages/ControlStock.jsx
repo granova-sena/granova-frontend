@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 import api from '../services/api'
 import { formatMoney } from '../utils/format'
 import ProductoModal from '../components/ProductoModal'
+import { PageHeader, StatCard, PanelCard, PanelSkeleton, EmptyState, BotonPrimario, Paginado } from '../components/ui/panel/PanelKit'
 
 function esAdmin() {
   try {
@@ -117,10 +119,10 @@ function ControlStock() {
         Nombre: p.nombre,
         Categoría: p.categoria,
         Origen: p.origen,
-        'Stock (kg)': p.stock,
+        'Stock (unid.)': p.stock,
         'Capacidad lote (kg)': p.capacidad || '',
         '% disponible': p.pct,
-        'Precio/kg': p.precio,
+        'Precio': p.precio,
         Estado: p.estado,
       }))
       datos.push({ Nombre: `— Página ${pagina} de ${totalPaginas} (${totalFiltrados} productos en total) —` })
@@ -129,19 +131,25 @@ function ControlStock() {
       XLSX.utils.book_append_sheet(libro, hoja, 'Inventario')
       XLSX.writeFile(libro, `inventario-granova-pagina-${pagina}.xlsx`)
     } catch (err) {
-      alert('No se pudo generar el Excel: ' + err.message)
+      toast.error('No se pudo generar el Excel: ' + err.message)
     } finally {
       setExportando(false)
     }
   }
 
-  if (error) return <p className="text-red-500">Error al cargar inventario: {error}</p>
+  if (error) {
+    return (
+      <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
+        Error al cargar inventario: {error}
+      </div>
+    )
+  }
 
   const stats = resumen ? [
-    { label: 'Productos', value: String(resumen.totalProductos), change: `↑ ${resumen.nuevosMes} este mes`, valueClass: 'text-gray-800', changeClass: 'text-gray-400' },
-    { label: 'Stock bajo', value: String(resumen.stockBajo), change: 'requieren acción', valueClass: 'text-amber-500', changeClass: 'text-amber-500' },
-    { label: 'Ventas hoy', value: formatMoney(resumen.ventasHoy), change: `${resumen.cambioVentasHoy >= 0 ? '↑ +' : ''}${resumen.cambioVentasHoy}% vs ayer`, valueClass: 'text-gray-800', changeClass: 'text-[#1D9E75]' },
-    { label: 'Agotados', value: String(resumen.agotados), change: resumen.agotados > 0 ? 'requieren reabastecer' : 'todo en orden', valueClass: 'text-red-500', changeClass: 'text-red-500' },
+    { label: 'Productos', value: String(resumen.totalProductos), sub: `↑ ${resumen.nuevosMes} este mes`, tono: 'verde', icono: '🫘' },
+    { label: 'Stock bajo', value: String(resumen.stockBajo), sub: 'requieren acción', tono: 'ambar', icono: '⚠️' },
+    { label: 'Ventas hoy', value: formatMoney(resumen.ventasHoy), sub: `${resumen.cambioVentasHoy >= 0 ? '↑ +' : ''}${resumen.cambioVentasHoy}% vs ayer`, tono: 'cielo', icono: '💰' },
+    { label: 'Agotados', value: String(resumen.agotados), sub: resumen.agotados > 0 ? 'requieren reabastecer' : 'todo en orden', tono: 'rojo', icono: '✕' },
   ] : []
 
   const tabs = [
@@ -151,49 +159,52 @@ function ControlStock() {
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Control de stock"
+        subtitulo="Supervisa la disponibilidad y los niveles de inventario de tus productos."
+        acciones={
+          <>
+            <button
+              type="button"
+              onClick={exportarExcel}
+              disabled={exportando}
+              className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
+            >
+              ↓ {exportando ? 'Generando...' : 'Exportar'}
+            </button>
+            {!esAdmin() && (
+              <BotonPrimario onClick={() => abrirModal(null)}>
+                + Nuevo producto
+              </BotonPrimario>
+            )}
+          </>
+        }
+      />
+
       {!resumen ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 h-20 animate-pulse"></div>
+            <div key={i} className={`bg-white rounded-2xl border border-gray-200 p-5 h-24 animate-pulse ${i ? 'hidden sm:block' : ''}`}></div>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {stats.map((stat) => (
-            <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5">
-              <p className="text-sm text-gray-500">{stat.label}</p>
-              <p className={`text-2xl font-semibold mt-1 ${stat.valueClass}`}>{stat.value}</p>
-              <p className={`text-xs mt-1 ${stat.changeClass}`}>{stat.change}</p>
-            </div>
+          {stats.map((stat, i) => (
+            <StatCard
+              key={stat.label}
+              icono={stat.icono}
+              label={stat.label}
+              value={stat.value}
+              sub={stat.sub}
+              tono={stat.tono}
+              delay={`panel-come-d${i + 1}`}
+            />
           ))}
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h2 className="text-base font-semibold text-admin-heading">Productos en inventario</h2>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={exportarExcel}
-            disabled={exportando}
-            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg border border-gray-300 bg-[#1D9E75] text-white hover:bg-[#178a64] transition disabled:opacity-50"
-          >
-            ↓ {exportando ? 'Generando...' : 'Exportar'}
-          </button>
-          {!esAdmin() && (
-            <button
-              type="button"
-              onClick={() => abrirModal(null)}
-              className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition"
-            >
-              + Nuevo producto
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-200">
+      <PanelCard>
         <div className="flex flex-wrap items-center gap-3 sm:gap-6 px-4 sm:px-5 pt-4 border-b border-gray-100">
           {tabs.map((tab) => (
             <button
@@ -201,7 +212,7 @@ function ControlStock() {
               key={tab.key}
               onClick={() => cambiarTab(tab.key)}
               className={`text-sm pb-3 border-b-2 transition ${
-                tabActivo === tab.key ? 'border-[#1a2e1a] text-gray-800 font-medium' : 'border-transparent text-gray-400'
+                tabActivo === tab.key ? 'border-[#1D9E75] text-gray-800 font-medium' : 'border-transparent text-gray-400 hover:text-gray-600'
               }`}
             >
               {tab.label}
@@ -209,7 +220,7 @@ function ControlStock() {
           ))}
         </div>
 
-        <div className="p-4">
+        <div className="p-4 sm:px-5 border-b border-gray-100">
           <div className="relative max-w-md">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="16" height="16" viewBox="0 0 24 24" fill="none">
               <circle cx="11" cy="11" r="8" stroke="#9ca3af" strokeWidth="2" />
@@ -220,35 +231,35 @@ function ControlStock() {
               value={busqueda}
               onChange={(e) => cambiarBusqueda(e.target.value)}
               placeholder="Buscar producto, origen, variedad..."
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 rounded-lg text-sm focus:outline-none focus:bg-white focus:border focus:border-[#1D9E75] transition"
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[#1D9E75] transition placeholder:text-gray-400"
             />
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-sm">
-            <thead>
-              <tr className="text-left text-gray-500 bg-gray-50">
-                <th className="py-3 px-5 font-medium">Producto</th>
-                <th className="py-3 px-5 font-medium">Categoría</th>
-                <th className="py-3 px-5 font-medium">Disponibilidad</th>
-                <th className="py-3 px-5 font-medium">Precio/kg</th>
-                <th className="py-3 px-5 font-medium">Estado</th>
-                <th className="py-3 px-5 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="py-6 px-5 text-center text-gray-400">Cargando productos...</td>
+          {loading ? (
+            <div className="p-5"><PanelSkeleton filas={4} columnas={6} /></div>
+          ) : productos.length === 0 ? (
+            <EmptyState
+              icono="📦"
+              titulo="No se encontraron productos"
+              descripcion="Ajusta tu búsqueda o cambia de categoría para ver más productos."
+            />
+          ) : (
+            <table className="w-full min-w-[900px] text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 bg-gray-50">
+                  <th className="py-3 px-5 font-medium">Producto</th>
+                  <th className="py-3 px-5 font-medium">Categoría</th>
+                  <th className="py-3 px-5 font-medium">Disponibilidad</th>
+                  <th className="py-3 px-5 font-medium">Precio</th>
+                  <th className="py-3 px-5 font-medium">Estado</th>
+                  <th className="py-3 px-5 font-medium">Acciones</th>
                 </tr>
-              ) : productos.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-6 px-5 text-center text-gray-400">No se encontraron productos.</td>
-                </tr>
-              ) : (
-                productos.map((p) => (
-                  <tr key={p.id} className="border-b border-gray-100 last:border-0">
+              </thead>
+              <tbody>
+                {productos.map((p) => (
+                  <tr key={p.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
                     <td className="py-3 px-5">
                       <div className="flex items-center gap-3">
                         {p.imagen ? (
@@ -276,7 +287,7 @@ function ControlStock() {
                             ></div>
                           </div>
                         </div>
-                        <span className={`text-xs whitespace-nowrap ${textColorPorEstado(p.estado)}`}>{p.stock} kg</span>
+                        <span className={`text-xs whitespace-nowrap ${textColorPorEstado(p.estado)}`}>{p.stock} {p.categoriaProducto === 'maquina' ? 'unid.' : 'bolsas'}</span>
                       </div>
                     </td>
                     <td className="py-3 px-5 text-gray-800 font-medium">{formatMoney(p.precio)}</td>
@@ -301,10 +312,10 @@ function ControlStock() {
                       )}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-5 py-4 border-t border-gray-100">
@@ -312,18 +323,7 @@ function ControlStock() {
             Mostrando {productos.length} de {totalFiltrados} productos
           </p>
           <div className="flex items-center gap-1">
-            {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
-              <button
-                type="button"
-                key={n}
-                onClick={() => setPagina(n)}
-                className={`w-8 h-8 rounded-lg text-sm transition ${
-                  n === pagina ? 'bg-[#1D9E75]/10 text-[#1D9E75] font-medium' : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                {n}
-              </button>
-            ))}
+            <Paginado pagina={pagina} totalPaginas={totalPaginas} onChange={setPagina} />
             <button
               type="button"
               onClick={() => setPagina((p) => Math.min(p + 1, totalPaginas))}
@@ -335,7 +335,7 @@ function ControlStock() {
             </button>
           </div>
         </div>
-      </div>
+      </PanelCard>
 
       {mostrarModal && (
         <ProductoModal

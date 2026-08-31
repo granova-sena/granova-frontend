@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
 import { formatMoney } from '../utils/format'
+import { bloquearNoNumerico, normalizarEntero } from '../utils/validacion'
+import ErrorModal from './ui/ErrorModal'
 
 let contadorId = 0
 function nuevoItem() {
@@ -17,7 +19,6 @@ function VentaModal({ onClose, onCreado }) {
 
   const [idCliente, setIdCliente] = useState('')
   const [metodoPago, setMetodoPago] = useState('Nequi')
-  const [estado, setEstado] = useState('Pendiente')
   const [items, setItems] = useState([nuevoItem()])
 
   useEffect(() => {
@@ -64,7 +65,7 @@ function VentaModal({ onClose, onCreado }) {
     for (const it of itemsValidos) {
       const producto = productoPorId(it.id_producto)
       if (producto && Number(it.cantidad) > Number(producto.stock)) {
-        setError(`Stock insuficiente para ${producto.nombre} (disponible: ${producto.stock} ${producto.categoria_producto === 'maquina' ? 'unidades' : 'kg'}).`)
+        setError(`Stock insuficiente para ${producto.nombre} (disponible: ${producto.stock} ${producto.categoria_producto === 'maquina' ? 'unidades' : 'bolsas'}).`)
         return
       }
     }
@@ -74,7 +75,6 @@ function VentaModal({ onClose, onCreado }) {
       await api.post('/ventas', {
         id_cliente: idCliente,
         metodo_pago: metodoPago,
-        estado,
         items: itemsValidos.map(it => ({ id_producto: it.id_producto, cantidad: Number(it.cantidad) })),
       })
       onCreado()
@@ -95,11 +95,6 @@ function VentaModal({ onClose, onCreado }) {
         </div>
 
         <form onSubmit={guardar} className="p-6 space-y-4">
-          {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {error}
-            </div>
-          )}
 
           <div>
             <label htmlFor="cliente-venta" className="block text-sm text-gray-600 mb-1">Cliente *</label>
@@ -121,101 +116,120 @@ function VentaModal({ onClose, onCreado }) {
 
           <div>
             <span className="block text-sm text-gray-600 mb-2">Productos *</span>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {items.map((it) => {
                 const producto = productoPorId(it.id_producto)
                 return (
-                  <div key={it.key} className="flex items-center gap-2">
+                  <div key={it.key} className="border border-gray-200 rounded-xl p-3 space-y-2">
                     <select
                       value={it.id_producto}
                       onChange={(e) => cambiarItem(it.key, 'id_producto', e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
                       disabled={cargando}
                     >
                       <option value="">Selecciona un producto</option>
                       {productos.map((p) => (
                         <option key={p.id_producto} value={p.id_producto}>
-                          {p.nombre} — {formatMoney(p.precio)}{p.categoria_producto === 'maquina' ? '/unidad' : '/kg'} ({p.stock} {p.categoria_producto === 'maquina' ? 'unid.' : 'kg'} disp.)
+                          {p.nombre} — {formatMoney(p.precio)}{p.categoria_producto === 'maquina' ? '/unidad' : '/bolsa'} ({p.stock} {p.categoria_producto === 'maquina' ? 'unid.' : 'bolsas'} disp.)
                         </option>
                       ))}
                     </select>
-                    <input
-                      type="number"
-                      min="0"
-                      max={producto ? producto.stock : undefined}
-                      value={it.cantidad}
-                      onChange={(e) => cambiarItem(it.key, 'cantidad', e.target.value)}
-                      placeholder={producto?.categoria_producto === 'maquina' ? 'unid.' : 'kg'}
-                      className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => quitarItem(it.key)}
-                      disabled={items.length === 1}
-                      className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition disabled:opacity-30"
-                    >
-                      ×
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        max={producto ? producto.stock : undefined}
+                        step="1"
+                        onKeyDown={bloquearNoNumerico}
+                        value={it.cantidad}
+                        onChange={(e) => {
+                          const limpio = normalizarEntero(e.target.value)
+                          const stock = producto ? Number(producto.stock) : Infinity
+                          const valor = Number(limpio)
+                          const maximo = limpio !== '' && !Number.isNaN(valor) && valor > stock
+                            ? String(stock)
+                            : limpio
+                          cambiarItem(it.key, 'cantidad', maximo)
+                        }}
+                        onBlur={() => {
+                          const stock = producto ? Number(producto.stock) : 0
+                          const valor = Number(String(it.cantidad).replace(',', '.') || 0)
+                          let fijado = it.cantidad
+                          if (it.cantidad === '' || valor < 1) fijado = '1'
+                          else if (valor > stock) fijado = String(stock)
+                          cambiarItem(it.key, 'cantidad', fijado)
+                        }}
+                        placeholder={producto
+                          ? `Cantidad (${producto.categoria_producto === 'maquina' ? 'unid.' : 'bolsas'})`
+                          : 'Cantidad'}
+                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                      />
+                      {producto && (
+                        <span className="w-10 text-center text-xs font-medium text-gray-400">
+                          {producto.categoria_producto === 'maquina' ? 'unid.' : 'bolsas'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        onClick={agregarItem}
+                        className="text-sm text-[#1D9E75] hover:underline"
+                      >
+                        + Agregar producto
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => quitarItem(it.key)}
+                        disabled={items.length === 1}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition disabled:opacity-30"
+                      >
+                        ×
+                      </button>
+                    </div>
                   </div>
                 )
               })}
             </div>
-            <button
-              type="button"
-              onClick={agregarItem}
-              className="mt-2 text-sm text-[#1D9E75] hover:underline"
-            >
-              + Agregar producto
-            </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <span className="block text-sm text-gray-600 mb-1.5">Método de pago</span>
-              <div className="flex gap-2">
+          <div>
+              <span className="block text-sm text-gray-600 mb-2">Método de pago *</span>
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setMetodoPago('Nequi')}
-                  className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg border-2 transition ${
-                    metodoPago === 'Nequi' ? 'border-[#e6007e] bg-[#e6007e]/5' : 'border-gray-200'
+                  className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border-2 transition ${
+                    metodoPago === 'Nequi'
+                      ? 'border-[#9C0BBA] bg-[#9C0BBA]/5 shadow-sm'
+                      : 'border-gray-200 hover:border-[#9C0BBA]/50'
                   }`}
                 >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <rect x="3" y="2" width="18" height="20" rx="4" fill="#e6007e" />
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="2" width="18" height="20" rx="4" fill="#9C0BBA" />
                     <circle cx="12" cy="17" r="1.4" fill="white" />
                     <path d="M8 6h8v7a4 4 0 0 1-8 0V6Z" fill="white" />
                   </svg>
-                  <span className="text-xs font-medium" style={{ color: '#e6007e' }}>Nequi</span>
+                  <span className="text-xs font-semibold" style={{ color: metodoPago === 'Nequi' ? '#9C0BBA' : '#6b7280' }}>Nequi</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setMetodoPago('Tarjeta')}
-                  className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg border-2 transition ${
-                    metodoPago === 'Tarjeta' ? 'border-[#1D9E75] bg-[#1D9E75]/5' : 'border-gray-200'
+                  className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border-2 transition ${
+                    metodoPago === 'Tarjeta'
+                      ? 'border-[#2F5CD0] bg-[#2F5CD0]/5 shadow-sm'
+                      : 'border-gray-200 hover:border-[#2F5CD0]/50'
                   }`}
                 >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <rect x="2" y="5" width="20" height="14" rx="2" stroke="#1D9E75" strokeWidth="2" />
-                    <path d="M2 10h20" stroke="#1D9E75" strokeWidth="2" />
-                    <rect x="4.5" y="13.5" width="5" height="2" rx="0.5" fill="#1D9E75" />
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                    <rect x="2" y="5" width="20" height="14" rx="2" stroke="#2F5CD0" strokeWidth="2" />
+                    <path d="M2 10h20" stroke="#2F5CD0" strokeWidth="2" />
+                    <rect x="4.5" y="13.5" width="5" height="2" rx="0.5" fill="#2F5CD0" />
                   </svg>
-                  <span className="text-xs font-medium text-[#1D9E75]">Tarjeta</span>
+                  <span className="text-xs font-semibold" style={{ color: metodoPago === 'Tarjeta' ? '#2F5CD0' : '#6b7280' }}>Tarjeta</span>
                 </button>
               </div>
             </div>
-            <div>
-              <label htmlFor="estado-venta" className="block text-sm text-gray-600 mb-1">Estado</label>
-              <select
-                id="estado-venta"
-                value={estado}
-                onChange={(e) => setEstado(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
-              >
-                <option value="Pendiente">Pendiente</option>
-                <option value="Confirmado">Confirmado</option>
-              </select>
-            </div>
-          </div>
 
           <div className="flex items-center justify-between pt-2 border-t border-gray-100">
             <span className="text-sm text-gray-600">Total</span>
@@ -240,6 +254,8 @@ function VentaModal({ onClose, onCreado }) {
           </div>
         </form>
       </div>
+
+      <ErrorModal mensaje={error} onClose={() => setError(null)} />
     </div>
   )
 }

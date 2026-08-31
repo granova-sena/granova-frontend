@@ -82,6 +82,7 @@ export function adaptarProducto(p) {
     peso_kg: Number(f.peso_kg) || 0,
     precio: Number(f.precio) || 0,
     imagen_url: f.imagen_url || "",
+    stock: Number(f.stock) || 0,
   }));
   // "Desde $X" = el formato más barato disponible (gancho de catálogo)
   const precioDesde = formatos.length > 0
@@ -141,13 +142,23 @@ export function eliminarDuplicados(productos) {
   return limpios;
 }
 
-// ── FAVORITOS Y VISTOS RECIENTEMENTE (localStorage) ────────
-export const LS_FAVORITOS = "granova_favoritos";
-const LS_VISTOS = "granova_vistos";
+// ── FAVORITOS Y VISTOS RECIENTEMENTE (localStorage POR USUARIO) ────────
+// La clave incluye el id del cliente logueado: cada cuenta tiene sus
+// propias listas en el mismo navegador. Sin sesión → sufijo "_invitado".
+export function idClienteActual() {
+  try {
+    return JSON.parse(localStorage.getItem("cliente"))?.id ?? "invitado";
+  } catch {
+    return "invitado";
+  }
+}
+
+const claveFavoritos = () => `granova_favoritos_u${idClienteActual()}`;
+const claveVistos = () => `granova_vistos_u${idClienteActual()}`;
 
 export function cargarFavoritos() {
   try {
-    const arr = JSON.parse(localStorage.getItem(LS_FAVORITOS)) || [];
+    const arr = JSON.parse(localStorage.getItem(claveFavoritos())) || [];
     return new Set(arr);
   } catch {
     return new Set();
@@ -156,13 +167,13 @@ export function cargarFavoritos() {
 
 export function guardarFavoritos(set) {
   try {
-    localStorage.setItem(LS_FAVORITOS, JSON.stringify([...set]));
+    localStorage.setItem(claveFavoritos(), JSON.stringify([...set]));
   } catch { /* localStorage no disponible, se ignora */ }
 }
 
 function cargarVistos() {
   try {
-    return JSON.parse(localStorage.getItem(LS_VISTOS)) || [];
+    return JSON.parse(localStorage.getItem(claveVistos())) || [];
   } catch {
     return [];
   }
@@ -170,7 +181,7 @@ function cargarVistos() {
 
 function guardarVistos(arr) {
   try {
-    localStorage.setItem(LS_VISTOS, JSON.stringify(arr));
+    localStorage.setItem(claveVistos(), JSON.stringify(arr));
   } catch { /* localStorage no disponible, se ignora */ }
 }
 
@@ -402,18 +413,6 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar, descuentosVol
 
   const precioItem = (p) => Math.round(p.precio * (1 - Math.max(Number(p.promoPct) || 0, ganador.pct) / 100));
 
-  const irACotizacion = () => {
-    sincronizarCarrito(carrito);
-    onClose();
-    navigate('/cliente/cotizacion');
-  };
-
-  const irAPagar = () => {
-    sincronizarCarrito(carrito);
-    onClose();
-    navigate('/cliente/configurar-pedido');
-  };
-
   return (
     <div
       className="fixed inset-0 z-50 flex justify-end bg-black/50 anim-overlay"
@@ -457,7 +456,7 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar, descuentosVol
               </button>
             </div>
           )}
-          {carrito.map(p => (
+          {carrito.slice(0, 6).map(p => (
             <div key={p.id} className="rounded-xl p-3 flex gap-3 items-start bg-[#0F1D13] border border-white/[0.08]">
               <ImagenProducto src={p.img} alt={p.nombre} className="w-16 h-16 rounded-lg object-cover bg-[#14291B] shrink-0" />
               <div className="flex-1 min-w-0">
@@ -485,6 +484,15 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar, descuentosVol
               </div>
             </div>
           ))}
+          {carrito.length > 6 && (
+            <button
+              type="button"
+              onClick={() => { sincronizarCarrito(carrito); onClose(); navigate('/cliente/carrito'); }}
+              className="rounded-xl py-3 px-4 border border-dashed border-[#6FA98C]/40 bg-[#6FA98C]/[0.06] text-[#9DC9B4] text-xs font-semibold hover:bg-[#6FA98C]/[0.12] transition"
+            >
+              + {carrito.length - 6} producto{carrito.length - 6 === 1 ? "" : "s"} más en el carrito — ver todo →
+            </button>
+          )}
         </div>
         {/* totales */}
         {carrito.length > 0 && (
@@ -501,8 +509,7 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar, descuentosVol
               <span>Total</span><span>${subtotal.toLocaleString("es-CO")}</span>
             </div>
             <div className="flex gap-3">
-              <button type="button" onClick={irACotizacion} className="flex-1 py-3 rounded-xl text-white/70 text-sm border border-white/15 hover:bg-white/[0.06] transition">Cotización</button>
-              <button type="button" onClick={irAPagar} className="flex-[1.4] py-3 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">Ir a pagar</button>
+              <button type="button" onClick={() => { sincronizarCarrito(carrito); onClose(); navigate('/cliente/carrito'); }} className="flex-1 py-3 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">Ver todo el carrito</button>
             </div>
           </div>
         )}
@@ -526,6 +533,11 @@ export function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFav
 
   const tieneFormatos = p.formatos && p.formatos.length > 0;
   const formato = tieneFormatos ? p.formatos.find(f => f.id_formato === formatoSel) : null;
+
+  // Máximo comprable: stock del formato elegido (bolsas) si existe, si no el stock general
+  const maxComprar = tieneFormatos && formato && Number(formato.stock) > 0
+    ? Math.min(Number(formato.stock), p.stock || Number(formato.stock))
+    : p.stock;
 
   // Precio unitario: precio del formato elegido, o el precio del producto (máquinas/legacy)
   const precioUnit = tieneFormatos ? Number(formato?.precio || 0) : p.precio;
@@ -601,11 +613,16 @@ export function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFav
                     <button
                       type="button"
                       key={f.id_formato}
-                      onClick={() => setFormatoSel(f.id_formato)}
+                      onClick={() => { setFormatoSel(f.id_formato); if (Number(f.stock) > 0) setCant(c => Math.min(c, Number(f.stock))); }}
                       className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-sm transition-colors ${activo ? "border-[#6FA98C] bg-[#6FA98C]/[0.08]" : "border-white/10 hover:border-[#6FA98C]/50"}`}
                     >
                       <span className="text-white/80 flex items-center gap-2">
                         <span>{iconoFormato(Number(f.peso_kg))}</span> {f.etiqueta}
+                        {f.stock > 0 && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${f.stock < 10 ? "bg-[#D85A30]/15 text-[#D85A30]" : "bg-white/[0.06] text-white/40"}`}>
+                            quedan {f.stock}
+                          </span>
+                        )}
                       </span>
                       {esJuridica ? (
                         <span className="flex items-center gap-2">
@@ -679,9 +696,12 @@ export function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFav
             <div className="flex items-center gap-3">
               <button type="button" onClick={() => setCant(c => Math.max(1, c-1))} className="w-10 h-10 rounded-xl bg-[#14291B] border border-white/10 text-white/70 text-xl flex items-center justify-center hover:bg-[#1B3624]">−</button>
               <span className="text-lg font-semibold w-8 text-center text-white">{cant}</span>
-              <button type="button" onClick={() => setCant(c => Math.min(p.stock, c+1))} disabled={cant >= p.stock} className="w-10 h-10 rounded-xl bg-[#14291B] border border-white/10 text-white/70 text-xl flex items-center justify-center hover:bg-[#1B3624] disabled:opacity-30 disabled:cursor-not-allowed">+</button>
+              <button type="button" onClick={() => setCant(c => Math.min(maxComprar, c+1))} disabled={cant >= maxComprar} className="w-10 h-10 rounded-xl bg-[#14291B] border border-white/10 text-white/70 text-xl flex items-center justify-center hover:bg-[#1B3624] disabled:opacity-30 disabled:cursor-not-allowed">+</button>
               <span className="text-white/40 text-sm">{etiquetaCant}</span>
             </div>
+            {tieneFormatos && formato && Number(formato.stock) > 0 && (
+              <p className="text-[11px] text-white/40 mt-2">Quedan {formato.stock} {formato.stock === 1 ? "unidad" : "unidades"} de "{formato.etiqueta}"</p>
+            )}
           </div>
           <button
             type="button"
@@ -716,7 +736,7 @@ export function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFav
 
 // ── MODAL CONFIRMAR CANTIDAD ──────────────────────────────
 export function ModalConfirmarCantidad({ data, onCancelar, onAceptar }) {
-  useModalBehavior(onCancelar);
+  useModalBehavior(onCancelar, !!data);
   if (!data) return null;
   const { tipo, producto, disponibleRestante, total } = data;
   const unidad = producto.unidad || "kg";
@@ -979,7 +999,14 @@ export function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0
           </div>
           <div className="flex items-center gap-1.5">
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${stockColor[p.stockLabel]}`}></span>
-            <span className={`text-[11px] ${stockTexto[p.stockLabel]}`}>{p.stockLabel}</span>
+            <span className={`text-[11px] ${stockTexto[p.stockLabel]}`}>
+              {p.stockLabel}
+              {p.stockLabel !== "Agotado" && (
+                p.formatos.length > 0 && p.formatos.some(f => Number(f.stock) > 0)
+                  ? ` · ${p.formatos.reduce((s, f) => s + Number(f.stock), 0)} bolsas`
+                  : ` · ${p.stock} ${p.esMaquina ? "und" : "kg"}`
+              )}
+            </span>
           </div>
         </div>
 
@@ -1067,11 +1094,6 @@ function CatalogoInterno() {
   const seccion = ["cafe", "maquinas"].includes(seccionParam) ? seccionParam : "cafe";
   const cambiarSeccion = (id) => setSearchParams(id === "cafe" ? {} : { seccion: id }, { replace: true });
 
-  useEffect(() => {
-    setBusqueda("");
-    setFiltros({ tipo: "", disp: "", marca: "" });
-  }, [seccion]);
-
   const [productos, setProductos] = useState([]);
   const [descuentosVolumen, setDescuentosVolumen] = useState([]);
   const [seleccionadosComparar, setSeleccionadosComparar] = useState([])
@@ -1090,6 +1112,12 @@ function CatalogoInterno() {
   const [busquedaIdx, setBusquedaIdx] = useState(-1);
   const buscaRef = useRef(null);
   const [filtros, setFiltros] = useState({ tipo: "", disp: "", marca: "" });
+
+  useEffect(() => {
+    setBusqueda("");
+    setFiltros({ tipo: "", disp: "", marca: "" });
+  }, [seccion]);
+
   const [carritoOpen, setCarritoOpen] = useState(false);
   const [detalle, setDetalle] = useState(null);
   const [carrito, setCarrito] = useState(() => {
@@ -1122,6 +1150,13 @@ function CatalogoInterno() {
   // ── Nuevas funcionalidades ──
   const [favoritos, setFavoritos] = useState(() => cargarFavoritos());
   const [vistos, setVistos] = useState(() => cargarVistos());
+
+  // Cambio de sesión: recargar listas del usuario activo sin recargar la página
+  const uidSesion = cliente?.id ?? "invitado";
+  useEffect(() => {
+    setFavoritos(cargarFavoritos());
+    setVistos(cargarVistos());
+  }, [uidSesion]);
 
   const [spotlightOpen, setSpotlightOpen] = useState(false);
 
@@ -1671,7 +1706,7 @@ function CatalogoInterno() {
                 {cliente?.tipo_persona === 'juridica' ? (
                   <span className="shrink-0 text-xs text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/30 rounded-full px-3.5 py-2">🏢 Ya tienes tu 10%</span>
                 ) : (
-                  <button type="button" onClick={() => navigate('/cliente/empresas')} className="shrink-0 h-10 px-5 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">Granova Empresas →</button>
+                  <button type="button" onClick={() => navigate('/cliente/cuenta')} className="shrink-0 h-10 px-5 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">Granova Empresas →</button>
                 )}
               </div>
               </FadeIn>
@@ -1850,7 +1885,7 @@ function CatalogoInterno() {
                         <p className="text-xs text-white/40">{primero.origen}</p>
                         <p className="text-base font-semibold text-white mt-1">{primero.nombre}</p>
                         <p className="text-xl font-semibold text-white mt-2">{primero.formatos.length > 0 ? `Desde $${primero.precioDesde.toLocaleString("es-CO")}` : `$${primero.precio.toLocaleString("es-CO")}`}</p>
-                        <p className="text-[10px] text-white/40">{primero.formatos.length > 0 ? primero.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ") : "por kg"}</p>
+                        <p className="text-[10px] text-white/40">{primero.formatos.length > 0 ? primero.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ") : "por bolsa"}</p>
                         {tabDestacados === "promociones" && (
                           <p className="text-[11px] font-medium text-[#D85A30] mt-1">
                             🏷️ {primero.promoNombre || "Oferta"}{primero.promoFin ? ` · hasta el ${new Date(primero.promoFin).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}` : ""}
@@ -1858,7 +1893,7 @@ function CatalogoInterno() {
                         )}
                         <div className="flex items-center gap-1.5 mt-2">
                           <span className={`w-2 h-2 rounded-full ${stockColor[primero.stockLabel]}`}></span>
-                          <span className={`text-xs ${stockTexto[primero.stockLabel]}`}>{primero.stockLabel} · {primero.stock} kg</span>
+                          <span className={`text-xs ${stockTexto[primero.stockLabel]}`}>{primero.stockLabel} · {primero.formatos.length > 0 && primero.formatos.some(f => Number(f.stock) > 0) ? `${primero.formatos.reduce((s, f) => s + Number(f.stock), 0)} bolsas` : `${primero.stock} bolsas`}</span>
                         </div>
                         <button type="button" onClick={e => { e.stopPropagation(); verDetalle(primero); }} className="w-full mt-3 h-9 rounded-xl bg-white/[0.07] border border-white/[0.12] text-white/80 text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-white/[0.14] hover:text-white active:scale-95 transition duration-150"><IconoBuscar width={13} height={13} /> Ver detalles</button>
                         <button type="button" onClick={e => { e.stopPropagation(); agregar({...primero, cant:1}, e.currentTarget); }} className="w-full mt-2 h-9 rounded-xl bg-[#6FA98C] text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#4F8A70] active:scale-95 transition duration-150"><IconoCarrito width={14} height={14} /> Agregar al carrito</button>

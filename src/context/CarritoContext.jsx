@@ -1,12 +1,22 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { API_URL } from "../config";
+import { getActiveToken, idDeTokenCliente } from '../services/session'
 const CarritoContext = createContext()
 
-const STORAGE_KEY = 'granova_carrito'
+// Clave POR USUARIO: cada cliente logueado tiene su propio carrito en
+// el mismo navegador. Sin sesión → sufijo "_invitado".
+function idClienteActual() {
+  try {
+    return JSON.parse(localStorage.getItem('cliente'))?.id ?? 'invitado'
+  } catch {
+    return 'invitado'
+  }
+}
+const claveCarrito = () => `granova_carrito_u${idClienteActual()}`
 
 function cargarCarrito() {
   try {
-    const guardado = localStorage.getItem(STORAGE_KEY)
+    const guardado = localStorage.getItem(claveCarrito())
     if (!guardado) return []
     const raw = JSON.parse(guardado)
     if (!Array.isArray(raw)) return []
@@ -30,15 +40,6 @@ const DESCUENTO_MINORISTA = 0.06
 const DESCUENTO_MAYORISTA = 0.12
 const UNIDADES_MINIMAS_DESCUENTO_MINORISTA = 5
 const IVA = 0.19
-
-function obtenerIdCliente() {
-  try {
-    const cliente = JSON.parse(localStorage.getItem('cliente'))
-    return cliente?.id ?? null
-  } catch {
-    return null
-  }
-}
 
 function obtenerCliente() {
   try {
@@ -66,7 +67,7 @@ export function CarritoProvider({ children }) {
 
   const confirmarPedido = async (datosFormulario, metodoPago, codigoCupon = null) => {
     try {
-      const id_cliente = obtenerIdCliente()
+      const id_cliente = idDeTokenCliente()
 
       if (!id_cliente) {
         return { ok: false, mensaje: 'Debes iniciar sesión para confirmar un pedido' }
@@ -97,7 +98,10 @@ export function CarritoProvider({ children }) {
 
       const res = await fetch(`${API_URL}/api/pedidos`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token_cliente')}`,
+        },
         body: JSON.stringify(body),
       })
 
@@ -105,16 +109,15 @@ export function CarritoProvider({ children }) {
 
       if (!json.ok) throw new Error(json.mensaje)
 
-      localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(claveCarrito())
       setProductos([])
       setCuponValidado(null)
 
       // Refrescar perfil del cliente para actualizar puntos
       try {
-        const token = localStorage.getItem('token')
-        if (token && id_cliente) {
+        if (id_cliente) {
           const r = await fetch(`${API_URL}/api/clientes/${id_cliente}`, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('token_cliente')}` },
           })
           const pj = await r.json()
           if (pj.ok) {
@@ -127,6 +130,11 @@ export function CarritoProvider({ children }) {
       return {
         ok: true,
         id_pedido: json.data.id_pedido,
+        estado: json.data?.estado ?? null,
+        estado_pago: json.data?.estado_pago ?? null,
+        pago: json.data?.pago ?? null,
+        total: json.data?.total ?? null,
+        mensaje: json.data?.mensaje ?? null,
         descuento_aplicado: json.data?.descuento_aplicado ?? 0,
         descuento_fuente: json.data?.descuento_fuente ?? null,
         puntos_ganados: json.data?.puntos_ganados ?? 0,
@@ -186,17 +194,28 @@ export function CarritoProvider({ children }) {
 
   // Persistir carrito en localStorage cada vez que cambia
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(productos))
+    localStorage.setItem(claveCarrito(), JSON.stringify(productos))
   }, [productos])
 
-  // Sincronizar perfil del cliente desde el backend
+  // Cambio de sesión: cargar el carrito del cliente activo.
+  // Al cerrar sesión, 'cliente' ya fue removido de localStorage, así que esta
+  // lectura cae en el carrito de invitado y el guardado posterior NO pisa
+  // el carrito guardado del usuario que salió (persiste para su regreso).
+  const uidCarrito = clienteActual?.id ?? null
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const id = obtenerIdCliente()
-    if (!token || !id) return
+    setProductos(cargarCarrito())
+  }, [uidCarrito])
+
+  // Sincronizar perfil del cliente desde el backend.
+  // SOLO para sesión de cliente real: si no hay token_cliente válido
+  // (por ejemplo al estar en el dashboard admin), no se toca nada y así
+  // no se contamina el perfil con la sesión de empleado/admin.
+  useEffect(() => {
+    const id = idDeTokenCliente()
+    if (!id) return
 
     fetch(`${API_URL}/api/clientes/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${localStorage.getItem('token_cliente')}` },
     })
       .then(res => res.json())
       .then(json => {
@@ -216,13 +235,14 @@ export function CarritoProvider({ children }) {
   const [cuponValidado, setCuponValidado] = useState(null)
 
   // ── Limpiar sesión (logout): resetea todo el estado React ──
+  // El carrito por usuario NO se borra de localStorage: persiste para
+  // cuando esa persona vuelva a iniciar sesión.
   const limpiarSesion = () => {
     setClienteActual({})
     setProductos([])
     setCuponValidado(null)
     setDatosCliente(null)
-    localStorage.removeItem(STORAGE_KEY)
-    localStorage.removeItem('token')
+    localStorage.removeItem('token_cliente')
     localStorage.removeItem('cliente')
   }
 
@@ -233,13 +253,12 @@ export function CarritoProvider({ children }) {
     setCuponValidado(null)
     setDatosCliente(null)
 
-    const token = localStorage.getItem('token')
-    const id = nuevoCliente?.id
-    if (!token || !id) return
+    const id = idDeTokenCliente()
+    if (!id) return
 
     try {
       const res = await fetch(`${API_URL}/api/clientes/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('token_cliente')}` },
       })
       const json = await res.json()
       if (json.ok) {
@@ -298,7 +317,7 @@ export function CarritoProvider({ children }) {
   const total = subtotal
 
   const validarCupon = async (codigo) => {
-    const token = localStorage.getItem('token')
+    const token = getActiveToken()
     if (!token) return { ok: false, mensaje: 'Debes iniciar sesión para usar un cupón' }
     try {
       const res = await fetch(`${API_URL}/api/cupones/validar`, {
@@ -352,7 +371,6 @@ export function CarritoProvider({ children }) {
       validarCupon,
       cuponValidado,
       cuponPct,
-      descuentoCuponMonto,
       actualizarPerfilCliente,
       limpiarSesion,
       sincronizarSesion,
@@ -362,7 +380,6 @@ export function CarritoProvider({ children }) {
   )
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useCarrito() {
   return useContext(CarritoContext)
 }

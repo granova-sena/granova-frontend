@@ -1,0 +1,40 @@
+# Dependencias y control de versiones
+node_modules/
+.git/
+
+# Artefactos de compilacion
+dist/
+build/
+.next/
+out/
+.nuxt/
+.output/
+.svelte-kit/
+
+# Analisis, cobertura y caches
+.scannerwork/
+coverage/
+.nyc_output/
+.cache/
+.parcel-cache/
+.vite/
+.vscode-test/
+.pnpm-store/
+.npm/
+
+# Logs y archivos temporales
+logs/
+*.log
+*.tmp
+*.temp
+*.bak
+*.pid
+*.seed
+*.pid.lock
+*.long
+
+# Archivos de entorno y paquetes generados
+.env
+.env.*
+!.env.example
+*.tgz

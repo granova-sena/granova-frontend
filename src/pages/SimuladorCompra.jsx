@@ -5,8 +5,58 @@ import { API_URL as BASE_API_URL } from "../config";
 import FadeIn from "../components/ui/FadeIn";
 import { SkeletonCard } from "../components/ui/Skeleton";
 import { ImagenProducto, adaptarProducto, eliminarDuplicados } from "./Catalogo";
+import toast from "react-hot-toast";
 
 const API_URL = `${BASE_API_URL}/productos`;
+
+// Animación "volar": una miniatura del producto viaja desde el botón
+// tocado hasta el panel de simulación, como feedback visual al agregar.
+function volarProducto(producto, elementoOrigen) {
+  try {
+    const origen = elementoOrigen?.getBoundingClientRect?.();
+    const destino = document.getElementById("panel-simulacion")?.getBoundingClientRect()
+      || { left: window.innerWidth - 80, top: 100 };
+    if (!origen) return;
+
+    const volador = document.createElement("img");
+    volador.src = producto.img || "/logoGranova.jpeg";
+    volador.style.cssText = [
+      "position: fixed",
+      "z-index: 9999",
+      "width: 44px",
+      "height: 44px",
+      "border-radius: 12px",
+      "object-fit: cover",
+      "border: 2px solid #6FA98C",
+      "box-shadow: 0 8px 24px rgba(0,0,0,0.45)",
+      "pointer-events: none",
+      "transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.55s ease",
+      `left: ${origen.left + origen.width / 2 - 22}px`,
+      `top: ${origen.top + origen.height / 2 - 22}px`,
+      "transform: scale(0.85)",
+      "opacity: 1",
+    ].join(";");
+    document.body.appendChild(volador);
+
+    requestAnimationFrame(() => {
+      const dx = destino.left + destino.width / 2 - (origen.left + origen.width / 2);
+      const dy = destino.top + destino.height / 2 - (origen.top + origen.height / 2);
+      volador.style.transform = `translate(${dx}px, ${dy}px) scale(0.35)`;
+      volador.style.opacity = "0.15";
+    });
+
+    setTimeout(() => {
+      volador.remove();
+      const panel = document.getElementById("panel-simulacion");
+      if (panel) {
+        panel.animate(
+          [{ transform: "scale(1)" }, { transform: "scale(1.025)" }, { transform: "scale(1)" }],
+          { duration: 260, easing: "ease-out" }
+        );
+      }
+    }, 580);
+  } catch { /* silencioso */ }
+}
 
 // ── SIMULADOR DE COMPRA ────────────────────────────────────
 // El cliente arma su pedido aquí SIN tocar el carrito real y ve al instante
@@ -68,7 +118,7 @@ function SimuladorInterno() {
   // para que "agregar de nuevo" sume a la línea correcta.
   const formatoDefault = (p) => (p.formatos.length > 0 ? [...p.formatos].sort((a, b) => a.precio - b.precio)[0] : null);
 
-  function agregarProducto(p) {
+  function agregarProducto(p, elementoOrigen) {
     const fd = formatoDefault(p);
     const key = `${p.id}-${fd?.id_formato ?? "u"}`;
     setLineas(prev => {
@@ -81,6 +131,8 @@ function SimuladorInterno() {
         cant: 1,
       }];
     });
+    volarProducto(p, elementoOrigen);
+    toast.success(`${p.nombre} agregado a la simulación`, { id: `sim-${key}`, duration: 1600 });
   }
 
   function cambiarCant(key, delta) {
@@ -184,20 +236,33 @@ function SimuladorInterno() {
               <div className="max-h-[420px] overflow-y-auto divide-y divide-white/[0.06]">
                 {resultadosBusqueda.map(p => {
                   const base = p.formatos.length > 0 ? p.precioDesde : p.precio;
+                  const promoPct = Number(p.promoPct) || 0;
+                  const promoPrecio = promoPct > 0 ? Math.round(base * (1 - promoPct / 100)) : null;
                   const yaEsta = lineas.some(l => l.p.id === p.id);
                   return (
                     <button
                       type="button"
                       key={p.id}
-                      onClick={() => agregarProducto(p)}
+                      onClick={(e) => agregarProducto(p, e.currentTarget)}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition ${yaEsta ? "bg-[#6FA98C]/[0.07]" : "hover:bg-white/[0.04]"}`}
                     >
-                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#14291B] shrink-0">
+                      <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#14291B] shrink-0">
                         <ImagenProducto src={p.img} alt={p.nombre} className="w-full h-full object-cover" />
+                        {promoPct > 0 && (
+                          <span className="absolute bottom-0 inset-x-0 bg-[#D85A30] text-white text-[7px] font-bold text-center py-[1px]">-{promoPct}%</span>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-white truncate">{p.nombre}</p>
-                        <p className="text-xs text-white/35 mt-0.5">${base.toLocaleString("es-CO")} · {p.stockLabel}</p>
+                        {promoPrecio ? (
+                          <p className="text-xs mt-0.5">
+                            <span className="line-through text-white/25">${base.toLocaleString("es-CO")}</span>{" "}
+                            <span className="text-[#9DC9B4] font-semibold">${promoPrecio.toLocaleString("es-CO")}</span>{" "}
+                            <span className="text-[#D85A30] font-semibold">-{promoPct}%</span>
+                          </p>
+                        ) : (
+                          <p className="text-xs text-white/35 mt-0.5">${base.toLocaleString("es-CO")} · {p.stockLabel}</p>
+                        )}
                       </div>
                       <span className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold transition ${yaEsta ? "bg-[#6FA98C] text-white" : "bg-white/[0.07] text-white/50 hover:bg-[#6FA98C] hover:text-white"}`}>+</span>
                     </button>
@@ -210,7 +275,7 @@ function SimuladorInterno() {
             </div>
 
             {/* ── PANEL DE SIMULACIÓN ── */}
-            <div className="flex flex-col gap-4">
+            <div id="panel-simulacion" className="flex flex-col gap-4">
 
               {/* Líneas */}
               <div className="rounded-2xl bg-[#0F1D13] border border-white/[0.08] overflow-hidden">
@@ -223,7 +288,6 @@ function SimuladorInterno() {
                 ) : (
                   <ul className="divide-y divide-white/[0.06]">
                     {lineas.map(l => {
-                      const f = formatoDe(l);
                       const pu = precioUnitario(l);
                       const pctItem = Math.max(Number(l.p.promoPct) || 0, ganador.pct);
                       const puFinal = Math.round(pu * (1 - pctItem / 100));

@@ -1,0 +1,107 @@
+/* ============================================================
+   PANEL-TEMA — Sistema de diseño unificado para paneles
+   Admin y Empleado (Granova). Tema claro + oscuro estilo web.
+   Los overrides de .dark convierten utilidades "claras" de
+   Tailwind en superficies oscuras, sin necesidad de dark:.
+   ============================================================ */
+
+/* ---------- Animaciones del panel ---------- */
+@keyframes panel-come {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes panel-pop {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes panel-barra {
+  from { width: 0; }
+}
+@keyframes panel-flotar {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+.panel-come   { animation: panel-come 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.panel-pop    { animation: panel-pop 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.panel-come-d1 { animation-delay: 0.06s; }
+.panel-come-d2 { animation-delay: 0.12s; }
+.panel-come-d3 { animation-delay: 0.18s; }
+.panel-come-d4 { animation-delay: 0.24s; }
+.panel-come-d5 { animation-delay: 0.30s; }
+
+/* Tarjeta base del panel con elevación al pasar el mouse */
+.panel-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.panel-card:hover {
+  transform: translateY(-3px);
+}
+
+/* Icono flotante suave en cabeceras */
+.panel-icono-flotante {
+  animation: panel-flotar 4s ease-in-out infinite;
+}
+
+/* Barras de gráfico que crecen al cargar */
+.panel-barra { animation: panel-barra 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+
+/* Accesibilidad: animaciones reducidas */
+@media (prefers-reduced-motion: reduce) {
+  .panel-come, .panel-pop, .panel-barra, .panel-icono-flotante { animation: none !important; }
+  .panel-card:hover { transform: none !important; }
+}
+
+/* ============================================================
+   MODO OSCURO — overrides globales de utilidades Tailwind
+   ============================================================ */
+.dark .bg-white { background-color: #101b15 !important; }
+.dark .bg-gray-50 { background-color: rgba(255, 255, 255, 0.04) !important; }
+.dark .bg-gray-100 { background-color: rgba(255, 255, 255, 0.06) !important; }
+.dark .bg-gray-200 { background-color: rgba(255, 255, 255, 0.08) !important; }
+.dark .bg-gray-50\/70 { background-color: rgba(255, 255, 255, 0.035) !important; }
+.dark .hover\:bg-gray-50:hover { background-color: rgba(255, 255, 255, 0.06) !important; }
+.dark .hover\:bg-gray-100:hover { background-color: rgba(255, 255, 255, 0.10) !important; }
+
+.dark .border-gray-100 { border-color: rgba(255, 255, 255, 0.07) !important; }
+.dark .border-gray-200 { border-color: rgba(255, 255, 255, 0.10) !important; }
+.dark .border-gray-300 { border-color: rgba(255, 255, 255, 0.16) !important; }
+.dark .divide-gray-100 > * + * { border-color: rgba(255, 255, 255, 0.07) !important; }
+.dark .divide-gray-200 > * + * { border-color: rgba(255, 255, 255, 0.10) !important; }
+
+.dark .text-gray-900 { color: #f2f7f4 !important; }
+.dark .text-gray-800 { color: #e8f2ec !important; }
+.dark .text-gray-700 { color: #d7e5dd !important; }
+.dark .text-gray-600 { color: #b9cdc2 !important; }
+.dark .text-gray-500 { color: #8fa89b !important; }
+.dark .text-gray-400 { color: #6d8579 !important; }
+.dark .text-admin-heading { color: #e8f2ec !important; }
+
+/* Badges: textos claros sobre fondos semitransparentes oscuros */
+.dark .text-green-700 { color: #86efac !important; }
+.dark .text-green-800 { color: #86efac !important; }
+.dark .text-emerald-600 { color: #6ee7b7 !important; }
+.dark .text-emerald-700 { color: #6ee7b7 !important; }
+.dark .text-emerald-800 { color: #6ee7b7 !important; }
+.dark .text-amber-600 { color: #fcd34d !important; }
+.dark .text-amber-700 { color: #fcd34d !important; }
+.dark .text-red-500 { color: #fca5a5 !important; }
+.dark .text-red-600 { color: #fca5a5 !important; }
+.dark .text-red-700 { color: #fca5a5 !important; }
+.dark .text-sky-700 { color: #7dd3fc !important; }
+.dark .text-violet-700 { color: #c4b5fd !important; }
+.dark .text-blue-700 { color: #93c5fd !important; }
+.dark .hover\:text-red-700:hover { color: #fca5a5 !important; }
+.dark .hover\:hover-red-800:hover,
+.dark .hover\:text-red-800:hover { color: #fca5a5 !important; }
+.dark .hover\:text-blue-800:hover { color: #93c5fd !important; }
+
+/* Variables de acento siempre legibles en ambos temas */
+:root {
+  --panel-verde: #1D9E75;
+  --panel-verde-oscuro: #0F6E56;
+  --panel-texto: #1F2A24;
+}
+.dark {
+  --panel-texto: #e8f2ec;
+}

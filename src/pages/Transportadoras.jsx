@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useModalBehavior } from '../hooks/useModalBehavior'
 import api from '../services/api'
+import toast from 'react-hot-toast'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
+import ErrorModal from '../components/ui/ErrorModal'
+import { bloquearEntero, normalizarEntero, normalizarTexto } from '../utils/validacion'
+import { PageHeader, StatCard, PanelCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
 
 function esAdmin() {
   try {
@@ -15,6 +20,7 @@ function Transportadoras() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
+  const [eliminando, setEliminando] = useState(null)
 
   function cargar() {
     setLoading(true)
@@ -69,13 +75,16 @@ function Transportadoras() {
     setMostrarModal(true)
   }
 
-  const eliminarTransportadora = async (t) => {
-    if (!window.confirm(`¿Eliminar a ${t.nombre}? Esta acción no se puede deshacer.`)) return
+  const eliminarTransportadora = async () => {
+    const t = eliminando
+    setEliminando(null)
+    if (!t) return
     try {
       await api.delete(`/logistica/transportadoras/${t.id_transportadora}`)
       cargar()
+      toast.success('Transportadora eliminada')
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     }
   }
 
@@ -96,6 +105,31 @@ function Transportadoras() {
     if (form.tipoPersona === 'persona_juridica' && !form.nit.trim()) {
       setErrorForm('Ingresa el NIT de la empresa (*)')
       return
+    }
+    const existenteNombre = transportadoras.some((t) =>
+      t.id_transportadora !== editandoId && String(t.nombre).trim().toLowerCase() === form.nombre.trim().toLowerCase()
+    )
+    if (existenteNombre) {
+      setErrorForm(`Ya existe una transportadora llamada "${form.nombre}"`)
+      return
+    }
+    if (form.tipoPersona === 'persona_natural') {
+      const existentePlaca = transportadoras.some((t) =>
+        t.id_transportadora !== editandoId && String(t.placa || '').trim().toLowerCase() === form.placa.trim().toLowerCase()
+      )
+      if (existentePlaca) {
+        setErrorForm(`La placa "${form.placa}" ya está registrada`)
+        return
+      }
+    }
+    if (form.tipoPersona === 'persona_juridica') {
+      const existenteNit = transportadoras.some((t) =>
+        t.id_transportadora !== editandoId && String(t.nit || '').trim().toLowerCase() === form.nit.trim().toLowerCase()
+      )
+      if (existenteNit) {
+        setErrorForm(`El NIT "${form.nit}" ya está registrado`)
+        return
+      }
     }
     const datos = {
       tipo_persona: form.tipoPersona,
@@ -146,9 +180,8 @@ function Transportadoras() {
       label: 'Total transportadoras',
       valor: transportadoras.length,
       descripcion: 'Domiciliarios registrados',
-      color: '#1D9E75',
-      bg: 'rgba(29,158,117,0.10)',
-      icon: (
+      tono: 'verde',
+      icono: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
           <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
@@ -161,9 +194,8 @@ function Transportadoras() {
       label: 'Envíos totales',
       valor: totalEnvios,
       descripcion: 'Suma de envíos gestionados',
-      color: '#2563eb',
-      bg: 'rgba(37,99,235,0.10)',
-      icon: (
+      tono: 'cielo',
+      icono: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
           <path d="M1 3h15v13H1z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
           <path d="M16 8h4l3 3v5h-7V8z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
@@ -176,9 +208,8 @@ function Transportadoras() {
       label: 'Activos',
       valor: activas,
       descripcion: 'Operando actualmente',
-      color: '#16a34a',
-      bg: 'rgba(22,163,74,0.10)',
-      icon: (
+      tono: 'verde',
+      icono: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           <path d="M22 4L12 14.01l-3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -191,48 +222,35 @@ function Transportadoras() {
   const mostrarColumnaEstado = filtroEstado === 'Todos'
   const admin = esAdmin()
 
-  if (loading) return <p className="text-sm text-gray-500">Cargando transportadoras...</p>
+  if (loading) return <PanelSkeleton filas={4} columnas={4} />
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-admin-page-title">Transportadoras</h1>
-          <p className="text-sm text-admin-page-subtitle">Gestión de domiciliarios y rendimiento de entregas</p>
-        </div>
-        {!admin && (
-          <button onClick={abrirModal} className="text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition whitespace-nowrap shadow-sm">
-            + Agregar transportadora
-          </button>
+      <PageHeader
+        titulo="Transportadoras"
+        subtitulo="Gestión de domiciliarios y rendimiento de entregas"
+        acciones={!admin && (
+          <BotonPrimario onClick={abrirModal}>+ Agregar transportadora</BotonPrimario>
         )}
-      </div>
+      />
 
-      {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2 flex justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400">✕</button>
-        </div>
-      )}
+      <ErrorModal mensaje={error} onClose={() => setError(null)} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-4">
-              <span
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: stat.bg, color: stat.color }}
-              >
-                {stat.icon}
-              </span>
-            </div>
-            <p className="text-3xl font-bold text-admin-page-title leading-none">{stat.valor}</p>
-            <p className="text-sm font-medium text-gray-700 mt-2">{stat.label}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{stat.descripcion}</p>
-          </div>
+        {stats.map((stat, i) => (
+          <StatCard
+            key={stat.label}
+            label={stat.label}
+            value={stat.valor}
+            sub={stat.descripcion}
+            icono={stat.icono}
+            tono={stat.tono}
+            delay={i ? `panel-come-d${i + 1}` : ''}
+          />
         ))}
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <PanelCard animado={false} className="p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-6">
           <div>
             <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</span>
@@ -274,11 +292,11 @@ function Transportadoras() {
             </div>
           </div>
         </div>
-      </div>
+      </PanelCard>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <PanelCard animado={false} className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Nombre</th>
@@ -297,26 +315,26 @@ function Transportadoras() {
             <tbody>
               {transportadorasFiltradas.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                    No hay transportadoras con los filtros seleccionados
+                  <td colSpan={7} className="px-6 py-8">
+                    <EmptyState icono="🚚" titulo="Sin transportadoras" descripcion="No hay transportadoras con los filtros seleccionados" />
                   </td>
                 </tr>
               ) : (
                 transportadorasFiltradas.map((t, idx) => (
                   <tr key={t.id_transportadora} className={`border-b border-gray-200 hover:bg-gray-50 transition ${idx === transportadorasFiltradas.length - 1 ? 'border-b-0' : ''}`}>
                     <td className="px-6 py-4">
-                      <p className="font-medium text-gray-900">{t.nombre}</p>
+                      <p className="font-medium text-admin-heading">{t.nombre}</p>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm text-gray-600">{t.telefono}</p>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-admin-heading">
                         {t.tipo_persona === 'persona_juridica' ? (t.nit || '—') : (t.placa || '—')}
                       </p>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <p className="text-sm font-medium text-gray-900">{t.envios}</p>
+                      <p className="text-sm font-medium text-admin-heading">{t.envios}</p>
                     </td>
                     {mostrarColumnaTipo && (
                       <td className="px-6 py-4 text-center">
@@ -341,7 +359,7 @@ function Transportadoras() {
                             Editar
                           </button>
                           <span className="text-gray-300">·</span>
-                          <button onClick={() => eliminarTransportadora(t)} className="text-red-600 hover:text-red-800 text-sm font-medium transition">
+                          <button onClick={() => setEliminando(t)} className="text-red-600 hover:text-red-800 text-sm font-medium transition">
                             Eliminar
                           </button>
                         </div>
@@ -353,22 +371,17 @@ function Transportadoras() {
             </tbody>
           </table>
         </div>
-      </div>
+      </PanelCard>
 
       {mostrarModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl panel-come">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h3 className="text-base font-semibold text-gray-800">{editandoId != null ? 'Editar transportadora' : 'Agregar transportadora'}</h3>
+              <h3 className="text-base font-semibold text-admin-heading">{editandoId != null ? 'Editar transportadora' : 'Agregar transportadora'}</h3>
               <button onClick={() => setMostrarModal(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
             </div>
 
             <form onSubmit={guardarTransportadora} className="p-6 space-y-4">
-              {errorForm && (
-                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                  {errorForm}
-                </div>
-              )}
 
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Tipo de persona</label>
@@ -400,8 +413,8 @@ function Transportadoras() {
                 <input
                   type="text"
                   value={form.nombre}
-                  onChange={(e) => cambiarCampo('nombre', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                  onChange={(e) => cambiarCampo('nombre', normalizarTexto(e.target.value))}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#1D9E75] transition text-gray-800"
                   placeholder={form.tipoPersona === 'persona_juridica' ? 'Ej: Translog CR S.A.' : 'Ej: Carlos Rodríguez'}
                 />
               </div>
@@ -410,10 +423,13 @@ function Transportadoras() {
                 <label className="block text-sm text-gray-600 mb-1">Teléfono *</label>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  maxLength={10}
+                  onKeyDown={bloquearEntero}
                   value={form.telefono}
-                  onChange={(e) => cambiarCampo('telefono', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
-                  placeholder="Ej: 300 000 0000"
+                  onChange={(e) => cambiarCampo('telefono', normalizarEntero(e.target.value))}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#1D9E75] transition text-gray-800"
+                  placeholder="Ej: 3000000000"
                 />
               </div>
 
@@ -422,7 +438,7 @@ function Transportadoras() {
                 <select
                   value={form.tipo}
                   onChange={(e) => cambiarCampo('tipo', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#1D9E75] transition text-gray-800"
                 >
                   <option value="Acarreo">Acarreo</option>
                   <option value="Domiciliario">Domiciliario (Moto)</option>
@@ -435,8 +451,8 @@ function Transportadoras() {
                   <input
                     type="text"
                     value={form.placa}
-                    onChange={(e) => cambiarCampo('placa', e.target.value.toUpperCase())}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75] uppercase"
+                    onChange={(e) => cambiarCampo('placa', normalizarTexto(e.target.value.toUpperCase()))}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#1D9E75] transition text-gray-800 uppercase"
                     placeholder="Ej: PBX-123"
                   />
                 </div>
@@ -447,8 +463,8 @@ function Transportadoras() {
                     <input
                       type="text"
                       value={form.nit}
-                      onChange={(e) => cambiarCampo('nit', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                      onChange={(e) => cambiarCampo('nit', normalizarTexto(e.target.value))}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#1D9E75] transition text-gray-800"
                       placeholder="Ej: 900.123.456-7"
                     />
                   </div>
@@ -457,9 +473,10 @@ function Transportadoras() {
                     <input
                       type="number"
                       min="0"
+                      onKeyDown={bloquearEntero}
                       value={form.vehiculos}
-                      onChange={(e) => cambiarCampo('vehiculos', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                      onChange={(e) => cambiarCampo('vehiculos', normalizarEntero(e.target.value))}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#1D9E75] transition text-gray-800"
                     />
                   </div>
                 </>
@@ -471,7 +488,7 @@ function Transportadoras() {
                   <select
                     value={form.estado}
                     onChange={(e) => cambiarCampo('estado', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75]"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#1D9E75] transition text-gray-800"
                   >
                     <option value="Activo">Activo</option>
                     <option value="Inactivo">Inactivo</option>
@@ -481,9 +498,9 @@ function Transportadoras() {
 
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setMostrarModal(false)}
-                  className="flex-1 text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-600">Cancelar</button>
+                  className="flex-1 text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition">Cancelar</button>
                 <button type="submit" disabled={guardando}
-                  className="flex-1 text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white disabled:opacity-50">
+                  className="flex-1 text-sm px-4 py-2 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition disabled:opacity-50">
                   {guardando ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
@@ -491,6 +508,17 @@ function Transportadoras() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        abierto={!!eliminando}
+        titulo="¿Eliminar transportadora?"
+        mensaje={eliminando ? `¿Eliminar a ${eliminando.nombre}? Esta acción no se puede deshacer.` : ''}
+        confirmarTexto="Eliminar"
+        onConfirmar={eliminarTransportadora}
+        onCancelar={() => setEliminando(null)}
+      />
+
+      <ErrorModal mensaje={errorForm} onClose={() => setErrorForm(null)} />
     </div>
   )
 }

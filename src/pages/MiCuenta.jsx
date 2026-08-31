@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { API_URL } from "../config";
+import { idDeTokenCliente } from '../services/session'
 import { useCarrito } from '../context/CarritoContext'
 import { calcularNivel } from '../utils/lealtad'
 import LoyaltyRing from '../components/ui/LoyaltyRing'
@@ -83,8 +84,13 @@ function MiCuenta() {
 
     setGuardando(true)
     try {
-      const token = localStorage.getItem('token')
-      const respuesta = await fetch(`${API_URL}/api/clientes/${cliente.id}`, {
+      const token = localStorage.getItem('token_cliente')
+      const idCliente = idDeTokenCliente()
+      if (!idCliente) {
+        toast.error('Debes iniciar sesión para actualizar tu perfil', { id: 'perfil-identificacion' })
+        return
+      }
+      const respuesta = await fetch(`${API_URL}/api/clientes/${idCliente}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -105,7 +111,7 @@ function MiCuenta() {
         const msg = datos.error ?? datos.mensaje ?? 'Error al actualizar'
         toast.error(msg, { id: 'perfil-identificacion' })
         if (respuesta.status === 401 || respuesta.status === 403) {
-          setTimeout(() => { localStorage.removeItem('token'); window.location.href = '/login'; }, 1500)
+          setTimeout(() => { localStorage.removeItem('token_cliente'); window.location.href = '/login'; }, 1500)
         }
         return
       }
@@ -141,7 +147,7 @@ function MiCuenta() {
   // Los cupones viven en la BD: aunque el cliente cierre sesión y vuelva,
   // sus cupones activos siguen apareciendo aquí. 🎟️
   useEffect(() => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token_cliente')
     const id = cliente?.id
     if (!token || !id) return
 
@@ -175,7 +181,7 @@ function MiCuenta() {
 
     setCanjeando(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('token_cliente')
       const respuesta = await fetch(`${API_URL}/api/cupones/canjear`, {
         method: 'POST',
         headers: {
@@ -302,7 +308,8 @@ function MiCuenta() {
           )}
         </div>
 
-        {/* LEALTAD (Frente D): nivel, puntos, progreso y canje */}
+        {/* LEALTAD (Frente D): nivel, puntos, progreso y canje — solo personas naturales */}
+        {!esJuridica && (
         <div className="rounded-2xl p-6 sm:p-8 mb-5 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
           <div className="flex flex-col sm:flex-row items-center gap-8">
             {/* Anillo de lealtad */}
@@ -352,8 +359,10 @@ function MiCuenta() {
             </div>
           </div>
         </div>
+        )}
 
-        {/* MIS CUPONES ACTIVOS (persisten en la BD) */}
+        {/* MIS CUPONES ACTIVOS (persisten en la BD) — solo personas naturales */}
+        {!esJuridica && (
         <div className="rounded-2xl p-6 sm:p-8 mb-5 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-xl">🎟️</span>
@@ -383,6 +392,7 @@ function MiCuenta() {
             </div>
           )}
         </div>
+        )}
 
         {/* IDENTIFICACIÓN */}
         <div className="rounded-2xl p-6 sm:p-8 mb-8 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">

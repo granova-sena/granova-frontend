@@ -32,6 +32,19 @@ function Promociones() {
   const navigate = useNavigate()
   const [promos, setPromos] = useState([])
 
+  const esJuridica = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('cliente'))?.tipo_persona === 'juridica'
+    } catch {
+      return false
+    }
+  })()
+
+  // Las personas jurídicas tienen 10% fijo: no participan de lealtad ni cupones
+  const beneficiosVisibles = esJuridica
+    ? BENEFICIOS.filter(b => b.titulo !== 'Cupones de lealtad' && b.titulo !== 'Programa de fidelidad' && b.titulo !== 'Premio por compra al por mayor')
+    : BENEFICIOS
+
   // Campañas activas: vienen de la BD (tabla promociones). Lo que se anuncia
   // aquí, de verdad está activo — cero promociones fantasma. 🚫👻
   useEffect(() => {
@@ -86,7 +99,7 @@ function Promociones() {
 
         <FadeIn>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {BENEFICIOS.map((b) => {
+            {beneficiosVisibles.map((b) => {
               const Icono = b.icono
               const activo = b.estado === 'Activo'
               return (
@@ -113,7 +126,7 @@ function Promociones() {
         <FadeIn>
           <div className="mt-6 p-6 sm:p-8 rounded-2xl text-center bg-[#6FA98C]">
             <p className="text-white font-medium mb-1">¿Listo para aprovechar tus descuentos?</p>
-            <p className="text-white/50 text-sm mb-5">Elige tu formato, compra al por mayor o canjea tus puntos — el mejor descuento se aplica solo.</p>
+            <p className="text-white/50 text-sm mb-5">{esJuridica ? 'Tu 10% de empresa ya está activo — el mejor descuento se aplica solo.' : 'Elige tu formato, compra al por mayor o canjea tus puntos — el mejor descuento se aplica solo.'}</p>
             <button
               type="button"
               onClick={() => navigate('/cliente/catalogo')}

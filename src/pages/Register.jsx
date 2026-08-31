@@ -302,8 +302,8 @@ function Register() {
               <button
                 type="button"
                 onClick={() => setVerContraseña(!verContraseña)}
+                aria-label={verContraseña ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                 className="absolute right-3 top-9 text-white/40 hover:text-white/80 transition"
-                tabIndex={-1}
               >
                 <IconoOjo ver={verContraseña} />
               </button>
@@ -343,8 +343,8 @@ function Register() {
               <button
                 type="button"
                 onClick={() => setVerConfirmar(!verConfirmar)}
+                aria-label={verConfirmar ? 'Ocultar confirmación de contraseña' : 'Mostrar confirmación de contraseña'}
                 className="absolute right-3 top-9 text-white/40 hover:text-white/80 transition"
-                tabIndex={-1}
               >
                 <IconoOjo ver={verConfirmar} />
               </button>

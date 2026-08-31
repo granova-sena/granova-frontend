@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import * as ReactJoyride from 'react-joyride'
 import { jwtDecode } from 'jwt-decode'
 import AsistenteWidget from '../components/AsistenteWidget'
+import '../panel-tema.css'
 
 const { Joyride, STATUS, EVENTS } = ReactJoyride
 
@@ -41,6 +42,18 @@ function DashboardLayout() {
       target: '.menu-usuarios',
       content: 'Aquí administras los empleados que operan el sistema.',
       placement: 'right',
+    },
+    {
+      target: '.grupo-pedidos',
+      content: 'Aquí gestionas cada pedido de principio a fin: aceptarlo, empacarlo, enviarlo, entregarlo y cobrar el pago manual.',
+      placement: 'right',
+      abrirGrupo: 'pedidos',
+    },
+    {
+      target: '.grupo-inventario',
+      content: 'Aquí controlas el stock de productos y las alertas de inventario bajo.',
+      placement: 'right',
+      abrirGrupo: 'inventario',
     },
     {
       target: '.grupo-ventas',
@@ -102,6 +115,28 @@ function DashboardLayout() {
 
   const menuGrupos = [
     {
+      id: 'pedidos',
+      titulo: 'Pedidos',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M21 8l-9-5-9 5 9 5 9-5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+          <path d="M3 8v8l9 5 9-5V8" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+          <path d="M12 13v8" stroke="currentColor" strokeWidth="2"/>
+        </svg>
+      ),
+      items: [
+        { label: 'Gestión de pedidos', path: '/dashboard/pedidos', icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          ) },
+        { label: 'Envíos', path: '/dashboard/envios', icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M1 3h15v13H1z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M16 8h4l3 3v5h-7V8z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><circle cx="5.5" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="2"/><circle cx="18.5" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="2"/></svg>
+          ) },
+        { label: 'Transportadoras', path: '/dashboard/transportadoras', icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>
+          ) },
+      ],
+    },
+    {
       id: 'ventas',
       titulo: 'Ventas',
       icon: (
@@ -110,8 +145,35 @@ function DashboardLayout() {
         </svg>
       ),
       items: [
-        { label: 'Registro de ventas', path: '/dashboard/ventas' },
-        { label: 'Reportes', path: '/dashboard/reportes' },
+        { label: 'Registro de ventas', path: '/dashboard/ventas', icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          ) },
+        { label: 'Reportes', path: '/dashboard/reportes', icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          ) },
+        { label: 'Promociones', path: '/dashboard/promociones', icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>
+          ) },
+        { label: 'Reseñas', path: '/dashboard/resenas', icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>
+          ) },
+      ],
+    },
+    {
+      id: 'inventario',
+      titulo: 'Inventario',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M21 8l-9-5-9 5v8l9 5 9-5V8zM3 8l9 5 9-5M12 13v8" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+        </svg>
+      ),
+      items: [
+        { label: 'Stock de productos', path: '/dashboard/inventario', icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>
+          ) },
+        { label: 'Alertas de stock', path: '/dashboard/inventario/alertas', icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          ) },
       ],
     },
   ]
@@ -134,13 +196,13 @@ function DashboardLayout() {
   }
 
   function handleLogout() {
-    localStorage.removeItem('token')
+    localStorage.removeItem('token_empleado')
     localStorage.removeItem('usuario')
     localStorage.removeItem('cliente')
     navigate('/control-interno')
   }
 
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('token_empleado')
   let nombreAdmin = 'Administrador'
   if (token) {
     try {
@@ -151,12 +213,34 @@ function DashboardLayout() {
     }
   }
 
+  const TITULOS_NAV = {
+    '/dashboard': 'Dashboard',
+    '/dashboard/empleados': 'Empleados',
+    '/dashboard/pedidos': 'Gestión de pedidos',
+    '/dashboard/envios': 'Envíos',
+    '/dashboard/transportadoras': 'Transportadoras',
+    '/dashboard/ventas': 'Registro de ventas',
+    '/dashboard/reportes': 'Reportes',
+    '/dashboard/promociones': 'Promociones',
+    '/dashboard/resenas': 'Reseñas',
+    '/dashboard/inventario/alertas': 'Alertas de stock',
+    '/dashboard/inventario': 'Stock de productos',
+  }
+  const tituloSeccion = TITULOS_NAV[location.pathname] || 'Dashboard'
+  const fechaHoy = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
+
   // Sistema de vidrio compartido — cambia según modo claro/oscuro
-  const [modoOscuro, setModoOscuro] = useState(() => localStorage.getItem('granova_modo_oscuro') === '1')
+  // Por defecto arranca en oscuro (estética Granova); respeta la preferencia guardada.
+  const [modoOscuro, setModoOscuro] = useState(() => {
+    const guardado = localStorage.getItem('modoOscuro')
+    if (guardado !== null) return guardado === 'true'
+    const legado = localStorage.getItem('granova_modo_oscuro')
+    return legado ? legado === '1' : true
+  })
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', modoOscuro)
-    localStorage.setItem('granova_modo_oscuro', modoOscuro ? '1' : '0')
+    localStorage.setItem('modoOscuro', String(modoOscuro))
   }, [modoOscuro])
 
   const glass = modoOscuro ? {
@@ -331,7 +415,8 @@ function DashboardLayout() {
                             onMouseEnter={(e) => { if (!activo) e.currentTarget.style.background = modoOscuro ? 'rgba(255,255,255,0.06)' : 'rgba(20,40,32,0.05)' }}
                             onMouseLeave={(e) => { if (!activo) e.currentTarget.style.background = 'transparent' }}
                           >
-                            {item.label}
+                            {item.icon}
+                            <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
                           </button>
                         )
                       })}
@@ -419,6 +504,24 @@ function DashboardLayout() {
 
           {/* Outlet */}
           <main className="relative flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+
+            {/* Cabecera de orientación en escritorio */}
+            <div className="hidden lg:flex items-end justify-between mb-6">
+              <div>
+                <p className="text-xs text-gray-400 mb-1">Granova Admin</p>
+                <h1 className="text-lg font-semibold tracking-tight text-admin-heading">{tituloSeccion}</h1>
+              </div>
+              <div className="flex items-center gap-3 pb-0.5">
+                <span className="text-xs text-gray-500 capitalize">{fechaHoy}</span>
+                <span
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
+                  style={{ background: '#1D9E75', boxShadow: '0 4px 12px rgba(29,158,117,0.35)' }}
+                >
+                  {String(nombreAdmin.charAt(0)).toUpperCase()}
+                </span>
+              </div>
+            </div>
+
             <Outlet />
           </main>
 

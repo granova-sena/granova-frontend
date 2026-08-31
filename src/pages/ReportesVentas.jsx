@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from 'react'
+import toast from 'react-hot-toast'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import { API_URL } from '../config'
+import { PageHeader, PanelCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
 
 // Mapea la etiqueta que ve el usuario al valor que entiende el backend.
 const PERIODOS = [
@@ -88,143 +90,146 @@ function ReportesVentas() {
 
       doc.save(`reporte-ventas-${periodoActivo}.pdf`)
     } catch (err) {
-      alert('No se pudo generar el PDF: ' + err.message)
+      toast.error('No se pudo generar el PDF: ' + err.message)
     } finally {
       setGenerandoPdf(false)
     }
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-admin-heading">Reportes de ventas</h1>
-          <p className="text-sm text-gray-300">Detalle de ventas por producto — {tituloPeriodo}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={descargarPDF}
-            disabled={generandoPdf || cargando}
-            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-[#9d351c] text-white border border-[#832b18] hover:bg-[#8a2f17] transition disabled:opacity-50"
-          >
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Reportes de ventas"
+        subtitulo={`Detalle de ventas por producto — ${tituloPeriodo}`}
+        acciones={(
+          <BotonPrimario onClick={descargarPDF} disabled={generandoPdf || cargando}>
             ↓ {generandoPdf ? 'Generando...' : 'Descargar PDF'}
-          </button>
-        </div>
-      </div>
+          </BotonPrimario>
+        )}
+      />
 
-      <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-wrap items-center gap-2">
+      <PanelCard animado={false} className="p-4 flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium mr-2 text-admin-heading">Periodo:</span>
         {PERIODOS.map((p) => (
           <button
             type="button"
             key={p.valor}
             onClick={() => setPeriodoActivo(p.valor)}
-            className={`text-sm px-4 py-1.5 rounded-lg transition ${
-              periodoActivo === p.valor ? 'bg-[#1a2e1a] text-white' : 'text-gray-500 hover:bg-gray-100'
+            className={`text-sm px-4 py-2 rounded-lg transition ${
+              periodoActivo === p.valor ? 'bg-[#1D9E75] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
             {p.label}
           </button>
         ))}
-      </div>
+      </PanelCard>
 
-      {/* Todo lo de acá adentro es lo que se captura en el PDF */}
-      <div ref={contenidoRef} className="space-y-4 bg-[#F4F1EC] p-1">
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          <div className="xl:col-span-2 bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-            <h2 className="text-base font-semibold mb-4 text-admin-heading">Tendencia de ventas — {tituloPeriodo}</h2>
-            {cargando ? (
-              <div className="h-[180px] flex items-center justify-center text-sm text-gray-400">Cargando...</div>
-            ) : tendencia.length === 0 ? (
-              <div className="h-[180px] flex items-center justify-center text-sm text-gray-400">Sin ventas en este período.</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={tendencia}>
-                  <XAxis dataKey="semana" stroke="#9ca3af" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="#9ca3af" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000000).toFixed(1)}M`} />
-                  <Tooltip formatter={(v) => [`$${Number(v).toLocaleString('es-CO')}`, 'Ventas']} />
-                  <Line type="monotone" dataKey="ventas" stroke="#6FA98C" strokeWidth={2} dot={{ fill: '#6FA98C', r: 4 }} activeDot={{ r: 6 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-            <h2 className="text-base font-semibold mb-4 text-admin-heading">Productos más vendidos</h2>
-            <div className="relative">
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3} dataKey="value">
-                    {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip formatter={(v, n) => [`${v} kg`, n]} />
-                </PieChart>
-              </ResponsiveContainer>
-              {pieData.length > 0 && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ marginTop: '-14px' }}>
-                  <span className="text-lg font-semibold text-gray-800">{kgTotalVendidos}</span>
-                  <span className="text-[10px] text-gray-400">kg totales</span>
-                </div>
+      {(cargando && !datos) ? (
+        <PanelSkeleton filas={3} columnas={3} />
+      ) : (
+        /* Todo lo de acá adentro es lo que se captura en el PDF */
+        <div ref={contenidoRef} className="space-y-4 panel-come">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <PanelCard className="xl:col-span-2 p-4 sm:p-5">
+              <h2 className="text-base font-semibold mb-4 text-admin-heading">Tendencia de ventas — {tituloPeriodo}</h2>
+              {cargando ? (
+                <div className="h-[180px] flex items-center justify-center text-sm text-gray-400">Cargando...</div>
+              ) : tendencia.length === 0 ? (
+                <EmptyState icono="📈" titulo="Sin ventas" descripcion="No hay ventas registradas en este período." />
+              ) : (
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={tendencia}>
+                    <XAxis dataKey="semana" stroke="#9ca3af" tick={{ fontSize: 12 }} />
+                    <YAxis stroke="#9ca3af" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000000).toFixed(1)}M`} />
+                    <Tooltip formatter={(v) => [`$${Number(v).toLocaleString('es-CO')}`, 'Ventas']} />
+                    <Line type="monotone" dataKey="ventas" stroke="#1D9E75" strokeWidth={2} dot={{ fill: '#1D9E75', r: 4 }} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
               )}
-            </div>
-            <div className="flex flex-col gap-1.5 mt-2">
-              {pieData.map((item) => (
-                <div key={item.name} className="flex items-center gap-2 text-xs">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }}></span>
-                  <span className="text-gray-600">{item.name}</span>
-                  <span className="ml-auto font-medium text-gray-800">{item.value} kg</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+            </PanelCard>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-base font-semibold mb-4 text-admin-heading">Top productos — {tituloPeriodo}</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-200">
-                  <th className="py-2 font-medium">Producto</th>
-                  <th className="py-2 font-medium">Categoría</th>
-                  <th className="py-2 font-medium">Kg vendidos</th>
-                  <th className="py-2 font-medium">Total ventas</th>
-                  <th className="py-2 font-medium">% del total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topProductos.length === 0 ? (
-                  <tr><td colSpan={5} className="py-6 text-center text-gray-400">Sin ventas en este período.</td></tr>
-                ) : topProductos.map((p) => (
-                  <tr key={p.nombre} className="border-b border-gray-100 last:border-0">
-                    <td className="py-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg ${p.color} flex-shrink-0`}></div>
-                        <div>
-                          <p className="text-gray-800 font-medium">{p.nombre}</p>
-                          <p className="text-xs text-gray-400">{p.detalle}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 text-gray-600">{p.categoria}</td>
-                    <td className="py-3 text-gray-600">{p.kg}</td>
-                    <td className="py-3 text-gray-800 font-medium">{p.total}</td>
-                    <td className="py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-[120px]">
-                          <div className="h-full bg-[#7CB342] rounded-full" style={{ width: `${p.pct}%` }}></div>
-                        </div>
-                        <span className="text-xs text-gray-500">{p.pct}%</span>
-                      </div>
-                    </td>
-                  </tr>
+            <PanelCard className="p-4 sm:p-5">
+              <h2 className="text-base font-semibold mb-4 text-admin-heading">Productos más vendidos</h2>
+              <div className="relative">
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3} dataKey="value">
+                      {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                    <Tooltip formatter={(v, n) => [`${v} kg`, n]} />
+                  </PieChart>
+                </ResponsiveContainer>
+                {pieData.length > 0 && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ marginTop: '-14px' }}>
+                    <span className="text-lg font-semibold text-admin-heading">{kgTotalVendidos}</span>
+                    <span className="text-[10px] text-gray-400">kg totales</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5 mt-2">
+                {pieData.map((item) => (
+                  <div key={item.name} className="flex items-center gap-2 text-xs">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }}></span>
+                    <span className="text-gray-600">{item.name}</span>
+                    <span className="ml-auto font-medium text-admin-heading">{item.value} kg</span>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </PanelCard>
           </div>
+
+          <PanelCard className="overflow-hidden">
+            <div className="p-5 border-b border-gray-100">
+              <h2 className="text-base font-semibold text-admin-heading">Top productos — {tituloPeriodo}</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500 bg-gray-50">
+                    <th className="py-3 px-5 font-medium">Producto</th>
+                    <th className="py-3 px-5 font-medium">Categoría</th>
+                    <th className="py-3 px-5 font-medium">Kg vendidos</th>
+                    <th className="py-3 px-5 font-medium">Total ventas</th>
+                    <th className="py-3 px-5 font-medium">% del total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topProductos.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-6 text-center">
+                        <EmptyState icono="📊" titulo="Sin ventas" descripcion="No hay ventas en este período." />
+                      </td>
+                    </tr>
+                  ) : topProductos.map((p) => (
+                    <tr key={p.nombre} className="border-b border-gray-100 last:border-0">
+                      <td className="py-3 px-5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-lg ${p.color} flex-shrink-0`}></div>
+                          <div>
+                            <p className="text-admin-heading font-medium">{p.nombre}</p>
+                            <p className="text-xs text-gray-400">{p.detalle}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-5 text-gray-600">{p.categoria}</td>
+                      <td className="py-3 px-5 text-gray-600">{p.kg}</td>
+                      <td className="py-3 px-5 text-admin-heading font-medium">{p.total}</td>
+                      <td className="py-3 px-5">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-[120px]">
+                            <div className="h-full bg-[#7CB342] rounded-full" style={{ width: `${p.pct}%` }}></div>
+                          </div>
+                          <span className="text-xs text-gray-500">{p.pct}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PanelCard>
         </div>
-      </div>
+      )}
     </div>
   )
 }

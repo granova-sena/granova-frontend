@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { formatMoney } from '../utils/format'
+import { PageHeader, StatCard, PanelCard } from '../components/ui/panel/PanelKit'
 
 function DashboardHome() {
   const navigate = useNavigate()
@@ -24,7 +25,7 @@ function DashboardHome() {
   }, [])
 
   useEffect(() => {
-    const auth = { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+    const auth = { headers: { Authorization: `Bearer ${localStorage.getItem('token_empleado')}` } }
     Promise.allSettled([
       api.get('/dashboard', auth),
       api.get('/pedidos/resumen', auth),
@@ -48,60 +49,46 @@ function DashboardHome() {
     return 'Buenas noches'
   }
 
-  const glass = {
-    background: 'rgba(255,255,255,0.92)',
-    border: '1px solid rgba(20,40,32,0.14)',
-    backdropFilter: 'blur(20px) saturate(160%)',
-    WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-    boxShadow: '0 8px 28px rgba(20,40,32,0.14), inset 0 1px 0 rgba(255,255,255,0.9)',
-  }
-
   const s = resumen?.ok ? resumen.stats : null
 
   const tarjetas = [
     {
       label: 'Clientes registrados',
       valor: cargando ? '—' : s ? String(s.clientesActivos) : '—',
-      icono: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        </svg>
-      ),
+      tono: 'cielo',
+      icono: '👥',
+      sub: 'cuentas activas',
     },
     {
       label: 'Pedidos pendientes',
       valor: cargando ? '—' : pedidosResumen ? String(pedidosResumen.pendientes) : '—',
-      icono: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M21 8l-9-5-9 5 9 5 9-5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-          <path d="M3 8v8l9 5 9-5V8" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-          <path d="M12 13v8" stroke="currentColor" strokeWidth="2"/>
-        </svg>
-      ),
+      tono: 'ambar',
+      icono: '📦',
+      sub: 'requieren tu acción',
     },
     {
       label: 'Productos activos',
       valor: cargando ? '—' : inventarioResumen ? String(inventarioResumen.totalProductos) : '—',
-      icono: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M3 9h14v6a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V9z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-          <path d="M17 9h2a3 3 0 0 1 0 6h-2" stroke="currentColor" strokeWidth="2"/>
-          <path d="M6 2v3M10 2v3M14 2v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        </svg>
-      ),
+      tono: 'verde',
+      icono: '🫘',
+      sub: 'en catálogo',
     },
     {
       label: 'Lotes disponibles',
       valor: cargando ? '—' : totalLotes !== null ? String(totalLotes) : '—',
-      icono: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M21 3c0 9-6 13-11 13H7v5H4v-8c0-6 5-10 11-10h6z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-        </svg>
-      ),
+      tono: 'violeta',
+      icono: '🗺️',
+      sub: 'en fincas',
     },
+  ]
+
+  const accesos = [
+    { label: 'Gestión de pedidos', icono: '📋', path: '/dashboard/pedidos', desc: 'Aceptar, empacar y entregar' },
+    { label: 'Empleados', icono: '👥', path: '/dashboard/empleados', desc: 'Nómina y reportes' },
+    { label: 'Stock de productos', icono: '📦', path: '/dashboard/inventario', desc: 'Inventario y lotes' },
+    { label: 'Registro de ventas', icono: '💳', path: '/dashboard/ventas', desc: 'Ventas de mostrador' },
+    { label: 'Reportes', icono: '📊', path: '/dashboard/reportes', desc: 'Métricas del negocio' },
+    { label: 'Envíos', icono: '🚚', path: '/dashboard/envios', desc: 'Guías y transportadoras' },
   ]
 
   const r = resumen?.ok ? resumen.rentabilidad : null
@@ -109,11 +96,16 @@ function DashboardHome() {
   const maxVenta = Math.max(...ventasMensuales.map(v => v.total), 1)
 
   return (
-    <div className="min-h-full">
+    <div className="space-y-6">
+      {/* Encabezado de bienvenida */}
+      <PageHeader
+        titulo={`${saludo()}, ${usuario?.nombre || 'Administrador'} 👋`}
+        subtitulo={`${hora.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}, ${hora.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} · Bienvenido al panel de Granova`}
+      />
 
       {/* Alerta: empleados con 3+ reportes acumulados */}
       {alertasEmpleados.length > 0 && (
-        <div className="rounded-2xl p-4 mb-4 bg-red-50 border border-red-200 flex flex-col gap-2">
+        <div className="panel-come rounded-2xl p-4 bg-red-50 border border-red-200 flex flex-col gap-2">
           {alertasEmpleados.map((a) => (
             <button
               key={a.id_usuario}
@@ -134,68 +126,58 @@ function DashboardHome() {
         </div>
       )}
 
-      {/* Header de bienvenida */}
-      <div
-        className="rounded-3xl p-8 mb-6 relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(135deg, rgba(29,158,117,0.10) 0%, rgba(255,255,255,0.65) 100%)',
-          border: '1px solid rgba(29,158,117,0.15)',
-          backdropFilter: 'blur(20px) saturate(160%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-          boxShadow: '0 8px 28px rgba(20,40,32,0.14), inset 0 1px 0 rgba(255,255,255,0.9)',
-        }}
-      >
-        <div
-          className="absolute -right-10 -top-10 w-56 h-56 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(29,158,117,0.10) 0%, transparent 70%)' }}
-        />
-        <div
-          className="absolute -right-4 -bottom-10 w-36 h-36 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(29,158,117,0.06) 0%, transparent 70%)' }}
-        />
-
-        <div className="relative z-10">
-          <p className="text-[#1D9E75] text-sm mb-1 capitalize font-medium">
-            {hora.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
-          <h1 className="text-3xl font-semibold text-[#1F2A24] mb-1">
-            {saludo()}, {usuario?.nombre || 'Administrador'} 👋
-          </h1>
-          <p className="text-[#1F2A24]/50 text-sm">
-            Bienvenido al panel de control de Granova
-          </p>
-        </div>
-      </div>
-
       {/* Tarjetas de resumen */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {tarjetas.map((item, i) => (
-          <div
-            key={i}
-            className="rounded-2xl p-5 flex items-center gap-4 transition-transform duration-300 hover:-translate-y-0.5"
-            style={glass}
-          >
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgba(29,158,117,0.10)', color: '#1D9E75' }}
-            >
-              {item.icono}
-            </div>
-            <div>
-              <p className="text-2xl font-semibold text-[#1F2A24]">{item.valor}</p>
-              <p className="text-xs text-[#1F2A24]/50 mt-0.5">{item.label}</p>
-            </div>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {cargando
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className={`bg-white rounded-2xl border border-gray-200 p-5 h-24 animate-pulse ${i ? 'hidden sm:block' : ''}`}></div>
+            ))
+          : tarjetas.map((item, i) => (
+              <StatCard
+                key={item.label}
+                icono={item.icono}
+                label={item.label}
+                value={item.valor}
+                sub={item.sub}
+                tono={item.tono}
+                delay={`panel-come-d${i + 1}`}
+              />
+            ))}
       </div>
+
+      {/* Accesos rápidos — para no perderte */}
+      <PanelCard animado={false} className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-admin-heading">Accesos rápidos</h2>
+          <span className="text-xs text-gray-400">Navegación directa a cada módulo</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+          {accesos.map((a, i) => (
+            <button
+              type="button"
+              key={a.path}
+              onClick={() => navigate(a.path)}
+              className={`panel-card panel-come group rounded-2xl border border-gray-200 bg-white p-4 text-left flex sm:flex-col sm:items-start items-center gap-3 hover:border-[#1D9E75]/40 ${a.path === '/dashboard/pedidos' ? 'ring-1 ring-[#1D9E75]/20' : ''} ${i ? `panel-come-d${i + 1}` : ''}`}
+            >
+              <span className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 group-hover:scale-110 transition-transform" style={{ background: 'rgba(29,158,117,0.12)' }}>
+                {a.icono}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-admin-heading">{a.label}</span>
+                <span className="block text-[11px] text-gray-500 mt-0.5 truncate">{a.desc}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </PanelCard>
 
       {/* Sección inferior */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-        {/* Rentabilidad del mes (antes "Clientes recientes") */}
-        <div className="rounded-2xl p-6" style={glass}>
+        {/* Rentabilidad del mes */}
+        <PanelCard className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[#1F2A24] font-medium">Rentabilidad del mes</h2>
+            <h2 className="font-semibold text-admin-heading">Rentabilidad del mes</h2>
             {!cargando && r && (
               <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
                 r.rentable ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
@@ -206,68 +188,87 @@ function DashboardHome() {
           </div>
 
           {cargando ? (
-            <p className="text-sm text-[#1F2A24]/40">Cargando...</p>
+            <div className="space-y-3 animate-pulse">
+              <div className="h-4 bg-gray-100 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-100 rounded w-1/2"></div>
+            </div>
           ) : !r || r.ingresos === 0 ? (
-            <p className="text-sm text-[#1F2A24]/40">Aún no hay ventas este mes para calcular rentabilidad.</p>
+            <p className="text-sm text-gray-400">Aún no hay ventas este mes para calcular rentabilidad.</p>
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#1F2A24]/50">Ingresos</span>
-                <span className="text-[#1F2A24] font-medium">{formatMoney(r.ingresos)}</span>
+                <span className="text-gray-400">Ingresos</span>
+                <span className="text-admin-heading font-medium">{formatMoney(r.ingresos)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#1F2A24]/50">Costo de lo vendido</span>
-                <span className="text-[#1F2A24] font-medium">- {formatMoney(r.costoVendido)}</span>
+                <span className="text-gray-400">Costo de lo vendido</span>
+                <span className="text-gray-600 font-medium">- {formatMoney(r.costoVendido)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#1F2A24]/50">Producto perdido ({r.kgPerdidos} kg)</span>
-                <span className="text-[#1F2A24] font-medium">- {formatMoney(r.valorPerdido)}</span>
+                <span className="text-gray-400">Producto perdido ({r.kgPerdidos} kg)</span>
+                <span className="text-gray-600 font-medium">- {formatMoney(r.valorPerdido)}</span>
               </div>
-              <div className="h-px bg-[#1F2A24]/10 my-2"></div>
+              <div className="h-px bg-gray-100 my-2"></div>
               <div className="flex items-center justify-between">
-                <span className="text-[#1F2A24] font-medium">Ganancia neta</span>
+                <span className="text-admin-heading font-medium">Ganancia neta</span>
                 <span className={`font-semibold ${r.gananciaNeta >= 0 ? 'text-[#1D9E75]' : 'text-red-500'}`}>
                   {formatMoney(r.gananciaNeta)}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#1F2A24]/40">Margen sobre ingresos</span>
-                <span className="text-[#1F2A24]/60">{r.margenPct}%</span>
+
+              {/* Barra de margen animada */}
+              <div className="pt-2">
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-gray-400">Margen sobre ingresos</span>
+                  <span className="text-gray-600 font-medium">{r.margenPct}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                  <div
+                    className="panel-barra h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${Math.max(Math.min(r.margenPct, 100), 2)}%`,
+                      background: 'linear-gradient(90deg, #1D9E75, #2dd4a7)',
+                    }}
+                  ></div>
+                </div>
               </div>
             </div>
           )}
-        </div>
+        </PanelCard>
 
-        {/* Ventas mensuales (antes "Estado del sistema") */}
-        <div className="rounded-2xl p-6" style={glass}>
-          <h2 className="text-[#1F2A24] font-medium mb-4">Ventas mensuales</h2>
+        {/* Ventas mensuales */}
+        <PanelCard className="p-6">
+          <h2 className="font-semibold text-admin-heading mb-4">Ventas mensuales</h2>
           {cargando ? (
-            <p className="text-sm text-[#1F2A24]/40">Cargando...</p>
+            <div className="space-y-3 animate-pulse">
+              <div className="h-4 bg-gray-100 rounded w-2/3"></div>
+              <div className="h-32 bg-gray-100 rounded"></div>
+            </div>
           ) : ventasMensuales.length === 0 ? (
-            <p className="text-sm text-[#1F2A24]/40">Aún no hay ventas registradas.</p>
+            <p className="text-sm text-gray-400">Aún no hay ventas registradas.</p>
           ) : (
-            <div className="flex items-end justify-between gap-2" style={{ height: '140px' }}>
+            <div className="flex items-end justify-between gap-2" style={{ height: '180px' }}>
               {ventasMensuales.map((v, i) => (
                 <div key={i} className="flex flex-col items-center flex-1 h-full justify-end">
-                  <span className="text-[10px] text-[#1F2A24]/40 mb-1">{formatMoney(v.total)}</span>
-                  <div className="w-full flex items-end" style={{ height: '90px' }}>
+                  <span className="text-[10px] text-gray-400 mb-1 hidden sm:inline">{formatMoney(v.total)}</span>
+                  <div className="w-full flex items-end" style={{ height: '140px' }}>
                     <div
-                      className="w-full rounded-t-md transition-all duration-300"
+                      className="panel-barra w-full rounded-t-md transition-all duration-500"
                       style={{
                         height: `${Math.max((v.total / maxVenta) * 100, 4)}%`,
+                        animationDelay: `${i * 0.08}s`,
                         background: v.total === maxVenta ? '#1D9E75' : 'rgba(29,158,117,0.35)',
                       }}
                     ></div>
                   </div>
-                  <span className="text-xs text-[#1F2A24]/50 mt-2">{v.mes}</span>
+                  <span className="text-xs text-gray-500 mt-2">{v.mes}</span>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </PanelCard>
 
       </div>
-
     </div>
   )
 }

@@ -89,7 +89,7 @@ function normalizarRutaAdmin(ruta) {
       setCargando(true)
 
       try {
-        const token = localStorage.getItem('token')
+        const token = localStorage.getItem('token_empleado')
         let idAdmin = 'admin-desconocido'
         if (token) {
           try {

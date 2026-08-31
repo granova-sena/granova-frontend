@@ -105,7 +105,7 @@ function ClienteInicio() {
           <div className="flex items-center gap-2 mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-[#6FA98C]"></span>
             <span className="text-xs text-white/60 uppercase tracking-wide">{saludoSegunHora()}</span>
-            {cliente.nombre && puntos > 0 && (
+            {cliente.nombre && puntos > 0 && cliente.tipo_persona !== 'juridica' && (
               <span className="ml-2 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-white/60">
                 <span>{nivel.icono}</span>
                 <span>{puntos.toLocaleString('es-CO')} pts</span>
@@ -207,7 +207,7 @@ function ClienteInicio() {
                     <p className="text-sm font-medium text-white mt-0.5 line-clamp-2">{p.nombre}</p>
                     <div className="flex items-center justify-between mt-2">
                       <p className="text-white text-sm font-semibold">
-                        ${Number(p.precio || 0).toLocaleString('es-CO')} <span className="text-white/40 font-normal text-xs">/{esMaquina ? 'und' : 'kg'}</span>
+                        ${Number(p.precio || 0).toLocaleString('es-CO')} <span className="text-white/40 font-normal text-xs">/{esMaquina ? 'und' : 'bolsa'}</span>
                       </p>
                       <span className="text-xs font-medium text-[#9DC9B4] group-hover:underline">Ver →</span>
                     </div>

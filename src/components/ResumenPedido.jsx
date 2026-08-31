@@ -3,7 +3,7 @@ import { useCarrito } from '../context/CarritoContext'
 
 function ResumenPedido() {
   const navigate = useNavigate()
-  const { subtotal, subtotalBase, descuentoProductos, descuentoCuponMonto, total, DESCUENTO, esMayorista, unidadesFaltantes, cuponPct } = useCarrito()
+  const { subtotalBase, descuentoProductos, descuentoCuponMonto, total, esMayorista, unidadesFaltantes, cuponPct, esJuridica } = useCarrito()
 
   return (
     <div className="w-full lg:w-80 flex flex-col gap-4">
@@ -31,7 +31,7 @@ function ResumenPedido() {
               🔥 Lleva {unidadesFaltantes} producto{unidadesFaltantes === 1 ? '' : 's'} más y obtén 6% de descuento
             </div>
           )}
-          {cuponPct > 0 && (
+          {cuponPct > 0 && !esJuridica && (
             <div className="flex justify-between">
               <span className="text-sm text-white/60">🎟️ Cupón ({cuponPct}%)</span>
               <span className="text-sm text-[#9DC9B4]">- ${descuentoCuponMonto.toLocaleString()}</span>
@@ -45,20 +45,13 @@ function ResumenPedido() {
         </div>
       </div>
 
-      {/* Botones */}
-      <button
-        type="button"
-        onClick={() => navigate('/cliente/cotizacion')}
-        className="w-full bg-[#0F1D13] border border-white/[0.08] text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#14291B] transition-colors"
-      >
-        💾 Generar cotización
-      </button>
+      {/* Botones: solo comprar — la cotización vive en Mis Pedidos */}
       <button
         type="button"
         onClick={() => navigate('/cliente/configurar-pedido')}
         className="w-full bg-[#6FA98C] text-white text-sm font-semibold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#4F8A70] transition-colors"
       >
-        ⚙️ Configurar pedido
+        💳 Comprar ahora
       </button>
 
       {/* Compra segura */}
