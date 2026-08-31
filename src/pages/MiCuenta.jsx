@@ -1,7 +1,14 @@
 import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import { API_URL } from '../config'
+import { API_URL } from "../config";
+import { idDeTokenCliente } from '../services/session'
+import { useCarrito } from '../context/CarritoContext'
+import { calcularNivel } from '../utils/lealtad'
+import LoyaltyRing from '../components/ui/LoyaltyRing'
+
+const ETIQUETAS_TIPO_PERSONA = { natural: 'Persona natural', juridica: 'Persona jurídica' }
+const ETIQUETAS_TIPO_DOCUMENTO = { CC: 'Cédula de ciudadanía (CC)', CE: 'Cédula de extranjería (CE)', NIT: 'NIT', PASAPORTE: 'Pasaporte' }
 
 const IconoUsuario = (props) => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" {...props}><circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.6" /><path d="M5 20c1.2-3.6 4-5.5 7-5.5s5.8 1.9 7 5.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
@@ -15,90 +22,227 @@ const IconoSalir = (props) => (
 
 function MiCuenta() {
   const navigate = useNavigate()
+  const { cliente: clienteContexto, actualizarPerfilCliente, limpiarSesion } = useCarrito()
 
-  const [cliente, setCliente] = useState(() => {
+  // El contexto trae el perfil sincronizado con el servidor (fuente de verdad);
+  // si quedó vacío (p. ej. el provider montó antes del login), se cae a la
+  // caché de localStorage para no mostrar la cuenta en blanco.
+  const clienteLocal = (() => {
     try {
       return JSON.parse(localStorage.getItem('cliente')) || {}
     } catch {
       return {}
     }
-  })
+  })()
+  const cliente = (clienteContexto && clienteContexto.nombre) ? clienteContexto : clienteLocal
 
-  const [form, setForm] = useState(() => ({
+  const [editando, setEditando] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [formIdentificacion, setFormIdentificacion] = useState({
+    tipo_persona: cliente.tipo_persona || 'natural',
+    tipo_documento: cliente.tipo_documento || 'CC',
+    numero_documento: cliente.numero_documento || '',
+    digito_verificacion: cliente.digito_verificacion || '',
+    razon_social: cliente.razon_social || '',
     telefono: cliente.telefono || '',
     direccion: cliente.direccion || '',
     ciudad: cliente.ciudad || '',
-    departamento: cliente.departamento || '',
-  }))
-
-  const [guardando, setGuardando] = useState(false)
+  })
 
   const inicial = (cliente.nombre || 'C').charAt(0).toUpperCase()
   const nombreCompleto = [cliente.nombre, cliente.apellido].filter(Boolean).join(' ') || 'Cliente Granova'
 
   function cerrarSesion() {
-    localStorage.removeItem('token')
-    localStorage.removeItem('cliente')
+    limpiarSesion()
     navigate('/login')
   }
 
-  function handleChange(e) {
+  function handleCambioIdentificacion(e) {
     const { name, value } = e.target
-    setForm(prev => ({ ...prev, [name]: value }))
+    setFormIdentificacion(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'tipo_persona' ? { tipo_documento: value === 'juridica' ? 'NIT' : 'CC' } : {}),
+    }))
   }
 
-  async function guardarDatosEnvio(e) {
-    e.preventDefault()
+  async function guardarIdentificacion() {
+    toast.dismiss('perfil-identificacion')
 
-    const id = cliente.id
-    if (!id) {
-      toast.error('No hay sesión activa')
+    if (!formIdentificacion.numero_documento.trim()) {
+      toast.error('El número de documento es obligatorio', { id: 'perfil-identificacion' })
       return
+    }
+
+    if (formIdentificacion.tipo_persona === 'juridica') {
+      if (!formIdentificacion.razon_social.trim()) {
+        toast.error('La razón social es obligatoria para personas jurídicas', { id: 'perfil-identificacion' })
+        return
+      }
+      if (!formIdentificacion.digito_verificacion.trim()) {
+        toast.error('El dígito de verificación del NIT es obligatorio', { id: 'perfil-identificacion' })
+        return
+      }
     }
 
     setGuardando(true)
     try {
-      const token = localStorage.getItem('token')
-      const respuesta = await fetch(`${API_URL}/api/clientes/${id}`, {
+      const token = localStorage.getItem('token_cliente')
+      const idCliente = idDeTokenCliente()
+      if (!idCliente) {
+        toast.error('Debes iniciar sesión para actualizar tu perfil', { id: 'perfil-identificacion' })
+        return
+      }
+      const respuesta = await fetch(`${API_URL}/api/clientes/${idCliente}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          telefono: form.telefono.trim(),
-          direccion: form.direccion.trim(),
-          ciudad: form.ciudad.trim(),
-          departamento: form.departamento.trim(),
+          tipo_persona: formIdentificacion.tipo_persona,
+          tipo_documento: formIdentificacion.tipo_documento,
+          numero_documento: formIdentificacion.numero_documento.trim(),
+          digito_verificacion: formIdentificacion.tipo_persona === 'juridica' ? formIdentificacion.digito_verificacion.trim() : null,
+          razon_social: formIdentificacion.tipo_persona === 'juridica' ? formIdentificacion.razon_social.trim() : null,
+          telefono: formIdentificacion.telefono.trim() || null,
+          direccion: formIdentificacion.direccion.trim() || null,
+          ciudad: formIdentificacion.ciudad.trim() || null,
         }),
       })
 
       const datos = await respuesta.json()
 
       if (!respuesta.ok) {
-        throw new Error(datos.error || 'No se pudieron guardar los datos')
+        const msg = datos.error ?? datos.mensaje ?? 'Error al actualizar'
+        toast.error(msg, { id: 'perfil-identificacion' })
+        if (respuesta.status === 401 || respuesta.status === 403) {
+          setTimeout(() => { localStorage.removeItem('token_cliente'); window.location.href = '/login'; }, 1500)
+        }
+        return
       }
 
-      // Actualizamos el cliente guardado en localStorage para que el checkout autocomplete.
-      const clienteActualizado = { ...cliente, ...datos.cliente }
-      localStorage.setItem('cliente', JSON.stringify(clienteActualizado))
-      setCliente(clienteActualizado)
-
-      toast.success('Datos de envío guardados correctamente')
+      // El contexto refresca la caché y re-renderiza la pantalla al instante
+      // (sin window.location.reload: el barco no necesita hundirse para repararse)
+      actualizarPerfilCliente(datos.data)
+      toast.success('Identificación actualizada', { id: 'perfil-identificacion' })
+      setEditando(false)
     } catch (error) {
-      toast.error(error.message)
+      console.error('Error actualizando identificación:', error)
+      toast.error('No se pudo conectar con el servidor', { id: 'perfil-identificacion' })
     } finally {
       setGuardando(false)
+    }
+  }
+
+  const tieneDocumento = Boolean(cliente.numero_documento)
+  const tienePremio = cliente.descuento_proxima_compra === true
+  const esJuridica = cliente.tipo_persona === 'juridica'
+
+  // Lealtad (Frente D)
+  const puntos = Number(cliente.puntos) || 0
+  const nivel = calcularNivel(puntos)
+  const progresoPct = nivel.siguiente
+    ? Math.min(100, Math.round(((puntos - nivel.rangoMin) / (nivel.siguiente - nivel.rangoMin)) * 100))
+    : 100
+  const puntosFaltantes = nivel.siguiente ? nivel.siguiente - puntos : 0
+  const [canjeando, setCanjeando] = useState(false)
+  const [cuponObtenido, setCuponObtenido] = useState(null)
+  const [cupones, setCupones] = useState([])
+
+  // Los cupones viven en la BD: aunque el cliente cierre sesión y vuelva,
+  // sus cupones activos siguen apareciendo aquí. 🎟️
+  useEffect(() => {
+    const token = localStorage.getItem('token_cliente')
+    const id = cliente?.id
+    if (!token || !id) return
+
+    fetch(`${API_URL}/api/cupones`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(json => {
+        if (json.ok) setCupones(json.data || [])
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carga una vez al entrar
+  }, [])
+
+  async function copiarCodigo(codigo) {
+    try {
+      await navigator.clipboard.writeText(codigo)
+      toast.success(`Código ${codigo} copiado`)
+    } catch {
+      toast.error('No se pudo copiar el código')
+    }
+  }
+
+  async function canjearPuntos(puntosACanjear) {
+    toast.dismiss('perfil-cupon')
+
+    if (puntos < puntosACanjear) {
+      toast.error(`Te faltan ${puntosACanjear - puntos} puntos para este canje`, { id: 'perfil-cupon' })
+      return
+    }
+
+    setCanjeando(true)
+    try {
+      const token = localStorage.getItem('token_cliente')
+      const respuesta = await fetch(`${API_URL}/api/cupones/canjear`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ puntos: puntosACanjear }),
+      })
+
+      const datos = await respuesta.json()
+
+      if (!respuesta.ok) {
+        toast.error(datos.mensaje || 'Error al canjear', { id: 'perfil-cupon' })
+        return
+      }
+
+      actualizarPerfilCliente({ puntos: datos.data.puntos_restantes })
+      setCuponObtenido(datos.data)
+      // El cupón nuevo entra directo a la lista de cupones activos
+      setCupones(prev => [
+        { codigo: datos.data.codigo, descuento_pct: Number(datos.data.descuento_pct) },
+        ...prev,
+      ])
+      toast.success(`¡Cupón de ${datos.data.descuento_pct}% creado!`, { id: 'perfil-cupon' })
+    } catch (error) {
+      console.error('Error canjeando puntos:', error)
+      toast.error('No se pudo conectar con el servidor', { id: 'perfil-cupon' })
+    } finally {
+      setCanjeando(false)
     }
   }
 
   const campos = [
     { label: 'Nombre completo', valor: [cliente.nombre, cliente.apellido].filter(Boolean).join(' ') || '—' },
     { label: 'Correo electrónico', valor: cliente.email || '—' },
-    { label: 'Miembro desde', valor: cliente.fecha_creacion ? new Date(cliente.fecha_creacion).toLocaleDateString('es-CO', { year: 'numeric', month: 'long' }) : '—' },
+    { label: 'Teléfono', valor: cliente.telefono || '—' },
+    { label: 'Dirección', valor: cliente.direccion || '—' },
+    { label: 'Ciudad', valor: cliente.ciudad || '—' },
+    { label: 'Miembro desde', valor: cliente.fecha_creacion ? new Date(cliente.fecha_creacion).toLocaleDateString('es-CO', { day: 'numeric', year: 'numeric', month: 'long' }) : '—' },
   ]
 
-  const inputClase = 'w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition bg-white/[0.06] border border-white/15 focus:border-[#6FA98C]'
+  const camposIdentificacion = [
+    { label: 'Tipo de persona', valor: ETIQUETAS_TIPO_PERSONA[cliente.tipo_persona] || '—' },
+    { label: 'Tipo de documento', valor: ETIQUETAS_TIPO_DOCUMENTO[cliente.tipo_documento] || '—' },
+    { label: 'Número de documento', valor: cliente.numero_documento || '—' },
+    ...(cliente.tipo_persona === 'juridica' ? [
+      { label: 'Razón social', valor: cliente.razon_social || '—' },
+      { label: 'Dígito de verificación', valor: cliente.digito_verificacion || '—' },
+    ] : []),
+  ]
+
+  const estilosInput = {
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.15)',
+  }
 
   return (
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
@@ -137,56 +281,302 @@ function MiCuenta() {
           </div>
         </div>
 
-        {/* DATOS DE ENVÍO — editable */}
-        <div className="rounded-2xl p-6 sm:p-8 mb-8 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
-          <div className="flex items-center gap-2 mb-1">
-            <IconoUbicacion className="text-white/40" />
-            <p className="text-sm font-semibold text-white">Datos de envío</p>
+        {/* DESCUENTOS (EMPRESA / PREMIO) */}
+        <div className={`rounded-2xl p-6 sm:p-8 mb-5 border shadow-sm ${(esJuridica || tienePremio) ? 'bg-[#6FA98C]/15 border-[#6FA98C]/40' : 'bg-white/[0.08] border-white/15'}`}>
+          {esJuridica ? (
+            <>
+              <p className="text-lg font-semibold text-white mb-1">🏢 Tienes 10% de descuento en todos tus pedidos</p>
+              <p className="text-sm text-white/60 leading-relaxed">
+                Por comprar como empresa, el 10% se aplica automáticamente en cada pedido.
+              </p>
+            </>
+          ) : tienePremio ? (
+            <>
+              <p className="text-lg font-semibold text-white mb-1">🎉 ¡Tienes 10% de descuento disponible!</p>
+              <p className="text-sm text-white/60 leading-relaxed">
+                Gracias a tu última compra al por mayor. Se aplicará automáticamente en tu próxima compra.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-semibold text-white mb-1">🔥 Compra y gana 10% de descuento</p>
+              <p className="text-sm text-white/60 leading-relaxed">
+                Compra 5 productos (en uno o varios pedidos, se van sumando) y ganas 10% de descuento para tu próxima compra.
+              </p>
+              {Number(cliente.unidades_acumuladas) > 0 && (
+                <p className="text-sm text-[#9DC9B4] mt-3 leading-relaxed">
+                  🏆 Llevas {Number(cliente.unidades_acumuladas)} de 5 productos acumulados para tu premio.
+                </p>
+              )}
+              {!tieneDocumento && (
+                <p className="text-sm text-[#9DC9B4] mt-3 leading-relaxed">
+                  💡 ¿Compras como empresa? Registra tu NIT en la sección Identificación y obtén 10% en todos tus pedidos.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* LEALTAD (Frente D): nivel, puntos, progreso y canje — solo personas naturales */}
+        {!esJuridica && (
+        <div className="rounded-2xl p-6 sm:p-8 mb-5 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center gap-8">
+            {/* Anillo de lealtad */}
+            <LoyaltyRing
+              puntos={puntos}
+              nivel={nivel}
+              progresoPct={progresoPct}
+              puntosFaltantes={puntosFaltantes}
+              size={160}
+            />
+
+            {/* Panel de canje */}
+            <div className="flex-1 w-full">
+            {cuponObtenido ? (
+            <div className="rounded-xl p-4 bg-[#6FA98C]/15 border border-[#6FA98C]/40">
+              <p className="text-sm font-semibold text-white">🎟️ ¡Tu cupón está listo!</p>
+              <p className="text-xs text-white/60 mt-1">Código: <span className="font-mono font-bold text-[#9DC9B4] text-sm">{cuponObtenido.codigo}</span></p>
+              <p className="text-xs text-white/60 mt-1">Descuento de {Number(cuponObtenido.descuento_pct)}% · válido por {cuponObtenido.vigencia_dias} días · úsalo en el checkout</p>
+            </div>
+          ) : esJuridica ? (
+            <p className="text-sm text-white/50 leading-relaxed">
+              🏢 Tu descuento de empresa (10%) ya supera los cupones de lealtad — tus puntos se siguen acumulando para tu rango.
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-white/50 mb-3">Canjea tus puntos por un cupón de descuento para tu próxima compra:</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => canjearPuntos(500)}
+                  disabled={canjeando || puntos < 500}
+                  className="flex-1 py-3 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  🎟️ 500 pts → Cupón 5%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => canjearPuntos(1000)}
+                  disabled={canjeando || puntos < 1000}
+                  className="flex-1 py-3 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                   🎟️ 1.000 pts → Cupón 10%
+                </button>
+              </div>
+            </>
+          )}
+            </div>
           </div>
-          <p className="text-white/40 text-xs mb-6 leading-relaxed">
-            Estos datos se guardan en tu cuenta y se autocompletan al confirmar un pedido.
-          </p>
+        </div>
+        )}
 
-          <form onSubmit={guardarDatosEnvio} className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-white/60">Teléfono</label>
-                <input name="telefono" value={form.telefono} onChange={handleChange}
-                  type="tel" placeholder="300 123 4567" className={inputClase} />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-white/60">Departamento</label>
-                <input name="departamento" value={form.departamento} onChange={handleChange}
-                  type="text" placeholder="Cundinamarca" className={inputClase} />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-white/60">Ciudad</label>
-                <input name="ciudad" value={form.ciudad} onChange={handleChange}
-                  type="text" placeholder="Bogotá" className={inputClase} />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-white/60">Dirección</label>
-                <input name="direccion" value={form.direccion} onChange={handleChange}
-                  type="text" placeholder="Calle 123 # 45-67" className={inputClase} />
-              </div>
+        {/* MIS CUPONES ACTIVOS (persisten en la BD) — solo personas naturales */}
+        {!esJuridica && (
+        <div className="rounded-2xl p-6 sm:p-8 mb-5 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-xl">🎟️</span>
+            <p className="text-sm font-semibold text-white">Mis cupones activos</p>
+          </div>
+          {cupones.length === 0 ? (
+            <p className="text-sm text-white/50 leading-relaxed">
+              Aún no tienes cupones. Canjea tus puntos arriba y tu cupón quedará guardado aquí para siempre.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {cupones.map(c => (
+                <div key={c.codigo} className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 bg-[#6FA98C]/10 border border-[#6FA98C]/25">
+                  <div className="min-w-0">
+                    <p className="text-sm font-mono font-bold text-[#9DC9B4]">{c.codigo}</p>
+                    <p className="text-xs text-white/50 mt-0.5">Descuento de {Number(c.descuento_pct)}% · úsalo en el checkout</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copiarCodigo(c.codigo)}
+                    className="shrink-0 px-3.5 py-2 rounded-lg text-xs font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition"
+                  >
+                    Copiar
+                  </button>
+                </div>
+              ))}
             </div>
+          )}
+        </div>
+        )}
 
-            <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mt-1">
+        {/* IDENTIFICACIÓN */}
+        <div className="rounded-2xl p-6 sm:p-8 mb-8 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <IconoUbicacion className="text-white/40" />
+              <p className="text-sm font-semibold text-white">Identificación y contacto</p>
+            </div>
+            {!editando && (
               <button
-                type="submit"
-                disabled={guardando}
-                className="px-6 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50"
+                type="button"
+                onClick={() => setEditando(true)}
+                className="text-xs font-medium text-[#9DC9B4] hover:underline bg-transparent border-0 p-0 cursor-pointer"
               >
-                {guardando ? 'Guardando...' : 'Guardar datos de envío'}
+                {tieneDocumento ? 'Editar' : 'Completar'}
               </button>
+            )}
+          </div>
+
+          {!editando ? (
+            <div className="flex flex-col">
+              {camposIdentificacion.map((campo) => (
+                <div key={campo.label} className="flex items-center justify-between py-3 border-b border-white/15 last:border-0 last:pb-0">
+                  <span className="text-white/45 text-sm">{campo.label}</span>
+                  <span className="text-white text-sm font-medium">{campo.valor}</span>
+                </div>
+              ))}
             </div>
-          </form>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10">
+                <span className="text-white/45 text-xs">Tipo de persona</span>
+                <p className="text-white text-sm font-medium mt-0.5">
+                  {formIdentificacion.tipo_persona === 'juridica' ? 'Persona jurídica' : 'Persona natural'}
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="tipo-documento-perfil" className="block text-sm text-white/70 mb-1.5">Tipo de documento</label>
+                <select
+                  id="tipo-documento-perfil"
+                  name="tipo_documento"
+                  value={formIdentificacion.tipo_documento}
+                  onChange={handleCambioIdentificacion}
+                  disabled={formIdentificacion.tipo_persona === 'juridica'}
+                  className="w-full px-4 py-3 rounded-xl text-sm text-white focus:outline-none transition disabled:opacity-50"
+                  style={estilosInput}
+                >
+                  {formIdentificacion.tipo_persona === 'juridica' ? (
+                    <option value="NIT" className="bg-white text-black">NIT</option>
+                  ) : (
+                    <>
+                      <option value="CC" className="bg-white text-black">Cédula de ciudadanía (CC)</option>
+                      <option value="CE" className="bg-white text-black">Cédula de extranjería (CE)</option>
+                      <option value="PASAPORTE" className="bg-white text-black">Pasaporte</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="numero-documento-perfil" className="block text-sm text-white/70 mb-1.5">Número de documento</label>
+                <input
+                  id="numero-documento-perfil"
+                  type="text"
+                  name="numero_documento"
+                  value={formIdentificacion.numero_documento}
+                  onChange={handleCambioIdentificacion}
+                  placeholder={formIdentificacion.tipo_persona === 'juridica' ? 'Número del NIT' : 'Número de cédula'}
+                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                  style={estilosInput}
+                />
+              </div>
+
+              {formIdentificacion.tipo_persona === 'juridica' && (
+                <>
+                  <div>
+                    <label htmlFor="razon-social-perfil" className="block text-sm text-white/70 mb-1.5">Razón social</label>
+                    <input
+                      id="razon-social-perfil"
+                      type="text"
+                      name="razon_social"
+                      value={formIdentificacion.razon_social}
+                      onChange={handleCambioIdentificacion}
+                      placeholder="Nombre de la empresa"
+                      className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                      style={estilosInput}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="digito-verificacion-perfil" className="block text-sm text-white/70 mb-1.5">Dígito de verificación</label>
+                    <input
+                      id="digito-verificacion-perfil"
+                      type="text"
+                      name="digito_verificacion"
+                      value={formIdentificacion.digito_verificacion}
+                      onChange={handleCambioIdentificacion}
+                      placeholder="Último dígito del NIT"
+                      className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                      style={estilosInput}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label htmlFor="telefono-perfil" className="block text-sm text-white/70 mb-1.5">Teléfono de contacto</label>
+                <input
+                  id="telefono-perfil"
+                  type="tel"
+                  name="telefono"
+                  value={formIdentificacion.telefono}
+                  onChange={handleCambioIdentificacion}
+                  placeholder="300 123 4567"
+                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                  style={estilosInput}
+                />
+                <p className="text-xs text-white/40 mt-1.5">Se usará para contactarte y se autocompletará en tus pedidos.</p>
+              </div>
+
+              <div>
+                <label htmlFor="direccion-perfil" className="block text-sm text-white/70 mb-1.5">Dirección</label>
+                <input
+                  id="direccion-perfil"
+                  type="text"
+                  name="direccion"
+                  value={formIdentificacion.direccion}
+                  onChange={handleCambioIdentificacion}
+                  placeholder="Calle 123 # 45-67"
+                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                  style={estilosInput}
+                />
+                <p className="text-xs text-white/40 mt-1.5">Se usará como dirección de envío y se autocompletará en tus pedidos.</p>
+              </div>
+
+              <div>
+                <label htmlFor="ciudad-perfil" className="block text-sm text-white/70 mb-1.5">Ciudad</label>
+                <input
+                  id="ciudad-perfil"
+                  type="text"
+                  name="ciudad"
+                  value={formIdentificacion.ciudad}
+                  onChange={handleCambioIdentificacion}
+                  placeholder="Bogotá, Medellín, Cali..."
+                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                  style={estilosInput}
+                />
+                <p className="text-xs text-white/40 mt-1.5">Se usará como ciudad de envío y se autocompletará en tus pedidos.</p>
+              </div>
+
+              <div className="flex gap-3 mt-1">
+                <button
+                  type="button"
+                  onClick={() => setEditando(false)}
+                  disabled={guardando}
+                  className="flex-1 py-3 rounded-xl text-sm text-white/70 hover:bg-white/10 transition disabled:opacity-50"
+                  style={{ border: '1px solid rgba(255,255,255,0.15)' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={guardarIdentificacion}
+                  disabled={guardando}
+                  className="flex-1 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50"
+                >
+                  {guardando ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <button
+          type="button"
           onClick={cerrarSesion}
           className="px-5 py-2.5 rounded-xl text-sm font-medium text-[#D85A30] hover:bg-[#D85A30]/5 border border-[#D85A30]/25 transition flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D85A30] focus-visible:ring-offset-2"
         >
