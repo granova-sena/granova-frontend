@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { API_URL } from "../config";
+import { leerParametro } from '../services/parametros';
 import FadeIn from '../components/ui/FadeIn';
 
 const IconoEnvio = (props) => (
@@ -19,10 +20,10 @@ const IconoRegalo = (props) => (
 // Promociones REALES: todo lo que el backend de verdad aplica.
 // Nada de descuentos fantasma — si aparece aquí, se cobra así. 🚫👻
 const BENEFICIOS = [
-  { icono: IconoDescuento, titulo: 'Descuento para empresas', descripcion: 'Registra tu NIT y obtén 10% en todos tus pedidos, automáticamente y sin letra pequeña.', estado: 'Activo' },
+  { icono: IconoDescuento, titulo: 'Descuento para empresas', descripcion: 'Registra tu NIT y obtén un descuento automático en todos tus pedidos, sin letra pequeña.', estado: 'Activo' },
   { icono: IconoTrofeo, titulo: 'Premio por compra al por mayor', descripcion: 'Compra 5 o más productos en un pedido y gana 10% de descuento para tu próxima compra.', estado: 'Activo' },
   { icono: IconoDescuento, titulo: 'Precios por volumen', descripcion: 'Entre más café lleves, más ahorras por kilo: 6–20 kg con 9% de descuento y más de 20 kg con 16%.', estado: 'Activo' },
-  { icono: IconoRegalo, titulo: 'Cupones de lealtad', descripcion: 'Gana 1 punto por cada $1.000 en tus compras. Canjea 500 pts por un cupón del 5% o 1.000 pts por uno del 10%.', estado: 'Activo' },
+  { icono: IconoRegalo, titulo: 'Cupones de lealtad', descripcion: 'Gana 1 punto por cada $1.000 en tus compras. Canjea puntos por cupones según tu nivel (Bronce, Plata, Oro).', estado: 'Activo' },
   { icono: IconoTrofeo, titulo: 'Programa de fidelidad', descripcion: 'Sube de nivel con tus compras: 🥉 Bronce → 🥈 Plata → 🥇 Oro. Tus puntos se acumulan siempre.', estado: 'Activo' },
   { icono: IconoDescuento, titulo: 'Producto del día', descripcion: 'Cada día un café destacado con 20% de descuento. Válido solo durante ese día.', estado: 'Activo' },
   { icono: IconoEnvio, titulo: 'Envío a todo el país', descripcion: 'Coordinamos la entrega de tu café directo desde la finca hasta tu puerta.', estado: 'Activo' },
@@ -126,7 +127,7 @@ function Promociones() {
         <FadeIn>
           <div className="mt-6 p-6 sm:p-8 rounded-2xl text-center bg-[#6FA98C]">
             <p className="text-white font-medium mb-1">¿Listo para aprovechar tus descuentos?</p>
-            <p className="text-white/50 text-sm mb-5">{esJuridica ? 'Tu 10% de empresa ya está activo — el mejor descuento se aplica solo.' : 'Elige tu formato, compra al por mayor o canjea tus puntos — el mejor descuento se aplica solo.'}</p>
+            <p className="text-white/50 text-sm mb-5">{esJuridica ? `Tu ${leerParametro('descuento_empresa_pct', 15)}% de empresa ya está activo — el mejor descuento se aplica solo.` : 'Elige tu formato, compra al por mayor o canjea tus puntos — el mejor descuento se aplica solo.'}</p>
             <button
               type="button"
               onClick={() => navigate('/cliente/catalogo')}

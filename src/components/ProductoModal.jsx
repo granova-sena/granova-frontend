@@ -3,7 +3,6 @@ import * as XLSX from 'xlsx'
 import api from '../services/api'
 import { formatMoney } from '../utils/format'
 import { bloquearEntero, manejarEntero, normalizarEntero, normalizarTexto } from '../utils/validacion'
-import ErrorModal from './ui/ErrorModal'
 
 const formVacio = {
   categoria_producto: 'cafe',
@@ -23,6 +22,8 @@ const formVacio = {
   imagen_url: '',
 }
 
+// Bloquea letras, símbolos y notación científica (e/+/-) en inputs numéricos.
+// Los inputs type="number" del navegador igual dejan escribir "e", "+" y "-".
 function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
   const [modo, setModo] = useState('individual') // 'individual' | 'excel'
 
@@ -54,7 +55,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
     api.get('/inventario/lotes').then(res => setLotes(res.data.lotes)).catch(() => {}).finally(() => setCargandoLotes(false))
     api.get('/inventario/categorias').then(res => setCategorias(res.data.categorias)).catch(() => {})
     api.get('/inventario/marcas').then(res => setMarcas(res.data.marcas)).catch(() => {})
-    api.get('/inventario/presentaciones').then(res => setPresentaciones(res.data.presentaciones.filter(p => p.activo))).catch(() => {})
+    api.get('/inventario/presentaciones').then(res => setPresentaciones(res.data.presentaciones)).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -125,6 +126,27 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
     if (!form.nombre || form.precio === '' || form.stock === '') {
       setError('Completa todos los campos obligatorios (*)')
       return
+    }
+    const precio = Number(form.precio)
+    const stock = Number(form.stock)
+    if (!Number.isFinite(precio) || precio <= 0) {
+      setError('El precio debe ser un número mayor que 0')
+      return
+    }
+    if (!Number.isFinite(stock) || stock < 0) {
+      setError('El stock debe ser un número igual o mayor que 0')
+      return
+    }
+    if (form.precio_mayorista) {
+      const mayorista = Number(form.precio_mayorista)
+      if (!Number.isFinite(mayorista) || mayorista <= 0) {
+        setError('El precio mayorista debe ser un número mayor que 0')
+        return
+      }
+      if (mayorista >= precio) {
+        setError('El precio mayorista debe ser menor que el precio público')
+        return
+      }
     }
     if (esMaquina) {
       if (!form.marca || !form.modelo) {
@@ -316,6 +338,11 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
           </div>
         ) : (
           <form onSubmit={intentarGuardar} className="p-6 space-y-4">
+            {error && (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {error}
+              </div>
+            )}
 
             <div>
               <span className="block text-sm text-gray-600 mb-1">¿Qué estás agregando? *</span>
@@ -343,7 +370,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                 id="nombre-producto"
                 type="text"
                 value={form.nombre}
-                onChange={(e) => cambiarCampo('nombre', normalizarTexto(e.target.value))}
+                 onChange={(e) => cambiarCampo('nombre', normalizarTexto(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#6FA98C]"
                 placeholder={esMaquina ? 'Ej: Cafetera espresso automática' : 'Ej: Café Huila Especial'}
               />
@@ -469,7 +496,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="precio-producto" className="block text-sm text-gray-600 mb-1">Precio {esMaquina ? '(unidad)' : '(por bolsa)'} *</label>
+                <label htmlFor="precio-producto" className="block text-sm text-gray-600 mb-1">Precio {esMaquina ? '' : 'por kg'} *</label>
                 <input
                   id="precio-producto"
                   ref={precioRef}
@@ -500,7 +527,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                 )}
               </div>
               <div>
-                <label htmlFor="costo-producto" className="block text-sm text-gray-600 mb-1">Costo {esMaquina ? '(unidad)' : '(por bolsa)'}</label>
+                <label htmlFor="costo-producto" className="block text-sm text-gray-600 mb-1">Costo {esMaquina ? '' : 'por kg'}</label>
                 <input
                   id="costo-producto"
                   type="number"
@@ -530,7 +557,7 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
                 </div>
               )}
               <div>
-                <label htmlFor="stock-producto" className="block text-sm text-gray-600 mb-1">Stock {esMaquina ? '(unidades)' : 'inicial (bolsas)'} *</label>
+                <label htmlFor="stock-producto" className="block text-sm text-gray-600 mb-1">Stock {esMaquina ? '(unidades)' : 'inicial (kg)'} *</label>
                 <input
                   id="stock-producto"
                   type="number"
@@ -635,8 +662,6 @@ function ProductoModal({ producto, onClose, onGuardado, loteInicial = null }) {
           </form>
         )}
       </div>
-
-      <ErrorModal mensaje={error} onClose={() => setError(null)} />
     </div>
   )
 }

@@ -207,7 +207,7 @@ function ClienteInicio() {
                     <p className="text-sm font-medium text-white mt-0.5 line-clamp-2">{p.nombre}</p>
                     <div className="flex items-center justify-between mt-2">
                       <p className="text-white text-sm font-semibold">
-                        ${Number(p.precio || 0).toLocaleString('es-CO')} <span className="text-white/40 font-normal text-xs">/{esMaquina ? 'und' : 'bolsa'}</span>
+                        ${Number(p.precio || 0).toLocaleString('es-CO')} <span className="text-white/40 font-normal text-xs">/{esMaquina ? 'und' : 'kg'}</span>
                       </p>
                       <span className="text-xs font-medium text-[#9DC9B4] group-hover:underline">Ver →</span>
                     </div>

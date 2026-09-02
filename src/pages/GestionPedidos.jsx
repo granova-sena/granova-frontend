@@ -5,6 +5,7 @@ import api from '../services/api'
 import { formatMoney, formatFecha } from '../utils/format'
 import FacturaModal from '../components/FacturaModal'
 import EstadoPagoBadge from '../components/ui/EstadoPagoBadge'
+import OperacionBadge from '../components/ui/OperacionBadge'
 
 // Métodos cuyo pago lo confirma manualmente el empleado (no pasarela).
 const METODOS_MANUALES = ['transferencia', 'efectivo', 'contra_entrega']
@@ -50,16 +51,30 @@ function esAdmin() {
   }
 }
 
-const LIMITE = 10
+const LIMITE = 5
 const MAX_MOTIVO = 500
 
-function FilaPedido({ p, esAdminUsuario, procesando, aceptarPedido, abrirModalRechazo, setFacturaId, avanzarEstado, marcarPago }) {
+// Pedidos creados en las últimas 24 h se resaltan como nuevos (ya van primero: backend ordena por fecha DESC).
+const esNuevo = (p) => {
+  const hace24h = Date.now() - 24 * 60 * 60 * 1000
+  const fecha = p.fecha ? new Date(p.fecha).getTime() : 0
+  return !isNaN(fecha) && fecha >= hace24h
+}
+
+const BadgeNuevo = () => (
+  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#1D9E75]/10 text-[#0F6E56] border border-[#1D9E75]/30 font-medium ml-2 align-middle">Nuevo</span>
+)
+
+function FilaPedido({ p, procesando, aceptarPedido, abrirModalRechazo, setFacturaId, avanzarEstado, marcarPago }) {
   const siguiente = SIGUIENTE_ESTADO[p.estado]
   const pagoFallido = p.estado_pago === 'fallido'
-  const puedeMarcarPago = !esAdminUsuario && p.estado_pago !== 'pagado' && (p.estado_pago !== 'fallido') && esMetodoManual(p.metodo_pago)
+  const esReparto = p.operacion === 'reparto'
+  const puedeMarcarPago = p.estado_pago !== 'pagado' && p.estado_pago !== 'fallido' && esMetodoManual(p.metodo_pago)
   return (
     <tr className="border-b border-gray-100 last:border-0">
-      <td className={`py-3 px-5 font-medium ${p.estado === 'Rechazado' ? 'text-red-500' : 'text-gray-600'}`}>{p.pedido}</td>
+      <td className={`py-3 px-5 font-medium ${p.estado === 'Rechazado' ? 'text-red-500' : 'text-gray-600'}`}>
+        {p.pedido}{esNuevo(p) && <BadgeNuevo />}
+      </td>
       <td className="py-3 px-5">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
@@ -87,6 +102,7 @@ function FilaPedido({ p, esAdminUsuario, procesando, aceptarPedido, abrirModalRe
           <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${estadoStyles[p.estado]}`}>
             {p.estado}
           </span>
+          <OperacionBadge operacion={p.operacion} sector={p.sector_envio} compacto />
           {p.estado_pago && (
             <>
               <EstadoPagoBadge estadoPago={p.estado_pago} compacto />
@@ -100,8 +116,30 @@ function FilaPedido({ p, esAdminUsuario, procesando, aceptarPedido, abrirModalRe
         </div>
       </td>
       <td className="py-3 px-5">
-        {esAdminUsuario ? (
-          <span className="text-xs text-gray-400">Solo lectura</span>
+        {esAdmin() ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setFacturaId(p.id)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
+            >
+              Ver detalle
+            </button>
+            <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">🔒 Solo lectura</span>
+          </div>
+        ) : esReparto ? (
+          <div className="flex flex-col items-start gap-2">
+            <button
+              type="button"
+              onClick={() => setFacturaId(p.id)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
+            >
+              Ver detalle
+            </button>
+            <span className="text-[11px] font-medium px-2 py-1 rounded-lg text-amber-700 bg-amber-50 border border-amber-200 whitespace-nowrap">
+              🚚 Reparto — lo coordina el módulo de Despacho
+            </span>
+          </div>
         ) : p.estado === 'Pendiente' ? (
           <div className="flex items-center gap-2">
             <button
@@ -120,6 +158,17 @@ function FilaPedido({ p, esAdminUsuario, procesando, aceptarPedido, abrirModalRe
             >
               ✕ Rechazar
             </button>
+            {puedeMarcarPago && (
+              <button
+                type="button"
+                onClick={() => marcarPago(p.id)}
+                disabled={procesando === p.id}
+                className="text-xs px-3 py-1.5 rounded-lg bg-[#D8A92E] text-white hover:bg-[#b98f1f] transition whitespace-nowrap disabled:opacity-50"
+                title="Confirma el cobro manual (transferencia/efectivo/contra entrega)"
+              >
+                💰 Marcar pago recibido
+              </button>
+            )}
           </div>
         ) : p.estado === 'Rechazado' ? (
           <span className="text-xs text-gray-400">—</span>
@@ -150,7 +199,7 @@ function FilaPedido({ p, esAdminUsuario, procesando, aceptarPedido, abrirModalRe
                 Ver detalle
               </button>
             </div>
-            {!esAdminUsuario && siguiente && !pagoFallido && (
+            {siguiente && !pagoFallido && (
               <button
                 type="button"
                 onClick={() => avanzarEstado(p.id, siguiente.estado)}
@@ -170,12 +219,6 @@ function FilaPedido({ p, esAdminUsuario, procesando, aceptarPedido, abrirModalRe
 
 function FragmentoGrupo({ finca, filas, ...propsFila }) {
   const totalGrupo = filas.reduce((s, f) => s + f.total, 0)
-  const lotes = filas.reduce((grupos, p) => {
-    const clave = p.lote || 'Sin lote'
-    grupos[clave] = grupos[clave] || []
-    grupos[clave].push(p)
-    return grupos
-  }, {})
   return (
     <>
       <tr className="bg-gray-50/70">
@@ -183,29 +226,155 @@ function FragmentoGrupo({ finca, filas, ...propsFila }) {
           {finca} — {filas.length} pedido{filas.length === 1 ? '' : 's'} · {formatMoney(totalGrupo)}
         </td>
       </tr>
-      {Object.entries(lotes).map(([lote, filasLote]) => (
-        <FragmentoLote key={lote} lote={lote} filas={filasLote} {...propsFila} />
-      ))}
-    </>
-  )
-}
-
-function FragmentoLote({ lote, filas, ...propsFila }) {
-  const totalLote = filas.reduce((s, f) => s + f.total, 0)
-  return (
-    <>
-      <tr className="bg-emerald-50/60">
-        <td colSpan={8} className="py-1.5 px-5 pl-9 text-xs font-medium text-[#178a64]">
-          ◆ {lote} — {filas.length} pedido{filas.length === 1 ? '' : 's'} · {formatMoney(totalLote)}
-        </td>
-      </tr>
       {filas.map((p) => <FilaPedido key={p.id} p={p} {...propsFila} />)}
     </>
   )
 }
 
+function TarjetaPedido({ p, procesando, aceptarPedido, abrirModalRechazo, setFacturaId, avanzarEstado, marcarPago }) {
+  const siguiente = SIGUIENTE_ESTADO[p.estado]
+  const pagoFallido = p.estado_pago === 'fallido'
+  const esReparto = p.operacion === 'reparto'
+  const puedeMarcarPago = p.estado_pago !== 'pagado' && p.estado_pago !== 'fallido' && esMetodoManual(p.metodo_pago)
+  return (
+    <div className="p-4 flex flex-col gap-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-medium text-gray-800">
+          {p.pedido}{esNuevo(p) && <BadgeNuevo />}
+        </p>
+        <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${estadoStyles[p.estado]}`}>
+          {p.estado}
+        </span>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
+          {p.cliente.charAt(0)}
+        </div>
+        <div className="min-w-0">
+          <p className="text-gray-800 truncate">{p.cliente}</p>
+          <p className="text-xs text-gray-400 truncate">{p.email}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg flex-shrink-0" style={{ backgroundColor: colorParaPedido(p.id) }}></div>
+        <span className="text-gray-600">{p.producto}</span>
+      </div>
+      <p className="text-xs text-gray-500">
+        {p.finca ? <>{p.finca}{p.lote && <> · Lote {p.lote}</>}</> : '—'}
+      </p>
+      <p className="text-gray-600">{p.cantidad} kg</p>
+      <p className="text-gray-800 font-medium">{formatMoney(p.total)}</p>
+      {p.estado_pago && (
+        <div className="flex flex-col items-start gap-1.5">
+          <EstadoPagoBadge estadoPago={p.estado_pago} compacto />
+          {p.metodo_pago && (
+            <span className="text-[10px] text-gray-400">
+              {ETIQUETA_METODO[p.metodo_pago] || p.metodo_pago}
+            </span>
+          )}
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2 mt-1">
+        {esAdmin() ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setFacturaId(p.id)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
+            >
+              Ver detalle
+            </button>
+            <span className="text-[11px] text-gray-400 font-medium">🔒 Solo lectura</span>
+          </>
+        ) : esReparto ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setFacturaId(p.id)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
+            >
+              Ver detalle
+            </button>
+            <span className="text-[11px] font-medium px-2 py-1 rounded-lg text-amber-700 bg-amber-50 border border-amber-200">
+              🚚 Reparto — lo coordina el módulo de Despacho
+            </span>
+          </>
+        ) : p.estado === 'Pendiente' ? (
+          <>
+            <button
+              type="button"
+              onClick={() => aceptarPedido(p.id)}
+              disabled={procesando === p.id}
+              className="text-xs px-3 py-1.5 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition whitespace-nowrap disabled:opacity-50"
+            >
+              ✓ Aceptar
+            </button>
+            <button
+              type="button"
+              onClick={() => abrirModalRechazo(p.id)}
+              disabled={procesando === p.id}
+              className="text-xs px-3 py-1.5 rounded-lg border border-red-300 text-red-500 hover:bg-red-50 transition whitespace-nowrap disabled:opacity-50"
+            >
+              ✕ Rechazar
+            </button>
+            {puedeMarcarPago && (
+              <button
+                type="button"
+                onClick={() => marcarPago(p.id)}
+                disabled={procesando === p.id}
+                className="text-xs px-3 py-1.5 rounded-lg bg-[#D8A92E] text-white hover:bg-[#b98f1f] transition whitespace-nowrap disabled:opacity-50"
+                title="Confirma el cobro manual (transferencia/efectivo/contra entrega)"
+              >
+                💰 Marcar pago recibido
+              </button>
+            )}
+          </>
+        ) : p.estado === 'Rechazado' ? (
+          <span className="text-xs text-gray-400">—</span>
+        ) : (
+          <>
+            {pagoFallido && (
+              <span className="text-[11px] text-red-500 font-medium px-2 py-1 rounded-lg bg-red-50 border border-red-200 whitespace-nowrap">
+                ⚠️ Sin pago: no avanza
+              </span>
+            )}
+            {puedeMarcarPago && (
+              <button
+                type="button"
+                onClick={() => marcarPago(p.id)}
+                disabled={procesando === p.id}
+                className="text-xs px-3 py-1.5 rounded-lg bg-[#D8A92E] text-white hover:bg-[#b98f1f] transition whitespace-nowrap disabled:opacity-50"
+                title="Confirma el cobro manual (transferencia/efectivo/contra entrega)"
+              >
+                💰 Marcar pago recibido
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setFacturaId(p.id)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
+            >
+              Ver detalle
+            </button>
+            {siguiente && !pagoFallido && (
+              <button
+                type="button"
+                onClick={() => avanzarEstado(p.id, siguiente.estado)}
+                disabled={procesando === p.id}
+                className="text-xs px-3 py-1.5 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition whitespace-nowrap disabled:opacity-50"
+              >
+                {siguiente.label === 'Empacando' ? '📦 ' : siguiente.label === 'En camino' ? '🚚 ' : '✅ '}
+                {siguiente.label} →
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function GestionPedidos() {
-  const [tabActivo, setTabActivo] = useState('Todos')
   const [pagina, setPagina] = useState(1)
 
   const [resumen, setResumen] = useState(null)
@@ -215,23 +384,39 @@ function GestionPedidos() {
   const [totalFiltrados, setTotalFiltrados] = useState(0)
 
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [exportando, setExportando] = useState(false)
   const [procesando, setProcesando] = useState(null)
   const [facturaId, setFacturaId] = useState(null)
 
   const [pedidoARechazar, setPedidoARechazar] = useState(null) // id del pedido en el modal de motivo
   const [motivo, setMotivo] = useState('')
-  const [filtroPago, setFiltroPago] = useState('Todos_pago') // Todos_pago | pendiente | pendiente_verificacion | pagado | fallido
+  const [filtroPago, setFiltroPago] = useState(null) // null (sin filtro) | pendiente_verificacion | pagado
+  const [filtroMetodo, setFiltroMetodo] = useState(null) // null (sin filtro) | contra_entrega | transferencia | efectivo | tarjeta | pse | nequi | daviplata
+  const [filtroOperacion, setFiltroOperacion] = useState(null) // null (sin filtro) | domicilio | reparto
+  const [filtroNuevo, setFiltroNuevo] = useState(false)
+  const [filtroPendiente, setFiltroPendiente] = useState(false)
+  const [filtroManual, setFiltroManual] = useState(false)
   const [busqueda, setBusqueda] = useState('')
   const [mostrarGuia, setMostrarGuia] = useState(() => localStorage.getItem('guia_pedidos_cerrada') !== '1')
 
   const normalizar = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
-  // Filtro por estado_pago aplicado en el cliente + búsqueda libre (pedido, cliente, correo, producto).
+  // Filtro por método de pago + estado_pago + operación + estado aplicados en el
+  // cliente + búsqueda libre (pedido, cliente, correo, producto).
   const pedidosVisibles = useMemo(() => {
-    let base = (filtroPago === 'Todos_pago' || filtroPago === 'Sin dato')
-      ? pedidos
-      : pedidos.filter(p => (p.estado_pago || 'sin_dato') === filtroPago)
+    let base = filtroMetodo
+      ? pedidos.filter(p => (p.metodo_pago || 'sin_dato') === filtroMetodo)
+      : pedidos
+    base = filtroPago
+      ? base.filter(p => (p.estado_pago || 'sin_dato') === filtroPago)
+      : base
+    base = filtroOperacion
+      ? base.filter(p => (p.operacion || 'domicilio') === filtroOperacion)
+      : base
+    if (filtroNuevo) base = base.filter(esNuevo)
+    if (filtroPendiente) base = base.filter(p => p.estado === 'Pendiente')
+    if (filtroManual) base = base.filter(p => esMetodoManual(p.metodo_pago))
     if (busqueda.trim()) {
       const q = normalizar(busqueda)
       base = base.filter(p =>
@@ -242,37 +427,45 @@ function GestionPedidos() {
       )
     }
     return base
-  }, [pedidos, filtroPago, busqueda])
+  }, [pedidos, filtroPago, filtroMetodo, filtroOperacion, filtroNuevo, filtroPendiente, filtroManual, busqueda])
+
+  const hayFiltros = !!(filtroPago || filtroMetodo || filtroOperacion || filtroNuevo || filtroPendiente || filtroManual || busqueda.trim())
+
+  const limpiarFiltros = () => {
+    setFiltroPago(null)
+    setFiltroMetodo(null)
+    setFiltroOperacion(null)
+    setFiltroNuevo(false)
+    setFiltroPendiente(false)
+    setFiltroManual(false)
+    setBusqueda('')
+    setPagina(1)
+  }
 
   const cargarResumen = () => {
     api.get('/admin/pedidos/resumen')
       .then(res => setResumen(res.data))
-      .catch(err => toast.error('Error al cargar resumen: ' + (err.response?.data?.error || err.message)))
+      .catch(err => setError(err.response?.data?.error || err.message))
   }
 
   const cargarPedidos = () => {
     setLoading(true)
-    api.get('/admin/pedidos/listado', { params: { tab: tabActivo, page: pagina, limit: LIMITE } })
+    api.get('/admin/pedidos/listado', { params: { page: pagina, limit: LIMITE } })
       .then(res => {
         setPedidos(res.data.pedidos)
         setTotalPaginas(res.data.totalPaginas)
         setTotalFiltrados(res.data.totalFiltrados)
       })
-      .catch(err => toast.error('Error al cargar pedidos: ' + (err.response?.data?.error || err.message)))
+      .catch(err => setError(err.response?.data?.error || err.message))
       .finally(() => setLoading(false))
   }
 
   useEffect(() => { cargarResumen() }, [])
-  useEffect(() => { cargarPedidos() }, [tabActivo, pagina])
+  useEffect(() => { cargarPedidos() }, [pagina])
 
   const recargarTodo = () => {
     cargarResumen()
     cargarPedidos()
-  }
-
-  const cambiarTab = (key) => {
-    setTabActivo(key)
-    setPagina(1)
   }
 
   const aceptarPedido = async (id) => {
@@ -280,7 +473,6 @@ function GestionPedidos() {
     try {
       await api.patch(`/admin/pedidos/${id}/aceptar`)
       recargarTodo()
-      toast.success('Pedido aceptado')
     } catch (err) {
       toast.error(err.response?.data?.error || 'No se pudo aceptar el pedido.')
     } finally {
@@ -295,7 +487,6 @@ function GestionPedidos() {
     try {
       await api.patch(`/admin/pedidos/${id}/estado`, { estado })
       recargarTodo()
-      toast.success('Estado del pedido actualizado')
     } catch (err) {
       toast.error(err.response?.data?.error || 'No se pudo avanzar el estado del pedido.')
     } finally {
@@ -314,7 +505,6 @@ function GestionPedidos() {
     try {
       await api.patch(`/admin/pedidos/${id}/pago`, { estado_pago: 'pagado' })
       recargarTodo()
-      toast.success('Pago marcado como recibido')
     } catch (err) {
       toast.error(err.response?.data?.error || 'No se pudo marcar el pago como recibido.')
     } finally {
@@ -329,7 +519,6 @@ function GestionPedidos() {
       await api.patch(`/admin/pedidos/${pedidoARechazar}/rechazar`, { motivo })
       setPedidoARechazar(null)
       recargarTodo()
-      toast.success('Pedido rechazado')
     } catch (err) {
       toast.error(err.response?.data?.error || 'No se pudo rechazar el pedido.')
     } finally {
@@ -362,19 +551,14 @@ function GestionPedidos() {
     }
   }
 
+  if (error) return <p className="text-red-500">Error al cargar pedidos: {error}</p>
+
   const stats = resumen ? [
-    { label: 'Pedidos pendientes', value: String(resumen.pendientes), change: 'requieren tu acción', valueClass: 'text-amber-600', changeClass: 'text-amber-600', icono: '⏳', fondo: 'rgba(245,158,11,0.12)' },
     { label: 'Pedidos confirmados', value: String(resumen.confirmados), change: 'en proceso', valueClass: 'text-[#178a64]', changeClass: 'text-gray-400', icono: '✅', fondo: 'rgba(29,158,117,0.12)' },
     { label: 'Pedidos rechazados', value: String(resumen.rechazados), change: 'con motivo registrado', valueClass: 'text-red-500', changeClass: 'text-gray-400', icono: '✕', fondo: 'rgba(239,68,68,0.12)' },
+    { label: 'Pendientes de pago', value: String(resumen.pendientesPago ?? 0), change: 'por método manual', valueClass: 'text-amber-600', changeClass: 'text-amber-600', icono: '💳', fondo: 'rgba(245,158,11,0.12)' },
     { label: 'Total en pedidos', value: formatMoney(resumen.totalEnPedidos), change: `${resumen.cambioTotal >= 0 ? '↑ +' : ''}${resumen.cambioTotal}% vs mes anterior`, valueClass: 'text-[#178a64]', changeClass: 'text-[#178a64]', icono: '💰', fondo: 'rgba(29,158,117,0.12)' },
   ] : []
-
-  const tabs = [
-    { key: 'Todos', label: `Todos (${resumen ? resumen.total : 0})` },
-    { key: 'Pendientes', label: `Pendientes (${resumen ? resumen.pendientes : 0})` },
-    { key: 'Confirmados', label: `Confirmados (${resumen ? resumen.confirmados : 0})` },
-    { key: 'Rechazados', label: `Rechazados (${resumen ? resumen.rechazados : 0})` },
-  ]
 
   return (
     <div className="space-y-4">
@@ -419,9 +603,6 @@ function GestionPedidos() {
           </button>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0F6E56] mb-2">Flujo de un pedido · orden sugerida para tu testing</p>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-gray-600">
-            <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">Pendiente</span>
-            <span>→</span>
-            <span className="px-2 py-1 rounded-full bg-[#1D9E75]/10 text-[#0F6E56] border border-[#1D9E75]/30 font-medium">✓ Aceptar</span>
             <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">Confirmado</span>
             <span>→</span>
             <span className="px-2 py-1 rounded-full bg-sky-100 text-sky-700 font-medium">📦 Empacando</span>
@@ -449,35 +630,57 @@ function GestionPedidos() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200">
-        <div className="flex flex-wrap items-center gap-3 sm:gap-6 px-4 sm:px-5 pt-4 border-b border-gray-100">
-          {tabs.map((tab) => (
+        <div className="flex flex-col gap-3 px-4 sm:px-5 py-3 border-b border-gray-100">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-gray-400 mr-1">Filtros:</span>
             <button
               type="button"
-              key={tab.key}
-              onClick={() => cambiarTab(tab.key)}
-              className={`text-sm pb-3 border-b-2 transition ${
-                tabActivo === tab.key ? 'border-[#1a2e1a] text-gray-800 font-medium' : 'border-transparent text-gray-400'
+              onClick={() => { setFiltroNuevo(v => !v); setPagina(1) }}
+              className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                filtroNuevo
+                  ? 'bg-[#1D9E75]/10 border-[#1D9E75] text-[#0F6E56] font-medium'
+                  : 'border-gray-200 text-gray-500 hover:border-gray-300'
               }`}
             >
-              {tab.label}
+              🆕 Nuevos (24 h)
             </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-100">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-gray-400 mr-1">Filtrar por pago:</span>
+            <button
+              type="button"
+              onClick={() => { setFiltroPendiente(v => !v); setPagina(1) }}
+              className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                filtroPendiente
+                  ? 'bg-[#1D9E75]/10 border-[#1D9E75] text-[#0F6E56] font-medium'
+                  : 'border-gray-200 text-gray-500 hover:border-gray-300'
+              }`}
+            >
+              ⏳ Pendientes
+            </button>
             {[
-              { key: 'Todos_pago', label: 'Todos' },
-              { key: 'pendiente', label: 'Pendiente' },
-              { key: 'pendiente_verificacion', label: 'En verificación' },
-              { key: 'pagado', label: 'Pagado' },
-              { key: 'fallido', label: 'Fallido' },
+              { key: 'domicilio', label: '🛵 Domicilio' },
+              { key: 'reparto', label: '🚚 Reparto' },
             ].map((opc) => (
               <button
                 type="button"
                 key={opc.key}
-                onClick={() => { setFiltroPago(opc.key); setPagina(1) }}
+                onClick={() => { setFiltroOperacion(prev => prev === opc.key ? null : opc.key); setPagina(1) }}
+                className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                  filtroOperacion === opc.key
+                    ? 'bg-[#1D9E75]/10 border-[#1D9E75] text-[#0F6E56] font-medium'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}
+              >
+                {opc.label}
+              </button>
+            ))}
+            <span className="w-px h-4 bg-gray-200" />
+            {[
+              { key: 'pendiente_verificacion', label: '🔄 En verificación' },
+              { key: 'pagado', label: '✅ Pagado' },
+            ].map((opc) => (
+              <button
+                type="button"
+                key={opc.key}
+                onClick={() => { setFiltroPago(prev => prev === opc.key ? null : opc.key); setPagina(1) }}
                 className={`text-xs px-3 py-1.5 rounded-full border transition ${
                   filtroPago === opc.key
                     ? 'bg-[#1D9E75]/10 border-[#1D9E75] text-[#0F6E56] font-medium'
@@ -487,8 +690,39 @@ function GestionPedidos() {
                 {opc.label}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => { setFiltroManual(v => !v); setPagina(1) }}
+              className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                filtroManual
+                  ? 'bg-[#1D9E75]/10 border-[#1D9E75] text-[#0F6E56] font-medium'
+                  : 'border-gray-200 text-gray-500 hover:border-gray-300'
+              }`}
+            >
+              💵 Pago manual
+            </button>
+            <select
+              value={filtroMetodo || ''}
+              onChange={(e) => { setFiltroMetodo(e.target.value || null); setPagina(1) }}
+              className="text-xs px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-500 hover:border-gray-300 focus:outline-none focus:border-[#1D9E75] transition"
+            >
+              <option value="">Método: todos</option>
+              {Object.entries(ETIQUETA_METODO).map(([clave, label]) => (
+                <option key={clave} value={clave}>{label}</option>
+              ))}
+            </select>
+            {hayFiltros && (
+              <button
+                type="button"
+                onClick={limpiarFiltros}
+                className="text-xs px-3 py-1.5 rounded-full text-red-500 hover:bg-red-50 transition font-medium"
+              >
+                ✕ Limpiar
+              </button>
+            )}
+            <span className="text-[10px] text-gray-300 ml-auto hidden sm:inline">toca la pill de nuevo para quitar el filtro</span>
           </div>
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="16" height="16" viewBox="0 0 24 24" fill="none">
               <circle cx="11" cy="11" r="8" stroke="#9ca3af" strokeWidth="2" />
               <path d="M21 21l-4.35-4.35" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" />
@@ -503,7 +737,7 @@ function GestionPedidos() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <div className="flex justify-end px-1 pb-2">
             <button
               type="button"
@@ -546,7 +780,6 @@ function GestionPedidos() {
                     key={finca}
                     finca={finca}
                     filas={filas}
-                    esAdminUsuario={esAdmin()}
                     procesando={procesando}
                     aceptarPedido={aceptarPedido}
                     abrirModalRechazo={abrirModalRechazo}
@@ -560,7 +793,6 @@ function GestionPedidos() {
                   <FilaPedido
                     key={p.id}
                     p={p}
-                    esAdminUsuario={esAdmin()}
                     procesando={procesando}
                     aceptarPedido={aceptarPedido}
                     abrirModalRechazo={abrirModalRechazo}
@@ -572,6 +804,59 @@ function GestionPedidos() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="md:hidden divide-y divide-gray-100 border-t border-gray-100">
+          {loading ? (
+            <p className="py-8 text-center text-sm text-gray-400">Cargando pedidos...</p>
+          ) : pedidosVisibles.length === 0 ? (
+            <p className="md:hidden py-8 text-center text-sm text-gray-400">
+              {busqueda.trim() ? 'No hay pedidos que coincidan con tu búsqueda.' : 'No hay pedidos en esta categoría.'}
+            </p>
+          ) : agruparPorFinca ? (
+            Object.entries(
+              pedidosVisibles.reduce((grupos, p) => {
+                const clave = p.finca || 'Sin finca'
+                grupos[clave] = grupos[clave] || []
+                grupos[clave].push(p)
+                return grupos
+              }, {})
+            ).map(([finca, filas]) => {
+              const totalGrupo = filas.reduce((s, f) => s + f.total, 0)
+              return (
+                <div key={finca}>
+                  <p className="px-4 pt-3 pb-1 text-xs font-medium text-gray-500">
+                    {finca} — {filas.length} pedido{filas.length === 1 ? '' : 's'} · {formatMoney(totalGrupo)}
+                  </p>
+                  {filas.map((p) => (
+                    <TarjetaPedido
+                      key={p.id}
+                      p={p}
+                      procesando={procesando}
+                      aceptarPedido={aceptarPedido}
+                      abrirModalRechazo={abrirModalRechazo}
+                      setFacturaId={setFacturaId}
+                      avanzarEstado={avanzarEstado}
+                      marcarPago={marcarPago}
+                    />
+                  ))}
+                </div>
+              )
+            })
+          ) : (
+            pedidosVisibles.map((p) => (
+              <TarjetaPedido
+                key={p.id}
+                p={p}
+                procesando={procesando}
+                aceptarPedido={aceptarPedido}
+                abrirModalRechazo={abrirModalRechazo}
+                setFacturaId={setFacturaId}
+                avanzarEstado={avanzarEstado}
+                marcarPago={marcarPago}
+              />
+            ))
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-5 py-4 border-t border-gray-100">

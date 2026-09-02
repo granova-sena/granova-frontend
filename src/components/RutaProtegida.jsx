@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
-import { getActiveToken, clearEmpleadoToken } from '../services/session'
+import { getActiveToken, limpiarTodo } from '../services/session'
 
 function tokenValido(token, rolesPermitidos) {
   if (!token) return false;
@@ -19,7 +19,7 @@ function RutaProtegida({ children, rolesPermitidos = ["admin"] }) {
   const token = getActiveToken();
 
   if (!tokenValido(token, rolesPermitidos)) {
-    clearEmpleadoToken();
+    limpiarTodo();
     return <Navigate to="/control-interno" replace />;
   }
 

@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import * as ReactJoyride from 'react-joyride'
 import { jwtDecode } from 'jwt-decode'
+const LOGO_URL = '/logoGranova.png'
 import AsistenteWidget from '../components/AsistenteWidget'
+import { limpiarTodo } from '../services/session'
 import '../panel-tema.css'
 
 const { Joyride, STATUS, EVENTS } = ReactJoyride
@@ -111,6 +113,29 @@ function DashboardLayout() {
       path: '/dashboard/empleados',
       clase: 'menu-usuarios',
     },
+    {
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+        </svg>
+      ),
+      label: 'Respuestas',
+      path: '/dashboard/respuestas',
+      clase: 'menu-respuestas',
+    },
+    {
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M20 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+          <path d="M5 21v-2a4 4 0 0 1 4-4h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      ),
+      label: 'Logística',
+      path: '/dashboard/logistica',
+      clase: 'menu-logistica',
+    },
   ]
 
   const menuGrupos = [
@@ -128,7 +153,7 @@ function DashboardLayout() {
         { label: 'Gestión de pedidos', path: '/dashboard/pedidos', icon: (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
           ) },
-        { label: 'Envíos', path: '/dashboard/envios', icon: (
+        { label: 'Salidas', path: '/dashboard/envios', icon: (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M1 3h15v13H1z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M16 8h4l3 3v5h-7V8z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><circle cx="5.5" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="2"/><circle cx="18.5" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="2"/></svg>
           ) },
         { label: 'Transportadoras', path: '/dashboard/transportadoras', icon: (
@@ -157,6 +182,9 @@ function DashboardLayout() {
         { label: 'Reseñas', path: '/dashboard/resenas', icon: (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>
           ) },
+        { label: 'Cotizaciones', path: '/dashboard/cotizaciones', icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 4h10v16l-5-3-5 3V4z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>
+          ) },
       ],
     },
     {
@@ -173,6 +201,21 @@ function DashboardLayout() {
           ) },
         { label: 'Alertas de stock', path: '/dashboard/inventario/alertas', icon: (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          ) },
+      ],
+    },
+    {
+      id: 'configuracion',
+      titulo: 'Configuración',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+        </svg>
+      ),
+      items: [
+        { label: 'Parámetros de negocio', path: '/dashboard/parametros', icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19H4v-3L16.5 3.5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/></svg>
           ) },
       ],
     },
@@ -196,9 +239,7 @@ function DashboardLayout() {
   }
 
   function handleLogout() {
-    localStorage.removeItem('token_empleado')
-    localStorage.removeItem('usuario')
-    localStorage.removeItem('cliente')
+    limpiarTodo()
     navigate('/control-interno')
   }
 
@@ -216,15 +257,19 @@ function DashboardLayout() {
   const TITULOS_NAV = {
     '/dashboard': 'Dashboard',
     '/dashboard/empleados': 'Empleados',
+    '/dashboard/respuestas': 'Respuestas de empleados',
+    '/dashboard/logistica': 'Logística',
     '/dashboard/pedidos': 'Gestión de pedidos',
-    '/dashboard/envios': 'Envíos',
+    '/dashboard/envios': 'Salidas',
     '/dashboard/transportadoras': 'Transportadoras',
     '/dashboard/ventas': 'Registro de ventas',
     '/dashboard/reportes': 'Reportes',
     '/dashboard/promociones': 'Promociones',
     '/dashboard/resenas': 'Reseñas',
+    '/dashboard/cotizaciones': 'Cotizaciones',
     '/dashboard/inventario/alertas': 'Alertas de stock',
     '/dashboard/inventario': 'Stock de productos',
+    '/dashboard/parametros': 'Parámetros de negocio',
   }
   const tituloSeccion = TITULOS_NAV[location.pathname] || 'Dashboard'
   const fechaHoy = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -330,10 +375,9 @@ function DashboardLayout() {
           {/* Logo */}
           <div className="flex items-center gap-2 px-3 mb-8">
             <span
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-semibold flex-shrink-0 text-white"
-              style={{ background: '#1D9E75', boxShadow: '0 4px 12px rgba(29,158,117,0.35)' }}
+              className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
             >
-              G
+              <img src={LOGO_URL} alt="Granova" className="w-full h-full rounded-[30%] object-cover object-center" />
             </span>
             <span className="sidebar-logo text-lg font-medium tracking-tight" style={{ color: modoOscuro ? '#eafff2' : '#1F2A24' }}>Granova</span>
             <span className="text-xs ml-1" style={{ color: modoOscuro ? 'rgba(234,255,242,0.35)' : 'rgba(31,42,36,0.35)' }}>Admin</span>

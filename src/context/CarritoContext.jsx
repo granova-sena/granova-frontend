@@ -1,17 +1,11 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { API_URL } from "../config";
-import { getActiveToken, idDeTokenCliente } from '../services/session'
+import { getActiveToken, idDeTokenCliente, idClienteActual, limpiarTodo } from '../services/session'
+import { leerParametro } from '../services/parametros'
 const CarritoContext = createContext()
 
 // Clave POR USUARIO: cada cliente logueado tiene su propio carrito en
 // el mismo navegador. Sin sesión → sufijo "_invitado".
-function idClienteActual() {
-  try {
-    return JSON.parse(localStorage.getItem('cliente'))?.id ?? 'invitado'
-  } catch {
-    return 'invitado'
-  }
-}
 const claveCarrito = () => `granova_carrito_u${idClienteActual()}`
 
 function cargarCarrito() {
@@ -86,6 +80,7 @@ export function CarritoProvider({ children }) {
         metodo_pago: metodoPago,
         direccion_envio: datosFormulario.direccion,
         ciudad_envio: datosFormulario.ciudad,
+        sector_envio: datosFormulario.sector || datosFormulario.sector_envio || null,
         productos: itemsValidos.map(p => ({
           id_producto: p.id,
           cantidad: Math.floor(Number(p.cantidad)),
@@ -130,14 +125,19 @@ export function CarritoProvider({ children }) {
       return {
         ok: true,
         id_pedido: json.data.id_pedido,
+        numero_pedido: json.data?.numero_pedido ?? null,
         estado: json.data?.estado ?? null,
         estado_pago: json.data?.estado_pago ?? null,
         pago: json.data?.pago ?? null,
         total: json.data?.total ?? null,
         mensaje: json.data?.mensaje ?? null,
         descuento_aplicado: json.data?.descuento_aplicado ?? 0,
+        descuento_empresa: json.data?.descuento_empresa ?? false,
         descuento_fuente: json.data?.descuento_fuente ?? null,
+        descuento_ganado: json.data?.descuento_ganado ?? false,
+        codigo_cupon: json.data?.codigo_cupon ?? null,
         puntos_ganados: json.data?.puntos_ganados ?? 0,
+        unidades_acumuladas: json.data?.unidades_acumuladas ?? 0,
       }
     } catch (error) {
       console.error('Error confirmando pedido:', error.message)
@@ -242,8 +242,7 @@ export function CarritoProvider({ children }) {
     setProductos([])
     setCuponValidado(null)
     setDatosCliente(null)
-    localStorage.removeItem('token_cliente')
-    localStorage.removeItem('cliente')
+    limpiarTodo()
   }
 
   // ── Re-sincronizar sesión (login): re-lee localStorage + fetch perfil ──
@@ -280,6 +279,7 @@ export function CarritoProvider({ children }) {
 
   // Descuento por volumen/mayorista como porcentaje
   const pctVolumen = DESCUENTO * 100
+  const pctJuridica = esJuridica ? leerParametro('descuento_empresa_pct', 15) : 0
 
   // Subtotal base (sin ningún descuento)
   const subtotalBase = productos.reduce((acc, p) => {
@@ -290,7 +290,7 @@ export function CarritoProvider({ children }) {
   const subtotalConDescuento = productos.reduce((acc, p) => {
     const precio = Number(p.precio) || 0
     const cant = Number(p.cantidad) || 0
-    const pctGanador = Math.max(Number(p.promo_pct) || 0, pctVolumen)
+    const pctGanador = Math.max(Number(p.promo_pct) || 0, pctVolumen, pctJuridica)
     return acc + Math.round(precio * (1 - pctGanador / 100)) * cant
   }, 0)
 
@@ -308,7 +308,7 @@ export function CarritoProvider({ children }) {
   const ivaMonto = Math.round(productos.reduce((acc, p) => {
     const precio = Number(p.precio) || 0
     const cant = Number(p.cantidad) || 0
-    const pctGanador = Math.max(Number(p.promo_pct) || 0, pctVolumen)
+    const pctGanador = Math.max(Number(p.promo_pct) || 0, pctVolumen, pctJuridica)
     const precioFinal = Math.round(precio * (1 - pctGanador / 100))
     const tasa = Number(p.iva_pct ?? 5)
     return acc + (precioFinal * cant * tasa) / (100 + tasa)
@@ -338,7 +338,9 @@ export function CarritoProvider({ children }) {
     }
   }
 
-  const tienePremio = false
+  // Premio de lealtad: cada 5 unidades acumuladas dan 10% de descuento.
+  // El panel confirma la liquidación al cobrar (las unidades se reinician).
+  const tienePremio = !esJuridica && Number(clienteActual?.unidades_acumuladas || 0) >= 5
   const descuentoFuente = DESCUENTO > 0 ? (esMayorista ? 'empresa' : 'volumen') : (cuponPct > 0 ? 'cupon' : null)
 
   return (
@@ -371,6 +373,7 @@ export function CarritoProvider({ children }) {
       validarCupon,
       cuponValidado,
       cuponPct,
+      descuentoCuponMonto,
       actualizarPerfilCliente,
       limpiarSesion,
       sincronizarSesion,
@@ -380,6 +383,7 @@ export function CarritoProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCarrito() {
   return useContext(CarritoContext)
 }

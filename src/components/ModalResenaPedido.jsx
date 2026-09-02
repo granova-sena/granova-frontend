@@ -20,7 +20,7 @@ function ModalResenaPedido({ pedidoId, onClose }) {
     async function cargar() {
       try {
         const token = localStorage.getItem('token_cliente')
-        const res = await fetch(`${API_URL}/pedidos/${pedidoId}`, {
+        const res = await fetch(`${API_URL}/api/pedidos/${pedidoId}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
         const json = await res.json()

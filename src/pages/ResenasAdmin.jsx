@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
-import { PageHeader, PanelCard, PanelSkeleton, EmptyState } from '../components/ui/panel/PanelKit'
-import ErrorModal from '../components/ui/ErrorModal'
+import { PageHeader, PanelCard, PanelSkeleton, EmptyState, Paginado } from '../components/ui/panel/PanelKit'
 
 // ── ADMIN: MODERACIÓN DE RESEÑAS ───────────────────────────
-// El administrador ve TODAS las reseñas (visibles y ocultas) y
-// puede ocultar las inapropiadas o volver a mostrarlas.
+// El administrador modera reseñas filtrando solo visibles/ocultas
+// (máximo 5 por página) y puede ocultar las inapropiadas o volver a mostrarlas.
 function ResenasAdmin() {
   const [resenas, setResenas] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
   const [procesando, setProcesando] = useState(null)
-  const [filtro, setFiltro] = useState('todas') // todas | visibles | ocultas
+  const [filtro, setFiltro] = useState('visibles') // visibles | ocultas
+  const [pagina, setPagina] = useState(1)
 
   function cargar() {
     setCargando(true)
@@ -35,7 +35,9 @@ function ResenasAdmin() {
     }
   }
 
-  const visibles = filtro === 'todas' ? resenas : resenas.filter((r) => (filtro === 'visibles' ? r.visible : !r.visible))
+  const filtradas = resenas.filter((r) => (filtro === 'visibles' ? r.visible : !r.visible))
+  const totalPaginas = Math.max(Math.ceil(filtradas.length / 5), 1)
+  const visibles = filtradas.slice((pagina - 1) * 5, (pagina - 1) * 5 + 5)
 
   return (
     <div className="space-y-6">
@@ -44,14 +46,19 @@ function ResenasAdmin() {
         subtitulo="Las reseñas ocultas dejan de verse en el catálogo y en los foros del cliente."
       />
 
-      <ErrorModal mensaje={error} onClose={() => setError(null)} />
+      {error && (
+        <div className="panel-come text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 flex justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="text-red-400">✕</button>
+        </div>
+      )}
 
       <div className="flex items-center gap-2">
-        {[['todas', 'Todas'], ['visibles', 'Visibles'], ['ocultas', 'Ocultas']].map(([val, label]) => (
+        {[['visibles', 'Visibles'], ['ocultas', 'Ocultas']].map(([val, label]) => (
           <button
             type="button"
             key={val}
-            onClick={() => setFiltro(val)}
+            onClick={() => { setFiltro(val); setPagina(1) }}
             className={`text-xs px-4 h-9 rounded-xl border transition ${filtro === val ? 'bg-[#1D9E75] text-white border-[#1D9E75]' : 'bg-white border-gray-200 text-gray-500 hover:border-[#1D9E75]'}`}
           >
             {label}
@@ -95,6 +102,12 @@ function ResenasAdmin() {
               </div>
             </PanelCard>
           ))}
+        </div>
+      )}
+
+      {!cargando && totalPaginas > 1 && (
+        <div className="pt-1">
+          <Paginado pagina={pagina} totalPaginas={totalPaginas} onChange={setPagina} />
         </div>
       )}
     </div>

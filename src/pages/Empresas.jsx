@@ -2,15 +2,15 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { API_URL as BASE_API_URL } from "../config";
 import { useCarrito } from '../context/CarritoContext'
+import { leerParametro } from '../services/parametros'
 import FadeIn from '../components/ui/FadeIn'
 
 const API_URL = `${BASE_API_URL}/productos`
 
-const DESCUENTO_EMPRESA = 10
 const MAX_CANTIDAD = 10000
 
 const BENEFICIOS = [
-  { icono: '🏢', titulo: '10% en todos tus pedidos', texto: 'Por comprar como empresa, el descuento se aplica automáticamente, sin cupones ni letra pequeña.' },
+  { icono: '🏢', titulo: 'Descuento en todos tus pedidos', texto: 'Por comprar como empresa, el descuento se aplica automáticamente, sin cupones ni letra pequeña.' },
   { icono: '📦', titulo: 'Formatos a tu medida', texto: 'Bultos de 50kg, paquetes de 5kg y 1kg. Compra el tamaño que tu negocio necesite.' },
   { icono: '📈', titulo: 'Precios por volumen', texto: 'Entre más café lleves, mayor descuento por kilogramo. El mayor beneficio gana, nunca suma.' },
   { icono: '🚚', titulo: 'Envío a todo el país', texto: 'Coordinamos la entrega de tu café directo desde la finca hasta tu negocio.' },
@@ -62,7 +62,8 @@ function Empresas() {
   const bruto = formato ? Math.min(Number(formato.precio) * cantidad, Number.MAX_SAFE_INTEGER) : 0
   const tier = descuentosVolumen.find(t => kgTotales >= Number(t.kg_min) && (t.kg_max === null || kgTotales <= Number(t.kg_max)))
   const volumenPct = tier ? Number(tier.descuento_pct) : 0
-  const pctFinal = Math.max(volumenPct, DESCUENTO_EMPRESA)
+  const pctEmpresa = leerParametro('descuento_empresa_pct', 15)
+  const pctFinal = Math.max(volumenPct, pctEmpresa)
   const total = Math.round(bruto * (1 - pctFinal / 100))
   const ahorro = bruto - total
 
@@ -201,7 +202,7 @@ function Empresas() {
                   <span className="text-white min-w-0 break-all text-right">${bruto.toLocaleString('es-CO')}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-white/50">Tu descuento {pctFinal}% {volumenPct > DESCUENTO_EMPRESA ? '(por volumen)' : '(empresa)'}</span>
+                  <span className="text-white/50">Tu descuento {pctFinal}% {volumenPct > pctEmpresa ? '(por volumen)' : '(empresa)'}</span>
                   <span className="text-[#9DC9B4] min-w-0 break-all text-right">− ${ahorro.toLocaleString('es-CO')}</span>
                 </div>
                 <div className="flex justify-between border-t border-white/10 pt-3">

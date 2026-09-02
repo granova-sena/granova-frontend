@@ -17,7 +17,7 @@
     { ruta: '/dashboard/pedidos', palabras: ['pedido', 'orden'] },
     { ruta: '/dashboard/envios', palabras: ['envio', 'shipment', 'entrega'] },
     { ruta: '/dashboard/transportadoras', palabras: ['transportadora', 'courier', 'mensajeria'] },
-    { ruta: '/dashboard/usuarios', palabras: ['usuario', 'cliente', 'admin', 'equipo'] },
+    { ruta: '/dashboard/logistica', palabras: ['logistica', 'repartidor', 'personal', 'equipo', 'usuario'] },
     { ruta: '/dashboard/ventas', palabras: ['venta', 'registro de venta'] },
     { ruta: '/dashboard/reportes', palabras: ['reporte', 'informe', 'estadistica', 'analisis'] },
     { ruta: '/dashboard', palabras: ['inicio', 'home', 'principal', 'dashboard'] },
@@ -135,7 +135,7 @@ function normalizarRutaAdmin(ruta) {
       <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
         {abierto && (
           <div
-            className="w-[22rem] sm:w-96 h-[28rem] flex flex-col rounded-2xl overflow-hidden animate-[granova-pop_0.18s_ease-out]"
+            className="w-80 sm:w-[22rem] h-[26rem] sm:h-[28rem] flex flex-col rounded-2xl overflow-hidden animate-[granova-pop_0.18s_ease-out]"
             style={panel}
           >
             {/* Header */}
@@ -275,24 +275,43 @@ function normalizarRutaAdmin(ruta) {
         <button
           type="button"
           onClick={() => setAbierto((v) => !v)}
-          className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0 transition-transform hover:scale-105 relative"
+          className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl transition-all duration-300 hover:scale-105 relative group"
           style={{
-            background: 'radial-gradient(circle at 35% 30%, #4dffa0, #0a3d24)',
-            boxShadow: `0 0 0 1px rgba(57,255,138,0.4), 0 0 24px rgba(57,255,138,0.55), 0 8px 24px rgba(0,0,0,0.4)`,
+            background: abierto
+              ? 'radial-gradient(circle at 35% 30%, #1a3d2a, #0a2016)'
+              : 'radial-gradient(circle at 35% 30%, #4dffa0, #0a3d24)',
+            boxShadow: abierto
+              ? `0 0 0 1px rgba(57,255,138,0.2), 0 0 24px rgba(57,255,138,0.3), 0 8px 32px rgba(0,0,0,0.5)`
+              : `0 0 0 1px rgba(57,255,138,0.4), 0 0 28px rgba(57,255,138,0.55), 0 8px 32px rgba(0,0,0,0.4)`,
           }}
         >
-          <span
-            className="absolute inset-0 rounded-full pointer-events-none"
-            style={{ boxShadow: `0 0 0 0 rgba(57,255,138,0.5)`, animation: abierto ? 'none' : 'granova-ring 2.2s infinite' }}
-          />
+          {!abierto && (
+            <span
+              className="absolute inset-0 rounded-2xl pointer-events-none"
+              style={{ boxShadow: `0 0 0 0 rgba(57,255,138,0.5)`, animation: 'granova-ring 2.5s infinite' }}
+            />
+          )}
           {abierto ? (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M18 6 6 18M6 6l12 12" stroke="#04140c" strokeWidth="2.2" strokeLinecap="round" />
             </svg>
           ) : (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke="#04140c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
+          )}
+          {!abierto && (
+            <span
+              className="text-xs sm:text-sm font-semibold relative whitespace-nowrap"
+              style={{ color: '#04140c', textShadow: `0 0 8px rgba(57,255,138,0.3)` }}
+            >
+              ¿Necesitas ayuda?
+            </span>
+          )}
+          {abierto && (
+            <span className="text-xs sm:text-sm font-medium relative" style={{ color: 'rgba(234,255,242,0.6)' }}>
+              Cerrar
+            </span>
           )}
         </button>
 

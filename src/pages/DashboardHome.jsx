@@ -28,7 +28,7 @@ function DashboardHome() {
     const auth = { headers: { Authorization: `Bearer ${localStorage.getItem('token_empleado')}` } }
     Promise.allSettled([
       api.get('/dashboard', auth),
-      api.get('/pedidos/resumen', auth),
+      api.get('/admin/pedidos/resumen', auth),
       api.get('/inventario/resumen', auth),
       api.get('/inventario/lotes', auth),
       api.get('/empleados/alertas', auth),
@@ -88,7 +88,7 @@ function DashboardHome() {
     { label: 'Stock de productos', icono: '📦', path: '/dashboard/inventario', desc: 'Inventario y lotes' },
     { label: 'Registro de ventas', icono: '💳', path: '/dashboard/ventas', desc: 'Ventas de mostrador' },
     { label: 'Reportes', icono: '📊', path: '/dashboard/reportes', desc: 'Métricas del negocio' },
-    { label: 'Envíos', icono: '🚚', path: '/dashboard/envios', desc: 'Guías y transportadoras' },
+    { label: 'Salidas', icono: '🚚', path: '/dashboard/envios', desc: 'Despachos de reparto en tiempo real' },
   ]
 
   const r = resumen?.ok ? resumen.rentabilidad : null

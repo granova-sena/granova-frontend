@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useRef, useCallback, Component } from "re
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useModalBehavior } from "../hooks/useModalBehavior";
 import { useCarrito } from "../context/CarritoContext";
+import { idClienteActual } from "../services/session";
+import { leerParametro } from "../services/parametros";
 import { API_URL as BASE_API_URL } from "../config";
 import toast from "react-hot-toast";
 import RecomendadorModal from "../components/RecomendadorModal";
@@ -123,7 +125,7 @@ export function adaptarProducto(p) {
     tipo: esMaquina ? (p.marca || "Otra marca") : (p.tipo_cafe || "Sin categoría"),
     unidad: esMaquina ? "unidad" : "kg",
     unidadCorta: esMaquina ? "und" : "kg",
-    disponible: p.estado === "activo" && stock > 0,
+    disponible: p.estado === "activo" && (stock > 0 || formatos.some(f => f.stock > 0)),
   };
 }
 
@@ -143,16 +145,9 @@ export function eliminarDuplicados(productos) {
 }
 
 // ── FAVORITOS Y VISTOS RECIENTEMENTE (localStorage POR USUARIO) ────────
-// La clave incluye el id del cliente logueado: cada cuenta tiene sus
-// propias listas en el mismo navegador. Sin sesión → sufijo "_invitado".
-export function idClienteActual() {
-  try {
-    return JSON.parse(localStorage.getItem("cliente"))?.id ?? "invitado";
-  } catch {
-    return "invitado";
-  }
-}
-
+// La clave incluye el id de la cuenta activa (desde el JWT del cliente, con
+// respaldo en el objeto `cliente`): cada cuenta tiene sus propias listas en
+// el mismo navegador. Sin sesión → sufijo "_invitado".
 const claveFavoritos = () => `granova_favoritos_u${idClienteActual()}`;
 const claveVistos = () => `granova_vistos_u${idClienteActual()}`;
 
@@ -168,6 +163,7 @@ export function cargarFavoritos() {
 export function guardarFavoritos(set) {
   try {
     localStorage.setItem(claveFavoritos(), JSON.stringify([...set]));
+    window.dispatchEvent(new Event('granova-favoritos'));
   } catch { /* localStorage no disponible, se ignora */ }
 }
 
@@ -397,7 +393,7 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar, descuentosVol
   const volumenPct = tier ? Number(tier.descuento_pct) : 0;
   const fuentes = [
     { fuente: 'volumen', pct: volumenPct },
-    { fuente: 'empresa', pct: esJuridica ? 10 : 0 },
+    { fuente: 'empresa', pct: esJuridica ? leerParametro('descuento_empresa_pct', 15) : 0 },
     { fuente: 'premio', pct: tienePremio && !esJuridica ? 10 : 0 },
   ].filter(f => f.pct > 0).sort((a, b) => b.pct - a.pct);
   const ganador = fuentes[0] || { fuente: null, pct: 0 };
@@ -552,7 +548,7 @@ export function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFav
   // EL MAYOR GANA (igual que el backend): volumen vs empresa 10% vs promoción.
   // El precio mostrado es un estimado — el cobro real lo hace el servidor.
   const pctVolumen = tierActivo ? Number(tierActivo.descuento_pct) : 0;
-  const pctEmpresa = esJuridica ? 10 : 0;
+  const pctEmpresa = esJuridica ? leerParametro('descuento_empresa_pct', 15) : 0;
   const pctPromo = p.promoPct || 0;
   const pctMostrado = Math.max(pctVolumen, pctEmpresa, pctPromo);
   const promoGana = pctPromo > 0 && pctPromo >= pctMostrado;
@@ -608,7 +604,7 @@ export function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFav
               <div className="flex flex-col gap-2">
                 {p.formatos.map(f => {
                   const activo = f.id_formato === formatoSel;
-                  const precioFormatoEmpresa = esJuridica ? Math.round(Number(f.precio) * 0.90) : null;
+                  const precioFormatoEmpresa = esJuridica ? Math.round(Number(f.precio) * (1 - pctEmpresa / 100)) : null;
                   return (
                     <button
                       type="button"
@@ -647,7 +643,7 @@ export function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFav
             )}
             {esJuridica && !p.esMaquina && !promoGana && (
               <p className="text-xs text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/25 rounded-full px-3 py-1.5 inline-block mb-2">
-                🏢 Tu precio de empresa incluye el 10% de descuento
+                🏢 Tu precio de empresa incluye el {pctEmpresa}% de descuento
               </p>
             )}
             <p className="text-2xl font-semibold text-white">
@@ -829,34 +825,6 @@ function ProductoDelDiaBanner({ producto, onAgregar, onVerDetalle }) {
   );
 }
 
-// ── CALCULADORA RÁPIDA (solo café) ────────────────────────
-// Aislada en su propio componente para que su estado (kgCalc) no
-// interfiera con el render de ProductoCard ni de la lista completa.
-function CalculadoraRapida({ precio, stock }) {
-  const [kgCalc, setKgCalc] = useState(1);
-
-  return (
-    <div className="flex items-center gap-2 text-xs bg-[#0B1810] border border-white/[0.06] rounded-lg px-2.5 py-1.5">
-      <span className="text-white/40">Calcular:</span>
-      <input
-        type="number"
-        min={1}
-        max={Math.min(stock || 1, 10000)}
-        value={kgCalc}
-        onClick={e => e.stopPropagation()}
-        onChange={e => {
-          e.stopPropagation();
-          const val = Number(e.target.value);
-          setKgCalc(Number.isFinite(val) && val > 0 ? Math.min(val, 10000) : 1);
-        }}
-        className="w-16 bg-transparent border border-white/15 rounded px-1 py-0.5 text-white text-center outline-none focus:border-[#6FA98C]"
-      />
-      <span className="text-white/40">kg =</span>
-      <span className="text-white font-semibold ml-auto break-all">${(kgCalc * precio).toLocaleString("es-CO")}</span>
-    </div>
-  );
-}
-
 export function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0, esFavorito, onToggleFavorito, seleccionadoComparar, onToggleComparar, esJuridica = false }) {
   const [feedback, setFeedback] = useState(false);
   const cardRef = useRef(null);
@@ -959,8 +927,8 @@ export function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0
         <div className="flex items-end justify-between">
           <div>
             {(() => {
-              const pctMostrar = Math.max(p.promoPct || 0, esJuridica ? 10 : 0);
-              const promoGana = (p.promoPct || 0) >= (esJuridica ? 10 : 0) && p.promoPct > 0;
+              const pctMostrar = Math.max(p.promoPct || 0, esJuridica ? leerParametro('descuento_empresa_pct', 15) : 0);
+              const promoGana = (p.promoPct || 0) >= (esJuridica ? leerParametro('descuento_empresa_pct', 15) : 0) && p.promoPct > 0;
               const base = p.formatos.length > 0 ? p.precioDesde : p.precio;
               const precioCard = pctMostrar > 0 ? Math.round(base * (1 - pctMostrar / 100)) : base;
               const leyendaFormatos = p.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ");
@@ -1026,7 +994,6 @@ export function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0
           </p>
         )}
 
-        {!p.esMaquina && <CalculadoraRapida precio={p.precio} stock={p.stock} />}
         <label className="flex items-center gap-1.5 text-[11px] text-[#9DC9B4] cursor-pointer select-none">
           <input type="checkbox" checked={seleccionadoComparar} onChange={onToggleComparar} className="w-3.5 h-3.5 accent-[#6FA98C]" />
           <span>Comparar</span>
@@ -1087,12 +1054,18 @@ function CatalogoInterno() {
   const navigate = useNavigate()
   const { cliente, sincronizarCarrito, productos: productosContexto } = useCarrito()
   const esJuridica = cliente?.tipo_persona === 'juridica'
+  const pctEmpresa = leerParametro('descuento_empresa_pct', 15)
   const [searchParams, setSearchParams] = useSearchParams();
   const seccionParam = searchParams.get("seccion");
   // La URL es la única fuente de verdad de la pestaña activa:
   // ?seccion=maquinas (por defecto, café). Favoritos vive en su propia página.
   const seccion = ["cafe", "maquinas"].includes(seccionParam) ? seccionParam : "cafe";
   const cambiarSeccion = (id) => setSearchParams(id === "cafe" ? {} : { seccion: id }, { replace: true });
+
+  useEffect(() => {
+    setBusqueda("");
+    setFiltros({ tipo: "", disp: "", marca: "" });
+  }, [seccion]);
 
   const [productos, setProductos] = useState([]);
   const [descuentosVolumen, setDescuentosVolumen] = useState([]);
@@ -1109,15 +1082,14 @@ function CatalogoInterno() {
   const [recomendaciones, setRecomendaciones] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [buscaAbierto, setBuscaAbierto] = useState(false);
+  // Campo de búsqueda enviado desde la landing (header público): /cliente/catalogo?q=...
+  const qParam = searchParams.get("q");
+  useEffect(() => {
+    if (qParam) setBusqueda(qParam);
+  }, [qParam]);
   const [busquedaIdx, setBusquedaIdx] = useState(-1);
   const buscaRef = useRef(null);
   const [filtros, setFiltros] = useState({ tipo: "", disp: "", marca: "" });
-
-  useEffect(() => {
-    setBusqueda("");
-    setFiltros({ tipo: "", disp: "", marca: "" });
-  }, [seccion]);
-
   const [carritoOpen, setCarritoOpen] = useState(false);
   const [detalle, setDetalle] = useState(null);
   const [carrito, setCarrito] = useState(() => {
@@ -1330,8 +1302,8 @@ function CatalogoInterno() {
   };
 
   // ── Secciones derivadas ──
-  const cafeProductos = useMemo(() => productos.filter(p => p.categoria === "cafe"), [productos]);
-  const maquinasProductos = useMemo(() => productos.filter(p => p.categoria === "maquina"), [productos]);
+  const cafeProductos = useMemo(() => productos.filter(p => p.categoria === "cafe" && p.disponible), [productos]);
+  const maquinasProductos = useMemo(() => productos.filter(p => p.categoria === "maquina" && p.disponible), [productos]);
 
   const productosSeccion = seccion === "maquinas" ? maquinasProductos : cafeProductos;
 
@@ -1353,7 +1325,7 @@ function CatalogoInterno() {
   const sugerencias = useMemo(() => {
     if (busqueda.trim().length < 2) return [];
     const q = norm(busqueda);
-    return productos.filter(p => (
+    return productos.filter(p => p.disponible && (
       norm(p.nombre).includes(q) ||
       norm(p.tipo).includes(q) ||
       norm(p.marca).includes(q) ||
@@ -1558,7 +1530,7 @@ function CatalogoInterno() {
             <motion.button
               type="button"
               id="icono-carrito-header"
-              onClick={() => setCarritoOpen(true)}
+              onClick={() => { setCarritoOpen(true); window.dispatchEvent(new CustomEvent('carrito-toggle', { detail: { abierto: true } })) }}
               whileTap={{ scale: 0.9 }}
               className="relative h-10 w-10 rounded-xl flex items-center justify-center shrink-0 bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition"
               aria-label="Carrito"
@@ -1701,12 +1673,12 @@ function CatalogoInterno() {
                 <span className="text-3xl">🏢</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-semibold">¿Compras para tu negocio?</p>
-                  <p className="text-sm text-white/50 mt-1">10% en todos tus pedidos + precios por bulto y descuentos por volumen.</p>
+                  <p className="text-sm text-white/50 mt-1">{pctEmpresa}% en todos tus pedidos + precios por bulto y descuentos por volumen.</p>
                 </div>
                 {cliente?.tipo_persona === 'juridica' ? (
-                  <span className="shrink-0 text-xs text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/30 rounded-full px-3.5 py-2">🏢 Ya tienes tu 10%</span>
+                  <span className="shrink-0 text-xs text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/30 rounded-full px-3.5 py-2">🏢 Ya tienes tu {pctEmpresa}%</span>
                 ) : (
-                  <button type="button" onClick={() => navigate('/cliente/cuenta')} className="shrink-0 h-10 px-5 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">Granova Empresas →</button>
+                  <button type="button" onClick={() => navigate('/cliente/simulador')} className="shrink-0 h-10 px-5 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">Granova Empresas →</button>
                 )}
               </div>
               </FadeIn>
@@ -1885,7 +1857,7 @@ function CatalogoInterno() {
                         <p className="text-xs text-white/40">{primero.origen}</p>
                         <p className="text-base font-semibold text-white mt-1">{primero.nombre}</p>
                         <p className="text-xl font-semibold text-white mt-2">{primero.formatos.length > 0 ? `Desde $${primero.precioDesde.toLocaleString("es-CO")}` : `$${primero.precio.toLocaleString("es-CO")}`}</p>
-                        <p className="text-[10px] text-white/40">{primero.formatos.length > 0 ? primero.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ") : "por bolsa"}</p>
+                        <p className="text-[10px] text-white/40">{primero.formatos.length > 0 ? primero.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ") : "por kg"}</p>
                         {tabDestacados === "promociones" && (
                           <p className="text-[11px] font-medium text-[#D85A30] mt-1">
                             🏷️ {primero.promoNombre || "Oferta"}{primero.promoFin ? ` · hasta el ${new Date(primero.promoFin).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}` : ""}
@@ -1893,7 +1865,7 @@ function CatalogoInterno() {
                         )}
                         <div className="flex items-center gap-1.5 mt-2">
                           <span className={`w-2 h-2 rounded-full ${stockColor[primero.stockLabel]}`}></span>
-                          <span className={`text-xs ${stockTexto[primero.stockLabel]}`}>{primero.stockLabel} · {primero.formatos.length > 0 && primero.formatos.some(f => Number(f.stock) > 0) ? `${primero.formatos.reduce((s, f) => s + Number(f.stock), 0)} bolsas` : `${primero.stock} bolsas`}</span>
+                          <span className={`text-xs ${stockTexto[primero.stockLabel]}`}>{primero.stockLabel} · {primero.formatos.length > 0 && primero.formatos.some(f => Number(f.stock) > 0) ? `${primero.formatos.reduce((s, f) => s + Number(f.stock), 0)} bolsas` : `${primero.stock} kg`}</span>
                         </div>
                         <button type="button" onClick={e => { e.stopPropagation(); verDetalle(primero); }} className="w-full mt-3 h-9 rounded-xl bg-white/[0.07] border border-white/[0.12] text-white/80 text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-white/[0.14] hover:text-white active:scale-95 transition duration-150"><IconoBuscar width={13} height={13} /> Ver detalles</button>
                         <button type="button" onClick={e => { e.stopPropagation(); agregar({...primero, cant:1}, e.currentTarget); }} className="w-full mt-2 h-9 rounded-xl bg-[#6FA98C] text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#4F8A70] active:scale-95 transition duration-150"><IconoCarrito width={14} height={14} /> Agregar al carrito</button>
@@ -1944,7 +1916,7 @@ function CatalogoInterno() {
       )}
 
       {/* MODALES */}
-      {carritoOpen  && <CarritoDrawer carrito={carrito} setCarrito={setCarrito} onClose={() => setCarritoOpen(false)} onAumentar={aumentarEnCarrito} descuentosVolumen={descuentosVolumen} />}
+      {carritoOpen  && <CarritoDrawer carrito={carrito} setCarrito={setCarrito} onClose={() => { setCarritoOpen(false); window.dispatchEvent(new CustomEvent('carrito-toggle', { detail: { abierto: false } })) }} onAumentar={aumentarEnCarrito} descuentosVolumen={descuentosVolumen} />}
       {detalle      && <DetalleProducto p={detalle} onClose={() => setDetalle(null)} onAgregar={agregar} esFavorito={favoritos.has(detalle.id)} onToggleFavorito={toggleFavorito} descuentosVolumen={descuentosVolumen} esJuridica={esJuridica} />}
       {confirmPendiente && <ModalConfirmarCantidad data={confirmPendiente} onCancelar={cancelarConfirm} onAceptar={aceptarConfirm} />}
       {mostrarRecomendador && (

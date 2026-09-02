@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { API_URL } from '../config'
-import { getActiveToken, clearClienteToken, clearEmpleadoToken, esRutaCliente } from './session'
+import { getActiveToken, clearClienteToken, clearEmpleadoToken, limpiarTodo, esRutaCliente } from './session'
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -17,20 +17,38 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+function redirigirLogin() {
+  if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/control-interno')) {
+    window.location.href = '/login'
+  }
+}
+
 api.interceptors.response.use(
   (respuesta) => respuesta,
   (error) => {
     const estado = error.response?.status
     const esLogin = /\/auth\/(login|login-admin|google)/.test(error.config?.url || '')
+    const esRutaPanel = !esRutaCliente()
 
     if (estado === 401 && !esLogin) {
       if (esRutaCliente()) {
         clearClienteToken()
+        redirigirLogin()
       } else {
         clearEmpleadoToken()
+        if (!window.location.pathname.startsWith('/control-interno')) {
+          window.location.href = '/control-interno'
+        }
       }
-      if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/control-interno')) {
-        window.location.href = '/login'
+    }
+
+    // 403 en rutas de panel: la sesión no tiene el rol que exige el endpoint
+    // (p.ej. empleado tratando de entrar a algo solo-admin). Se limpia y se
+    // manda al inicio de sesión de panel para evitar estados "congelados".
+    if (estado === 403 && !esLogin && esRutaPanel) {
+      limpiarTodo()
+      if (!window.location.pathname.startsWith('/control-interno')) {
+        window.location.href = '/control-interno'
       }
     }
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { jwtDecode } from 'jwt-decode'
 import api from '../services/api'
+import { limpiarTodo } from '../services/session'
 import '../panel-tema.css'
 
 function EmpleadoLayout() {
@@ -19,7 +20,7 @@ function EmpleadoLayout() {
     api.get('/empleados/mis-reportes')
       .then((res) => setMisReportes(res.data.reportes))
       .catch(() => {})
-  }, [location.pathname])
+  }, [])
 
   useEffect(() => {
     localStorage.setItem('modoOscuro', String(modoOscuro))
@@ -43,7 +44,7 @@ function EmpleadoLayout() {
     '/panel-empleado/pedidos': 'Pedidos',
     '/panel-empleado/ventas': 'Ventas',
     '/panel-empleado/transportadoras': 'Transportadoras',
-    '/panel-empleado/envios': 'Envíos',
+    '/panel-empleado/envios': 'Salidas',
     '/panel-empleado/reportes': 'Mis reportes',
   }
   const tituloSeccion = TITULOS_NAV[location.pathname] || 'Panel empleado'
@@ -91,22 +92,11 @@ function EmpleadoLayout() {
         { label: 'Transportadoras', path: '/panel-empleado/transportadoras', icon: (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 8l-9-5-9 5 9 5 9-5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M3 8v8l9 5 9-5V8M12 13v8" stroke="currentColor" strokeWidth="2"/></svg>
         ) },
-        { label: 'Envíos', path: '/panel-empleado/envios', icon: (
+        { label: 'Salidas', path: '/panel-empleado/envios', icon: (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M1 3h15v13H1z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M16 8h4l3 3v5h-7V8z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><circle cx="5.5" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="2"/><circle cx="18.5" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="2"/></svg>
         ) },
-      ],
-    },
-    {
-      id: 'reportes',
-      titulo: 'Reportes',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path d="M12 9v4m0 4h.01M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      items: [
         { label: 'Mis reportes', path: '/panel-empleado/reportes', icon: (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 12h6M9 16h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/></svg>
         ) },
       ],
     },
@@ -124,8 +114,7 @@ function EmpleadoLayout() {
   }, [location.pathname])
 
   function handleLogout() {
-    localStorage.removeItem('token_empleado')
-    localStorage.removeItem('usuario')
+    limpiarTodo()
     navigate('/control-interno')
   }
 
@@ -193,14 +182,6 @@ function EmpleadoLayout() {
                 >
                   {grupo.icon}
                   <span className="flex-1 text-left">{grupo.titulo}</span>
-                  {grupo.id === 'reportes' && misReportes.length > 0 && (
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0"
-                      style={{ background: 'rgba(220,38,38,0.12)', color: modoOscuro ? '#fca5a5' : '#b91c1c' }}
-                    >
-                      {misReportes.length}
-                    </span>
-                  )}
                   <svg
                     width="14" height="14" viewBox="0 0 24 24" fill="none"
                     className="transition-transform duration-200 flex-shrink-0"

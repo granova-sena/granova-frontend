@@ -13,7 +13,7 @@ function estadoAIndice(estado) {
   return mapa[estado] ?? -1;
 }
 
-export default function OrderStepper({ estado, compacto = false, fechaPedido = null, pagado = false }) {
+export default function OrderStepper({ estado, compacto = false, fechaPedido = null }) {
   const indexActual = estadoAIndice(estado);
   const cancelado = estado === "cancelado" || estado === "rechazado";
 
@@ -85,17 +85,13 @@ export default function OrderStepper({ estado, compacto = false, fechaPedido = n
             <p className={`text-xs mt-2 text-center font-medium ${
               i <= indexActual ? "text-white" : "text-white/40"
             }`}>
-              {paso.id === "pendiente" && pagado ? "Pagado" : paso.label}
+              {paso.label}
             </p>
             {i === 0 && fechaPedido && (
               <p className="text-[10px] text-white/30">{fechaPedido}</p>
             )}
             {i > indexActual && (
-              <p className="text-[10px] text-white/30">
-                {paso.id === "pendiente" && pagado
-                  ? "Tu pago fue recibido. Tu pedido será enviado en menos de 2 días."
-                  : paso.desc}
-              </p>
+              <p className="text-[10px] text-white/30">{paso.desc}</p>
             )}
           </div>
           {i < PASOS.length - 1 && (

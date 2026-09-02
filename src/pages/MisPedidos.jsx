@@ -9,28 +9,37 @@ import toast from 'react-hot-toast';
 import FadeIn from '../components/ui/FadeIn';
 import OrderStepper from '../components/ui/OrderStepper';
 import EstadoPagoBadge from '../components/ui/EstadoPagoBadge';
+import OperacionBadge from '../components/ui/OperacionBadge';
 
 const METODOS_PASARELA = ['tarjeta', 'pse', 'nequi', 'daviplata']
 const esMetodoPasarela = (metodo) => METODOS_PASARELA.includes(String(metodo || '').toLowerCase())
 
-// Solo se permite pagar mientras el pago siga pendiente. Si el pago falló, la
-// venta fue rechazada: el cliente hace una compra nueva (PagarPage lo explica).
 function necesitaPagar(p) {
+  if (p.estado_pago === 'fallido') return true
   if (p.estado_pago === 'pendiente' && esMetodoPasarela(p.metodo_pago)) return true
   return false
 }
 
 const descargarFactura = async (id_pedido) => {
   try {
-    // Genera la factura si no existe
-    await fetch(`${API_URL}/api/facturas`, {
+    // Genera la factura si no existe (el dueño del pedido la puede emitir).
+    // Si ya existía, el backend responde 200 con la factura existente (idempotente).
+    const token = localStorage.getItem('token_cliente')
+    const resPost = await fetch(`${API_URL}/api/facturas`, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
       body:    JSON.stringify({ id_pedido })
     })
+    const jsonPost = await resPost.json().catch(() => null)
+
+    if (!resPost.ok || !jsonPost?.ok) {
+      throw new Error(jsonPost?.mensaje || jsonPost?.error || 'No se pudo generar la factura')
+    }
 
     // Obtiene la factura
-    const token = localStorage.getItem('token_cliente')
     const res  = await fetch(`${API_URL}/api/facturas/${id_pedido}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     })
@@ -100,8 +109,14 @@ const descargarFactura = async (id_pedido) => {
       doc.text(`-$${Number(factura.descuento).toLocaleString()}`, 175, finalY + 6, { align: 'right' })
     }
 
+    if (factura.envio > 0 && factura.envio !== null && factura.envio !== undefined) {
+      doc.setTextColor(80)
+      doc.text('Envío:', 130, finalY + 12)
+      doc.text(`$${Number(factura.envio).toLocaleString()}`, 175, finalY + 12, { align: 'right' })
+    }
+
     // Desglose de IVA por tasa
-    const tasaInicio = finalY + 12
+    const tasaInicio = finalY + 18
     if (Array.isArray(factura.impuestos_por_tasa) && factura.impuestos_por_tasa.length > 0) {
       factura.impuestos_por_tasa.forEach((t, i) => {
         doc.text(`IVA ${t.tasa}%:`, 130, tasaInicio + i * 6)
@@ -150,6 +165,17 @@ function MisPedidos() {
   const [error, setError] = useState(null)
   const [pagina, setPagina] = useState(1)
   const [paginacion, setPaginacion] = useState({ totalPages: 1, totalRows: 0 })
+  const [refresco, setRefresco] = useState(0)
+  const [textoBusqueda, setTextoBusqueda] = useState('')
+  const [busqueda, setBusqueda] = useState('')
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setBusqueda(textoBusqueda.trim())
+      setPagina(1)
+    }, 350)
+    return () => clearTimeout(t)
+  }, [textoBusqueda])
 
   useEffect(() => {
     const id_cliente = idDeTokenCliente()
@@ -159,11 +185,12 @@ function MisPedidos() {
     }
 
     let cancelado = false
-    async function cargarPedidos() {
+    async function cargarPedidos(silencioso = false) {
       try {
-        setCargando(true)
+        if (!silencioso) setCargando(true)
         const token = localStorage.getItem('token_cliente')
-        const res = await fetch(`${API_URL}/api/pedidos/cliente/${id_cliente}?page=${pagina}&limit=10`, {
+        const q = busqueda ? `&q=${encodeURIComponent(busqueda)}` : ''
+        const res = await fetch(`${API_URL}/api/pedidos/cliente/${id_cliente}?page=${pagina}&limit=5${q}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         })
         const json = await res.json()
@@ -178,9 +205,24 @@ function MisPedidos() {
         if (!cancelado) setCargando(false)
       }
     }
-    cargarPedidos()
-    return () => { cancelado = true }
-  }, [pagina])
+    cargarPedidos(true)
+
+    // Refresco automático: así el cambio de estado (p. ej. a "Empacando")
+    // se ve sin tener que recargar la página, igual que las notificaciones.
+    const intervalo = setInterval(() => cargarPedidos(true), 10000)
+    function onVisibilidad() {
+      if (document.visibilityState === 'visible') cargarPedidos(true)
+    }
+    document.addEventListener('visibilitychange', onVisibilidad)
+    window.addEventListener('focus', () => cargarPedidos(true))
+
+    return () => {
+      cancelado = true
+      clearInterval(intervalo)
+      document.removeEventListener('visibilitychange', onVisibilidad)
+      window.removeEventListener('focus', onVisibilidad)
+    }
+  }, [pagina, refresco, busqueda])
 
   const formatearFecha = (fecha) =>
     new Date(fecha).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -193,14 +235,21 @@ function MisPedidos() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-white">
         <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Historial</span>
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <h1 className="text-2xl sm:text-3xl font-semibold mt-2 tracking-tight">Mis pedidos</h1>
-          <button
-            type="button"
-            onClick={() => navigate('/cliente/cotizacion')}
-            className="self-start sm:self-auto h-10 px-5 rounded-xl bg-[#0F1D13] border border-white/[0.12] text-white/80 text-sm font-medium flex items-center gap-2 hover:bg-[#14291B] hover:text-white transition"
-          >
-            💾 Generar cotización
-          </button>
+          <h1 className="text-2xl sm:text-3xl font-semibold mt-2 tracking-tight">Mis compras</h1>
+        </div>
+
+        <div className="relative mt-6">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="11" r="8" stroke="#ffffff66" strokeWidth="2" />
+            <path d="M21 21l-4.35-4.35" stroke="#ffffff66" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <input
+            type="text"
+            value={textoBusqueda}
+            onChange={(e) => setTextoBusqueda(e.target.value)}
+            placeholder="Buscar por número de pedido o producto..."
+            className="w-full pl-9 pr-4 py-2.5 bg-white/[0.08] border border-white/15 rounded-xl text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#6FA98C] transition"
+          />
         </div>
         <div className="h-8 sm:h-10" />
 
@@ -225,9 +274,11 @@ function MisPedidos() {
                 <path d="M4 7l8-4 8 4-8 4-8-4zm0 0v10l8 4m0-14v14m8-14v10l-8 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <p className="text-white font-semibold mb-2">Aún no tienes pedidos</p>
+            <p className="text-white font-semibold mb-2">{busqueda ? 'Sin resultados' : 'Aún no tienes compras'}</p>
             <p className="text-white/50 text-sm max-w-sm mx-auto mb-8 leading-relaxed">
-              Cuando compres en el catálogo, cada pedido y su estado de envío aparecerán aquí.
+              {busqueda
+                ? `Nada coincide con "${busqueda}". Prueba con el número de pedido o el nombre de un producto.`
+                : 'Cuando compres en el catálogo, cada pedido y su estado de envío aparecerán aquí.'}
             </p>
             <button
               type="button"
@@ -251,7 +302,10 @@ function MisPedidos() {
                 onClick={() => navigate(`/cliente/pedidos/${p.id_pedido}`)}
                 className="flex-1 text-left min-w-[140px]"
               >
-                <p className="text-sm font-medium text-white">{formatearNumero(p.id_pedido)}</p>
+                <p className="text-sm font-medium text-white">{p.numero_pedido || formatearNumero(p.id_pedido)}</p>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  {p.operacion && <OperacionBadge operacion={p.operacion} sector={p.sector_envio} compacto />}
+                </div>
                 <p className="text-xs text-white/40 mt-0.5">{formatearFecha(p.fecha_pedido)}</p>
                 <div className="mt-2">
                   <EstadoPagoBadge estadoPago={p.estado_pago} />
@@ -260,13 +314,11 @@ function MisPedidos() {
 
               <div className="flex items-center gap-4 ml-auto">
                 <div className="hidden sm:block">
-                  <OrderStepper estado={p.estado} pagado={p.estado_pago === 'pagado'} compacto />
+                  <OrderStepper estado={p.estado} compacto />
                 </div>
                 <div className="text-right">
-                  <p className={`text-xs font-medium ${
-                    p.estado_pago === 'pagado' ? 'text-[#9DC9B4]' : (estadoTexto[p.estado] || 'text-white/50')
-                  }`}>
-                    {p.estado_pago === 'pagado' ? 'Pagado' : (estadoLabel[p.estado] || p.estado)}
+                  <p className={`text-xs font-medium ${estadoTexto[p.estado] || 'text-white/50'}`}>
+                    {estadoLabel[p.estado] || p.estado}
                   </p>
                   <p className="text-sm font-semibold text-white mt-0.5">
                     ${Number(p.total).toLocaleString('es-CO')}

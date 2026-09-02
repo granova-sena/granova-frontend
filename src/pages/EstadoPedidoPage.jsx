@@ -4,13 +4,13 @@ import { API_URL } from "../config";
 import FormularioResena from '../components/FormularioResena'
 import OrderStepper from '../components/ui/OrderStepper'
 import EstadoPagoBadge from '../components/ui/EstadoPagoBadge'
+import OperacionBadge from '../components/ui/OperacionBadge'
 
 const METODOS_PASARELA = ['tarjeta', 'pse', 'nequi', 'daviplata']
 const esMetodoPasarela = (metodo) => METODOS_PASARELA.includes(String(metodo || '').toLowerCase())
 
-// Solo se permite pagar mientras el pago siga pendiente. Si el pago falló, la
-// venta fue rechazada: el cliente hace una compra nueva.
 function necesitaPagar(estadoPago, metodoPago) {
+  if (estadoPago === 'fallido') return true
   // Pendiente con método de pasarela (online): el cliente aún debe pagar.
   if (estadoPago === 'pendiente' && esMetodoPasarela(metodoPago)) return true
   return false
@@ -25,23 +25,40 @@ function EstadoPedidoPage() {
   const [resenaAbierta, setResenaAbierta] = useState(null) // guarda el id_detalle abierto, o null
 
   useEffect(() => {
-    async function cargarPedido() {
+    let cancelado = false
+    async function cargarPedido(silencioso = false) {
       try {
-        setCargando(true)
+        if (!silencioso) setCargando(true)
         const token = localStorage.getItem('token_cliente')
-        const res = await fetch(`${API_URL}/pedidos/${id}`, {
+        const res = await fetch(`${API_URL}/api/pedidos/${id}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         })
         const json = await res.json()
         if (!json.ok) throw new Error(json.mensaje)
-        setPedido(json.data)
+        if (!cancelado) setPedido(json.data)
       } catch (err) {
-        setError(err.message)
+        if (!cancelado) setError(err.message)
       } finally {
-        setCargando(false)
+        if (!cancelado) setCargando(false)
       }
     }
-    cargarPedido()
+    cargarPedido(true)
+
+    // Refresco automático para ver el cambio de estado (p. ej. a "Empacando")
+    // sin recargar la página, igual que las notificaciones.
+    const intervalo = setInterval(() => cargarPedido(true), 10000)
+    function onVisibilidad() {
+      if (document.visibilityState === 'visible') cargarPedido(true)
+    }
+    document.addEventListener('visibilitychange', onVisibilidad)
+    window.addEventListener('focus', onVisibilidad)
+
+    return () => {
+      cancelado = true
+      clearInterval(intervalo)
+      document.removeEventListener('visibilitychange', onVisibilidad)
+      window.removeEventListener('focus', onVisibilidad)
+    }
   }, [id])
 
   if (cargando) return (
@@ -66,10 +83,6 @@ function EstadoPedidoPage() {
 
   const productoEnResena = pedido.productos?.find(p => p.id_detalle === resenaAbierta)
 
-  const estadoVisible = pedido.estado_pago === 'pagado'
-    ? 'Pagado'
-    : (pedido.estado === 'en_proceso' ? 'En preparación' : pedido.estado)
-
   return (
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
       <div className="max-w-5xl mx-auto px-4 sm:px-8 py-10 text-white">
@@ -78,23 +91,26 @@ function EstadoPedidoPage() {
         <h1 className="text-2xl sm:text-3xl font-semibold mb-1 tracking-tight">Estado del pedido</h1>
         <div className="flex flex-wrap items-center gap-3 mb-1">
           <span className="text-sm font-medium text-white">
-            Pedido #{formatearNumero(pedido.id_pedido)}
+            Pedido #{pedido.numero_pedido || formatearNumero(pedido.id_pedido)}
           </span>
-          <span className="bg-[#6FA98C] text-white text-xs px-3 py-1 rounded-full font-medium capitalize">
-            {estadoVisible}
+          <span className="bg-[#6FA98C] text-white text-xs px-3 py-1 rounded-full font-medium">
+            {pedido.estado === 'en_proceso' ? 'En preparación' : pedido.estado}
           </span>
           <EstadoPagoBadge estadoPago={pedido.estado_pago} />
+          {pedido.operacion && <OperacionBadge operacion={pedido.operacion} sector={pedido.sector_envio} />}
         </div>
         <p className="text-xs text-white/40 mb-4">
           Realizado el {formatearFecha(pedido.fecha_pedido)}
         </p>
 
-        {/* Aviso + botón "Pagar ahora" si el pago quedó pendiente de pasarela */}
+        {/* Aviso + botón "Pagar ahora" si el pago quedó pendiente/fallido */}
         {necesitaPagar(pedido.estado_pago, pedido.metodo_pago) && (
           <div className="rounded-xl border border-[#D8A92E]/30 bg-[#D8A92E]/10 px-5 py-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex-1">
               <p className="text-sm font-medium text-white">
-                🕘 Tu pedido está pendiente de pago.
+                {pedido.estado_pago === 'fallido'
+                  ? '❌ Tu pago no se procesó.'
+                  : '🕘 Tu pedido está pendiente de pago.'}
               </p>
               <p className="text-xs text-white/50">
                 Completa el pago para confirmar el pedido.
@@ -131,7 +147,7 @@ function EstadoPedidoPage() {
         {/* Timeline (Entrega) */}
         <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl p-6 sm:p-8 mb-6">
           <p className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-4">Entrega</p>
-          <OrderStepper estado={pedido.estado} pagado={pedido.estado_pago === 'pagado'} fechaPedido={formatearFecha(pedido.fecha_pedido)} />
+          <OrderStepper estado={pedido.estado} fechaPedido={formatearFecha(pedido.fecha_pedido)} />
         </div>
 
         {/* Cards info */}
@@ -143,7 +159,7 @@ function EstadoPedidoPage() {
             <div className="flex flex-col gap-3 text-xs">
               <div className="flex justify-between">
                 <span className="text-white/40">Número</span>
-                <span className="text-white font-medium">{formatearNumero(pedido.id_pedido)}</span>
+                <span className="text-white font-medium">{pedido.numero_pedido || formatearNumero(pedido.id_pedido)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-white/40">Método de pago</span>
@@ -154,6 +170,10 @@ function EstadoPedidoPage() {
                 <span className="text-white text-right">
                   {pedido.direccion_envio}<br />{pedido.ciudad_envio}
                 </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-white/40">Sector</span>
+                <span className="text-[#9DC9B4] text-right">{pedido.sector_envio || '—'}</span>
               </div>
               <div className="flex justify-between border-t border-white/10 pt-3 mt-1">
                 <span className="text-white/40">Total pagado</span>
@@ -180,15 +200,6 @@ function EstadoPedidoPage() {
         <Link to={`/cliente/trazabilidad/${p.id_lote}`} className="text-[10px] text-[#9DC9B4] hover:underline block">
           Ver origen →
         </Link>
-      )}
-      {pedido.estado === 'entregado' && resenaAbierta !== p.id_detalle && (
-        <button
-          type="button"
-          onClick={() => setResenaAbierta(p.id_detalle)}
-          className="text-[10px] text-[#9DC9B4] hover:underline block mt-1"
-        >
-          Escribir reseña →
-        </button>
       )}
     </div>
     <span className="text-xs text-white/40">{p.cantidad} und</span>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useCarrito } from "../context/CarritoContext";
 import { API_URL as BASE_API_URL } from "../config";
 import FadeIn from "../components/ui/FadeIn";
@@ -27,6 +27,7 @@ function IconoCorazon({ className = "", width = 20, height = 20, lleno = false }
 }
 
 function FavoritosInterno() {
+  const navigate = useNavigate();
   const { cliente, sincronizarCarrito, productos: productosContexto } = useCarrito();
   const esJuridica = cliente?.tipo_persona === 'juridica';
 

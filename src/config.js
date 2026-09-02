@@ -1,2 +1,3 @@
 export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 export const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || "http://localhost:5173";
+export const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAAA1234567890abcd";

@@ -119,10 +119,10 @@ function ControlStock() {
         Nombre: p.nombre,
         Categoría: p.categoria,
         Origen: p.origen,
-        'Stock (unid.)': p.stock,
+        'Stock (kg)': p.stock,
         'Capacidad lote (kg)': p.capacidad || '',
         '% disponible': p.pct,
-        'Precio': p.precio,
+        'Precio/kg': p.precio,
         Estado: p.estado,
       }))
       datos.push({ Nombre: `— Página ${pagina} de ${totalPaginas} (${totalFiltrados} productos en total) —` })
@@ -236,7 +236,7 @@ function ControlStock() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           {loading ? (
             <div className="p-5"><PanelSkeleton filas={4} columnas={6} /></div>
           ) : productos.length === 0 ? (
@@ -252,7 +252,7 @@ function ControlStock() {
                   <th className="py-3 px-5 font-medium">Producto</th>
                   <th className="py-3 px-5 font-medium">Categoría</th>
                   <th className="py-3 px-5 font-medium">Disponibilidad</th>
-                  <th className="py-3 px-5 font-medium">Precio</th>
+                  <th className="py-3 px-5 font-medium">Precio/kg</th>
                   <th className="py-3 px-5 font-medium">Estado</th>
                   <th className="py-3 px-5 font-medium">Acciones</th>
                 </tr>
@@ -287,7 +287,7 @@ function ControlStock() {
                             ></div>
                           </div>
                         </div>
-                        <span className={`text-xs whitespace-nowrap ${textColorPorEstado(p.estado)}`}>{p.stock} {p.categoriaProducto === 'maquina' ? 'unid.' : 'bolsas'}</span>
+                        <span className={`text-xs whitespace-nowrap ${textColorPorEstado(p.estado)}`}>{p.stock} kg</span>
                       </div>
                     </td>
                     <td className="py-3 px-5 text-gray-800 font-medium">{formatMoney(p.precio)}</td>
@@ -315,6 +315,66 @@ function ControlStock() {
                 ))}
               </tbody>
             </table>
+          )}
+        </div>
+
+        <div className="md:hidden divide-y divide-gray-100 border-t border-gray-100">
+          {loading ? (
+            <p className="py-8 text-center text-sm text-gray-400">Cargando productos...</p>
+          ) : productos.length === 0 ? (
+            <p className="md:hidden py-8 text-center text-sm text-gray-400">
+              No se encontraron productos. Ajusta tu búsqueda o cambia de categoría.
+            </p>
+          ) : (
+            productos.map((p) => (
+              <div key={p.id} className="p-4 flex flex-col gap-1.5">
+                <div className="flex items-center gap-3">
+                  {p.imagen ? (
+                    <img src={p.imagen} alt={p.nombre} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg flex-shrink-0" style={{ backgroundColor: colorParaProducto(p.id) }}></div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-gray-800 font-medium truncate">{p.nombre}</p>
+                    <p className="text-xs text-gray-400 truncate">{p.origen || 'Sin origen registrado'}</p>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${estadoStyles[p.estado]}`}>
+                    {p.estado}
+                  </span>
+                </div>
+                <p className="text-gray-600">{p.categoria || '—'}</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs mb-1 ${textColorPorEstado(p.estado)}`}>
+                      {p.pct}%{p.capacidad > 0 ? ` · max ${p.capacidad} kg` : ''}
+                    </p>
+                    <div className="h-1.5 w-full max-w-[140px] bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${p.pct}%`, backgroundColor: barColorPorEstado(p.estado) }}
+                      ></div>
+                    </div>
+                  </div>
+                  <span className={`text-xs whitespace-nowrap ${textColorPorEstado(p.estado)}`}>{p.stock} kg</span>
+                </div>
+                <p className="text-gray-800 font-medium">{formatMoney(p.precio)}</p>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {!esAdmin() && (
+                    <button
+                      type="button"
+                      onClick={() => abrirModal(p)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition"
+                      title="Editar producto"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 20h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
           )}
         </div>
 

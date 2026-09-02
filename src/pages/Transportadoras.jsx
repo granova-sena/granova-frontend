@@ -3,16 +3,20 @@ import { useModalBehavior } from '../hooks/useModalBehavior'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
-import ErrorModal from '../components/ui/ErrorModal'
-import { bloquearEntero, normalizarEntero, normalizarTexto } from '../utils/validacion'
 import { PageHeader, StatCard, PanelCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
+import { bloquearEntero, normalizarEntero, normalizarTexto } from '../utils/validacion'
 
-function esAdmin() {
+function rolUsuario() {
   try {
-    return JSON.parse(localStorage.getItem('usuario'))?.rol === 'admin'
+    return JSON.parse(localStorage.getItem('usuario'))?.rol
   } catch {
-    return false
+    return null
   }
+}
+// admin solo ve; empleado y logistica crean/editan/eliminan.
+function usuarioPuedeEditar() {
+  const rol = rolUsuario()
+  return rol === 'empleado' || rol === 'logistica'
 }
 
 function Transportadoras() {
@@ -32,8 +36,7 @@ function Transportadoras() {
 
   useEffect(() => { cargar() }, [])
 
-  const [filtroTipo, setFiltroTipo] = useState('Todos')
-  const [filtroEstado, setFiltroEstado] = useState('Todos')
+  const [filtroTipo, setFiltroTipo] = useState('') // '' = ver ambas; 'Acarreo' | 'Reparto'
 
   const [mostrarModal, setMostrarModal] = useState(false)
   const [editandoId, setEditandoId] = useState(null)
@@ -46,7 +49,8 @@ function Transportadoras() {
     placa: '',
     nit: '',
     vehiculos: '',
-    estado: 'Activo',
+    tipo_vehiculo: '',
+    capacidad_kg: '',
   }
   const [form, setForm] = useState(formVacio)
 
@@ -68,7 +72,8 @@ function Transportadoras() {
       placa: t.placa || '',
       nit: t.nit || '',
       vehiculos: t.vehiculos ?? '',
-      estado: t.estado || 'Activo',
+      tipo_vehiculo: t.tipo_vehiculo || '',
+      capacidad_kg: t.capacidad_kg ?? '',
     })
     setEditandoId(t.id_transportadora)
     setErrorForm(null)
@@ -106,31 +111,6 @@ function Transportadoras() {
       setErrorForm('Ingresa el NIT de la empresa (*)')
       return
     }
-    const existenteNombre = transportadoras.some((t) =>
-      t.id_transportadora !== editandoId && String(t.nombre).trim().toLowerCase() === form.nombre.trim().toLowerCase()
-    )
-    if (existenteNombre) {
-      setErrorForm(`Ya existe una transportadora llamada "${form.nombre}"`)
-      return
-    }
-    if (form.tipoPersona === 'persona_natural') {
-      const existentePlaca = transportadoras.some((t) =>
-        t.id_transportadora !== editandoId && String(t.placa || '').trim().toLowerCase() === form.placa.trim().toLowerCase()
-      )
-      if (existentePlaca) {
-        setErrorForm(`La placa "${form.placa}" ya está registrada`)
-        return
-      }
-    }
-    if (form.tipoPersona === 'persona_juridica') {
-      const existenteNit = transportadoras.some((t) =>
-        t.id_transportadora !== editandoId && String(t.nit || '').trim().toLowerCase() === form.nit.trim().toLowerCase()
-      )
-      if (existenteNit) {
-        setErrorForm(`El NIT "${form.nit}" ya está registrado`)
-        return
-      }
-    }
     const datos = {
       tipo_persona: form.tipoPersona,
       nombre: form.nombre,
@@ -139,7 +119,8 @@ function Transportadoras() {
       placa: form.tipoPersona === 'persona_natural' ? form.placa : null,
       nit: form.tipoPersona === 'persona_juridica' ? form.nit : null,
       vehiculos: form.vehiculos === '' ? 0 : Number(form.vehiculos),
-      estado: form.estado,
+      tipo_vehiculo: form.tipo_vehiculo === '' ? null : form.tipo_vehiculo,
+      capacidad_kg: form.capacidad_kg === '' ? 0 : Number(form.capacidad_kg),
     }
     setGuardando(true)
     try {
@@ -159,27 +140,17 @@ function Transportadoras() {
   }
 
   const transportadorasFiltradas = transportadoras.filter(t => {
-    const coincideTipo = filtroTipo === 'Todos' || t.tipo === filtroTipo
-    const coincideEstado = filtroEstado === 'Todos' || t.estado === filtroEstado
-    return coincideTipo && coincideEstado
+    return filtroTipo === '' || t.tipo === filtroTipo
   })
 
-  const getEstadoBadge = (estado) => {
-    const estilos = {
-      'Activo': 'bg-green-100 text-green-700',
-      'Inactivo': 'bg-gray-100 text-gray-700',
-    }
-    return estilos[estado] || 'bg-gray-100 text-gray-700'
-  }
-
   const totalEnvios = transportadoras.reduce((sum, t) => sum + t.envios, 0)
-  const activas = transportadoras.filter((t) => t.estado === 'Activo').length
+  const reparto = transportadoras.filter((t) => t.tipo === 'Reparto').length
 
   const stats = [
     {
       label: 'Total transportadoras',
       valor: transportadoras.length,
-      descripcion: 'Domiciliarios registrados',
+      descripcion: 'Transportadores registrados',
       tono: 'verde',
       icono: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -205,9 +176,9 @@ function Transportadoras() {
       ),
     },
     {
-      label: 'Activos',
-      valor: activas,
-      descripcion: 'Operando actualmente',
+      label: 'Reparto',
+      valor: reparto,
+      descripcion: 'Reparto local / domicilios',
       tono: 'verde',
       icono: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -218,9 +189,7 @@ function Transportadoras() {
     },
   ]
 
-  const mostrarColumnaTipo = filtroTipo === 'Todos'
-  const mostrarColumnaEstado = filtroEstado === 'Todos'
-  const admin = esAdmin()
+  const puedeEditar = usuarioPuedeEditar()
 
   if (loading) return <PanelSkeleton filas={4} columnas={4} />
 
@@ -229,12 +198,17 @@ function Transportadoras() {
       <PageHeader
         titulo="Transportadoras"
         subtitulo="Gestión de domiciliarios y rendimiento de entregas"
-        acciones={!admin && (
+        acciones={puedeEditar && (
           <BotonPrimario onClick={abrirModal}>+ Agregar transportadora</BotonPrimario>
         )}
       />
 
-      <ErrorModal mensaje={error} onClose={() => setError(null)} />
+      {error && (
+        <div className="panel-come text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 flex justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="text-red-400">✕</button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {stats.map((stat, i) => (
@@ -255,38 +229,17 @@ function Transportadoras() {
           <div>
             <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</span>
             <div className="flex gap-2 mt-1">
-              {['Todos', 'Acarreo', 'Domiciliario'].map((tipo) => (
+              {['Acarreo', 'Reparto'].map((tipo) => (
                 <button
                   key={tipo}
-                  onClick={() => setFiltroTipo(tipo)}
+                  onClick={() => setFiltroTipo(prev => prev === tipo ? '' : tipo)}
                   className={`px-4 py-1.5 text-sm rounded-lg transition ${
                     filtroTipo === tipo
                       ? 'bg-[#1D9E75] text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  {tipo}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="w-px h-10 bg-gray-200"></div>
-
-          <div>
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</span>
-            <div className="flex gap-2 mt-1">
-              {['Todos', 'Activo', 'Inactivo'].map((estado) => (
-                <button
-                  key={estado}
-                  onClick={() => setFiltroEstado(estado)}
-                  className={`px-4 py-1.5 text-sm rounded-lg transition ${
-                    filtroEstado === estado
-                      ? 'bg-[#1D9E75] text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {estado}
+                  {filtroTipo === tipo ? `${tipo} ✓` : tipo}
                 </button>
               ))}
             </div>
@@ -295,7 +248,7 @@ function Transportadoras() {
       </PanelCard>
 
       <PanelCard animado={false} className="overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
@@ -303,13 +256,8 @@ function Transportadoras() {
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Teléfono</th>
                 <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Placa / NIT</th>
                 <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Envíos</th>
-                {mostrarColumnaTipo && (
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Tipo</th>
-                )}
-                {mostrarColumnaEstado && (
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Estado</th>
-                )}
-                {!admin && <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Acciones</th>}
+                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Tipo</th>
+                {puedeEditar && <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Acciones</th>}
               </tr>
             </thead>
             <tbody>
@@ -323,7 +271,21 @@ function Transportadoras() {
                 transportadorasFiltradas.map((t, idx) => (
                   <tr key={t.id_transportadora} className={`border-b border-gray-200 hover:bg-gray-50 transition ${idx === transportadorasFiltradas.length - 1 ? 'border-b-0' : ''}`}>
                     <td className="px-6 py-4">
-                      <p className="font-medium text-admin-heading">{t.nombre}</p>
+                      <div className="flex items-center gap-3">
+                        {t.imagen_url ? (
+                          <img src={t.imagen_url} alt={t.tipo_vehiculo || t.tipo} className="w-11 h-11 rounded-lg object-cover bg-gray-100 flex-shrink-0" loading="lazy" />
+                        ) : (
+                          <span className="w-11 h-11 rounded-lg bg-gray-100 flex items-center justify-center text-lg flex-shrink-0">🚚</span>
+                        )}
+                        <div>
+                          <p className="font-medium text-admin-heading">{t.nombre}</p>
+                          {t.tipo_vehiculo && (
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {t.tipo_vehiculo}{t.capacidad_kg ? ` · ${t.capacidad_kg} kg` : ''}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm text-gray-600">{t.telefono}</p>
@@ -336,23 +298,14 @@ function Transportadoras() {
                     <td className="px-6 py-4 text-center">
                       <p className="text-sm font-medium text-admin-heading">{t.envios}</p>
                     </td>
-                    {mostrarColumnaTipo && (
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          t.tipo === 'Acarreo' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                        }`}>
-                          {t.tipo}
-                        </span>
-                      </td>
-                    )}
-                    {mostrarColumnaEstado && (
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getEstadoBadge(t.estado)}`}>
-                          {t.estado}
-                        </span>
-                      </td>
-                    )}
-                    {!admin && (
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        t.tipo === 'Acarreo' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                      }`}>
+                        {t.tipo}
+                      </span>
+                    </td>
+                    {puedeEditar && (
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button onClick={() => editarTransportadora(t)} className="text-blue-600 hover:text-blue-800 text-sm font-medium transition">
@@ -371,6 +324,63 @@ function Transportadoras() {
             </tbody>
           </table>
         </div>
+
+        <div className="md:hidden divide-y divide-gray-100 border-t border-gray-100">
+          {transportadorasFiltradas.length === 0 ? (
+            <p className="md:hidden py-8 text-center text-sm text-gray-400">No hay transportadoras con los filtros seleccionados</p>
+          ) : (
+            transportadorasFiltradas.map((t) => (
+              <div key={t.id_transportadora} className="p-4 flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {t.imagen_url ? (
+                      <img src={t.imagen_url} alt={t.tipo_vehiculo || t.tipo} className="w-12 h-12 rounded-lg object-cover bg-gray-100 flex-shrink-0" loading="lazy" />
+                    ) : (
+                      <span className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-xl flex-shrink-0">🚚</span>
+                    )}
+                    <p className="font-medium text-admin-heading truncate">{t.nombre}</p>
+                  </div>
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
+                    t.tipo === 'Acarreo' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                  }`}>
+                    {t.tipo}
+                  </span>
+                </div>
+                {t.tipo_vehiculo && (
+                  <p className="text-xs text-gray-500">
+                    🚚 {t.tipo_vehiculo}{t.capacidad_kg ? ` · ${t.capacidad_kg} kg` : ''}
+                  </p>
+                )}
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div>
+                    <p className="text-xs text-gray-400">Teléfono</p>
+                    <p className="text-sm text-gray-600">{t.telefono}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Placa / NIT</p>
+                    <p className="text-sm font-medium text-admin-heading">{t.tipo_persona === 'persona_juridica' ? (t.nit || '—') : (t.placa || '—')}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs text-gray-400">Envíos</p>
+                    <p className="text-sm font-medium text-admin-heading">{t.envios}</p>
+                  </div>
+                </div>
+                {puedeEditar && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button onClick={() => editarTransportadora(t)} className="text-blue-600 hover:text-blue-800 text-sm font-medium transition">
+                      Editar
+                    </button>
+                    <button onClick={() => setEliminando(t)} className="text-red-600 hover:text-red-800 text-sm font-medium transition">
+                      Eliminar
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </PanelCard>
 
       {mostrarModal && (
@@ -382,6 +392,11 @@ function Transportadoras() {
             </div>
 
             <form onSubmit={guardarTransportadora} className="p-6 space-y-4">
+              {errorForm && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {errorForm}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Tipo de persona</label>
@@ -423,13 +438,11 @@ function Transportadoras() {
                 <label className="block text-sm text-gray-600 mb-1">Teléfono *</label>
                 <input
                   type="text"
-                  inputMode="numeric"
-                  maxLength={10}
-                  onKeyDown={bloquearEntero}
                   value={form.telefono}
-                  onChange={(e) => cambiarCampo('telefono', normalizarEntero(e.target.value))}
+                  onKeyDown={bloquearEntero}
+                  onChange={(e) => cambiarCampo('telefono', normalizarEntero(e.target.value).slice(0, 10))}
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#1D9E75] transition text-gray-800"
-                  placeholder="Ej: 3000000000"
+                  placeholder="Ej: 300 000 0000"
                 />
               </div>
 
@@ -440,9 +453,41 @@ function Transportadoras() {
                   onChange={(e) => cambiarCampo('tipo', e.target.value)}
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#1D9E75] transition text-gray-800"
                 >
-                  <option value="Acarreo">Acarreo</option>
-                  <option value="Domiciliario">Domiciliario (Moto)</option>
+                  <option value="Acarreo">Acarreo (Camión/Camioneta/Carro)</option>
+                  <option value="Reparto">Reparto (Moto/Carro)</option>
                 </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">Tipo de vehículo</label>
+                  <input
+                    type="text"
+                    value={form.tipo_vehiculo}
+                    onChange={(e) => cambiarCampo('tipo_vehiculo', e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#1D9E75] transition text-gray-800"
+                    placeholder="Ej: Moto, Carro, Camión"
+                    list="tipos-vehiculo"
+                  />
+                  <datalist id="tipos-vehiculo">
+                    <option value="Moto" />
+                    <option value="Carro" />
+                    <option value="Camión" />
+                    <option value="Camioneta" />
+                  </datalist>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">Capacidad (kg)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    onKeyDown={bloquearEntero}
+                    value={form.capacidad_kg}
+                    onChange={(e) => cambiarCampo('capacidad_kg', normalizarEntero(e.target.value))}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#1D9E75] transition text-gray-800"
+                    placeholder="Ej: 500"
+                  />
+                </div>
               </div>
 
               {form.tipoPersona === 'persona_natural' ? (
@@ -451,7 +496,7 @@ function Transportadoras() {
                   <input
                     type="text"
                     value={form.placa}
-                    onChange={(e) => cambiarCampo('placa', normalizarTexto(e.target.value.toUpperCase()))}
+                    onChange={(e) => cambiarCampo('placa', normalizarTexto(e.target.value).toUpperCase())}
                     className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#1D9E75] transition text-gray-800 uppercase"
                     placeholder="Ej: PBX-123"
                   />
@@ -483,16 +528,8 @@ function Transportadoras() {
               )}
 
               {editandoId != null && (
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Estado</label>
-                  <select
-                    value={form.estado}
-                    onChange={(e) => cambiarCampo('estado', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#1D9E75] transition text-gray-800"
-                  >
-                    <option value="Activo">Activo</option>
-                    <option value="Inactivo">Inactivo</option>
-                  </select>
+                <div className="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+                  🚚 Se clasifica como <b>{form.tipo}</b>. Para cambiar la operación del vehículo edita el campo "Tipo de transportadora".
                 </div>
               )}
 
@@ -517,8 +554,6 @@ function Transportadoras() {
         onConfirmar={eliminarTransportadora}
         onCancelar={() => setEliminando(null)}
       />
-
-      <ErrorModal mensaje={errorForm} onClose={() => setErrorForm(null)} />
     </div>
   )
 }

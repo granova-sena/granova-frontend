@@ -93,13 +93,23 @@ function CarritoPage() {
                 <p className="text-xl font-bold text-white mt-0.5">${subtotal.toLocaleString('es-CO')}</p>
                 <p className="text-[11px] text-white/35">Todos los precios incluyen IVA</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setVerTodo(v => !v)}
-                className="h-11 px-6 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#4F8A70] active:scale-[0.98] transition"
-              >
-                {verTodo ? 'Ocultar detalle' : 'Ver todo el carrito'} ({productos.length})
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/cliente/cotizacion')}
+                  title="Generar cotización del carrito actual"
+                  className="h-11 px-5 rounded-xl bg-[#0F1D13] border border-[#6FA98C]/40 text-[#9DC9B4] text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#14291B] hover:text-white active:scale-[0.98] transition"
+                >
+                  💾 Cotización
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVerTodo(v => !v)}
+                  className="h-11 px-6 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#4F8A70] active:scale-[0.98] transition"
+                >
+                  {verTodo ? 'Ocultar detalle' : 'Ver todo el carrito'} ({productos.length})
+                </button>
+              </div>
             </div>
 
             {/* ── Vista completa (se expande) ── */}

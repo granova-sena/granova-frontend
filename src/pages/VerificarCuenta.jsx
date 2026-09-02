@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import logo from '../assets/logo.png'
+import LogoGranova from '../components/ui/LogoGranova'
 import { API_URL } from "../config";
 
 
@@ -84,10 +84,7 @@ function VerificarCuenta() {
         className="relative z-10 w-full max-w-md rounded-2xl p-6 sm:p-8 text-center bg-white border border-[#17140F]/8 shadow-2xl"
       >
         <div className="flex items-center justify-center gap-2 mb-8">
-          <span className="w-9 h-9 rounded-full bg-[#17140F] flex items-center justify-center p-[7px]">
-            <img src={logo} alt="Granova logo" className="w-full h-full object-contain" />
-          </span>
-          <span className="text-[#17140F] text-xl font-semibold tracking-tight">Granova</span>
+          <LogoGranova fondo="oscuro" textoClases="text-[#17140F] text-xl" />
         </div>
 
         {estado === 'cargando' && (

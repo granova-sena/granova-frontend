@@ -1,11 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { API_URL } from "../config";
+import { API_URL, TURNSTILE_SITE_KEY } from "../config";
+import { leerParametro } from "../services/parametros";
 import toast from "react-hot-toast";
 
+// ═══════════════════════════════════════════════════════════════
+// CLOUDFLARE TURNSTILE — Configuración
+// ═══════════════════════════════════════════════════════════════
+// Para obtener tu Site Key:
+// 1. Crea cuenta gratis en https://dash.cloudflare.com/sign-up
+// 2. Ve a Turnstile → Manage Widgets → Create Widget
+// 3. Copia la "Site Key" y pégala en tu .env como VITE_TURNSTILE_SITE_KEY
+// 4. La "Secret Key" va en el backend (.env → TURNSTILE_SECRET_KEY)
+// ═══════════════════════════════════════════════════════════════
+const TURNSTILE_SCRIPT = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+// ═══════════════════════════════════════════════════════════════
+
 const BENEFICIOS = [
-  { icono: "💸", titulo: "10% de descuento", detalle: "En tus compras por ser cliente empresarial" },
+  { icono: "💸", titulo: "Descuento automático", detalle: "En todas tus compras por ser cliente empresarial" },
   { icono: "🧾", titulo: "Facturación a tu empresa", detalle: "Razón social y NIT en tus facturas" },
   { icono: "📦", titulo: "Pedidos por volumen", detalle: "Precios especiales según kilogramos" },
 ];
@@ -45,6 +58,46 @@ function RegistroEmpresa() {
 
   const [guardando, setGuardando] = useState(false);
   const [registrado, setRegistrado] = useState(false);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [modalTerminosAbierto, setModalTerminosAbierto] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef(null);
+  const turnstileWidgetId = useRef(null);
+
+  // ── Cloudflare Turnstile: cargar y renderizar en el Paso 2 ──
+  useEffect(() => {
+    if (paso !== 2) return;
+    if (turnstileWidgetId.current) return;
+
+    function onTurnstileReady() {
+      if (!turnstileRef.current || !window.turnstile) return;
+      turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        callback: (token) => setTurnstileToken(token),
+        "error-callback": () => setTurnstileToken(""),
+        theme: "dark",
+        size: "normal",
+      });
+    }
+
+    if (window.turnstile) {
+      onTurnstileReady();
+    } else {
+      const script = document.createElement("script");
+      script.src = TURNSTILE_SCRIPT;
+      script.async = true;
+      script.onload = onTurnstileReady;
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      if (turnstileWidgetId.current && window.turnstile) {
+        try { window.turnstile.remove(turnstileWidgetId.current); } catch {}
+        turnstileWidgetId.current = null;
+        setTurnstileToken("");
+      }
+    };
+  }, [paso]);
 
   const fuerza = fuerzaContraseña(contraseña);
 
@@ -88,6 +141,16 @@ function RegistroEmpresa() {
     e.preventDefault();
     if (!validarPaso2()) return;
 
+    if (!aceptaTerminos) {
+      toast.error("Debes aceptar los Términos y Condiciones", { id: "emp-err" });
+      return;
+    }
+
+    if (!turnstileToken) {
+      toast.error("Completa la verificación anti-bot", { id: "emp-err" });
+      return;
+    }
+
     const [nombre, ...resto] = nombreContacto.trim().split(" ");
     const apellido = resto.join(" ");
 
@@ -106,6 +169,7 @@ function RegistroEmpresa() {
           numero_documento: nit.trim(),
           digito_verificacion: digito.trim(),
           razon_social: razonSocial.trim(),
+          turnstileToken,
         }),
       });
 
@@ -352,6 +416,36 @@ function RegistroEmpresa() {
                     </div>
                   )}
 
+                  {/* Cloudflare Turnstile — verificación anti-bot */}
+                  <div>
+                    <p className="text-xs text-white/40 mb-2">Verificación de seguridad</p>
+                    <div ref={turnstileRef} className="flex justify-center" />
+                    {!turnstileToken && (
+                      <p className="text-[11px] text-white/30 mt-1.5 text-center">Esperando verificación...</p>
+                    )}
+                  </div>
+
+                  {/* Términos y Condiciones */}
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={aceptaTerminos}
+                      onChange={(e) => setAceptaTerminos(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded accent-[#6FA98C] cursor-pointer"
+                    />
+                    <span className="text-xs text-white/60 leading-relaxed group-hover:text-white/80 transition">
+                      Acepto los{" "}
+                      <button
+                        type="button"
+                        onClick={() => setModalTerminosAbierto(true)}
+                        className="text-[#9DC9B4] underline underline-offset-2 hover:text-white transition"
+                      >
+                        Términos y Condiciones
+                      </button>{" "}
+                      y la Política de Privacidad
+                    </span>
+                  </label>
+
                   <div className="flex flex-col sm:flex-row gap-3">
                     <button
                       type="button"
@@ -362,7 +456,7 @@ function RegistroEmpresa() {
                     </button>
                     <button
                       type="submit"
-                      disabled={guardando}
+                      disabled={guardando || !aceptaTerminos || !turnstileToken}
                       className="flex-1 h-12 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
                       {guardando ? "Creando cuenta..." : "Crear cuenta empresarial"}
@@ -375,7 +469,7 @@ function RegistroEmpresa() {
 
           <div className="mt-7 pt-5 border-t border-white/[0.07]">
             <div className="rounded-xl bg-[#6FA98C]/[0.08] border border-[#6FA98C]/20 px-4 py-3 text-xs text-[#9DC9B4]">
-              💡 Las cuentas empresariales obtienen <span className="font-semibold">10% de descuento</span> en todas sus compras en lugar de puntos de lealtad.
+              💡 Las cuentas empresariales obtienen <span className="font-semibold">{leerParametro('descuento_empresa_pct', 15)}% de descuento</span> en todas sus compras en lugar de puntos de lealtad.
             </div>
             <p className="text-center text-xs text-white/35 mt-4">
               ¿Ya tienes cuenta?{" "}
@@ -385,6 +479,78 @@ function RegistroEmpresa() {
             </p>
           </div>
         </form>
+
+        {/* Modal de Términos y Condiciones */}
+        {modalTerminosAbierto && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+            onClick={() => setModalTerminosAbierto(false)}
+          >
+            <div
+              className="w-full max-w-lg max-h-[80vh] flex flex-col rounded-2xl overflow-hidden"
+              style={{ background: "#0F1D13", border: "1px solid rgba(255,255,255,0.12)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                <h3 className="text-white font-semibold text-sm">Términos y Condiciones</h3>
+                <button
+                  type="button"
+                  onClick={() => setModalTerminosAbierto(false)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/40 hover:text-white transition"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-5 py-4 text-xs text-white/60 leading-relaxed space-y-4">
+                <p><strong className="text-white/80">1. Aceptación de los Términos</strong><br />
+                Al crear una cuenta empresarial en Granova, usted acepta estos Términos y Condiciones de uso. Si no está de acuerdo, por favor no utilice nuestro servicio.</p>
+
+                <p><strong className="text-white/80">2. Registro Empresarial</strong><br />
+                Para acceder a nuestros servicios empresariales, usted debe proporcionar información veraz y actualizada de su empresa (razón social, NIT y dígito de verificación). Usted es responsable de mantener la confidencialidad de sus credenciales de acceso.</p>
+
+                <p><strong className="text-white/80">3. Descuento Empresarial</strong><br />
+                Las cuentas empresariales obtienen un descuento automático sobre sus compras según el porcentaje vigente. Este beneficio puede ser modificado por Granova con aviso previo.</p>
+
+                <p><strong className="text-white/80">4. Productos y Precios</strong><br />
+                Todos los precios mostrados incluyen los impuestos aplicables salvo indicación contraria. Los precios pueden cambiar sin previo aviso. Nos reservamos el derecho de modificar el catálogo de productos en cualquier momento.</p>
+
+                <p><strong className="text-white/80">5. Pedidos y Pagos</strong><br />
+                Al realizar un pedido, usted está realizando una oferta de compra. Nos reservamos el derecho de aceptar o rechazar cualquier pedido. Los pagos se procesan de forma segura a través de nuestras pasarelas de pago habilitadas.</p>
+
+                <p><strong className="text-white/80">6. Facturación</strong><br />
+                Los datos de facturación (razón social, NIT y dígito de verificación) se utilizan para generar sus facturas según la normatividad colombiana vigente (DIAN).</p>
+
+                <p><strong className="text-white/80">7. Protección de Datos</strong><br />
+                Sus datos serán tratados de conformidad con nuestra Política de Privacidad y la normatividad vigente en materia de protección de datos personales (Ley 1581 de 2012 en Colombia).</p>
+
+                <p><strong className="text-white/80">8. Uso del Servicio</strong><br />
+                Usted se compromete a utilizar el servicio de manera lícita y respetuosa. Está prohibido el uso fraudulento, la suplantación de identidad o cualquier actividad que pueda dañar la integridad del servicio.</p>
+
+                <p><strong className="text-white/80">9. Limitación de Responsabilidad</strong><br />
+                Granova no será responsable por daños indirectos, incidentales o consecuentes derivados del uso de nuestro servicio. Nuestra responsabilidad máxima será limitada al valor del último pedido realizado.</p>
+
+                <p className="text-white/40 italic">Última actualización: Septiembre 2026</p>
+              </div>
+              <div className="flex gap-3 px-5 py-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setModalTerminosAbierto(false)}
+                  className="flex-1 py-2.5 rounded-xl text-sm text-white/60 hover:bg-white/10 transition"
+                  style={{ border: "1px solid rgba(255,255,255,0.12)" }}
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAceptaTerminos(true); setModalTerminosAbierto(false); }}
+                  className="flex-1 py-2.5 rounded-xl bg-[#6FA98C] text-white text-sm font-medium hover:bg-[#4F8A70] transition"
+                >
+                  Acepto
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 // GRN-21 - Pantalla de Login de Granova
 import { useNavigate } from 'react-router-dom'
 import { useState, useRef } from 'react'
-import logo from '../assets/logo.png'
+
 import registerBg from '../assets/register-bg.mp4'
 import toast from 'react-hot-toast'
 import { API_URL, FRONTEND_URL } from "../config";
@@ -213,17 +213,7 @@ function Login() {
       >
 
         <div className="flex items-center justify-center gap-2 mb-8">
-
-          <img
-            src={logo}
-            alt="Granova logo"
-            className="w-9 h-9 object-contain object-top"
-          />
-
-          <span className="text-[#E1F5EE] text-xl font-medium tracking-tight">
-            Granova
-          </span>
-
+          <span className="text-[#E1F5EE] text-3xl font-semibold tracking-tight">Granova</span>
         </div>
 
         <h2 className="text-2xl font-medium text-white mb-1 text-center">

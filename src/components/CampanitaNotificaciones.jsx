@@ -54,14 +54,16 @@ function CampanitaNotificaciones({ onAbrirResena }) {
   }, [])
 
   async function marcarLeida(n) {
-    if (n.leida) return
+    // La de reseña persiste hasta que el cliente reseñe; las demás
+    // desaparecen de la bandeja en cuanto se leen (estilo MercadoLibre).
+    if (n.leida || n.tipo === 'reseña') return
     try {
       const token = localStorage.getItem('token_cliente')
       await fetch(`${API}/${n.id_notificacion}/leida`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       })
-      setNotificaciones(prev => prev.map(x => x.id_notificacion === n.id_notificacion ? { ...x, leida: true } : x))
+      setNotificaciones(prev => prev.filter(x => x.id_notificacion !== n.id_notificacion))
       setNoLeidas(c => Math.max(0, c - 1))
     } catch { /* silencioso */ }
   }
@@ -117,10 +119,10 @@ function CampanitaNotificaciones({ onAbrirResena }) {
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-[10px] text-white/25">{formatearFecha(n.fecha)}</span>
                     <div className="flex items-center gap-2">
-                      {n.titulo.toLowerCase().includes('llegó') && n.id_pedido && (
+                      {n.tipo === 'reseña' && n.id_pedido && (
                         <button
                           type="button"
-                          onClick={() => { marcarLeida(n); setAbierta(false); onAbrirResena?.(n.id_pedido); }}
+                          onClick={() => { setAbierta(false); onAbrirResena?.(n.id_pedido); }}
                           className="text-[11px] font-semibold text-[#9DC9B4] hover:text-white transition"
                         >
                           ✍️ Reseñar

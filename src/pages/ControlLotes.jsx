@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react'
 import api from '../services/api'
 import { formatMoney } from '../utils/format'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
-import ErrorModal from '../components/ui/ErrorModal'
-import { bloquearNoNumerico, bloquearEntero, normalizarNumerico, normalizarEntero } from '../utils/validacion'
 import toast from 'react-hot-toast'
 import { PageHeader, StatCard, PanelCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
+import { bloquearNoNumerico, normalizarNumerico, bloquearEntero, normalizarEntero } from '../utils/validacion'
 
 function authHeaders() {
   const token = localStorage.getItem('token_empleado')
@@ -49,10 +48,21 @@ function ControlLotes() {
 
   async function registrarEntrega(e) {
     e.preventDefault()
-    if (!form.id_finca || !form.id_lote || !form.cantidad_kg || !form.valor) return
+    const cantidad = Number(form.cantidad_kg)
+    const valor = Number(form.valor)
+    if (!form.id_finca || !form.id_lote) return
+    if (!Number.isFinite(cantidad) || cantidad <= 0) {
+      setError('La cantidad en kg debe ser un número mayor que 0')
+      return
+    }
+    if (!Number.isFinite(valor) || valor <= 0) {
+      setError('El valor debe ser un número mayor que 0')
+      return
+    }
     setGuardando(true)
+    setError(null)
     try {
-      await api.post('/inventario/entregas', form, { headers: authHeaders() })
+      await api.post('/inventario/entregas', { ...form, cantidad_kg: cantidad, valor }, { headers: authHeaders() })
       setModalEntrega(false)
       setForm(entregaVacia)
       cargar()
@@ -115,7 +125,12 @@ function ControlLotes() {
         }
       />
 
-      <ErrorModal mensaje={error} onClose={() => setError(null)} />
+      {error && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2 flex justify-between items-center panel-come">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="text-red-400">✕</button>
+        </div>
+      )}
 
       {resumen && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -144,47 +159,93 @@ function ControlLotes() {
 
       <PanelCard className="overflow-x-auto">
         {entregas.length === 0 ? (
-          <EmptyState
-            icono="📭"
-            titulo="Aún no hay entregas registradas"
-            descripcion="Registra la primera entrega de una finca con el botón '+ Registrar entrega'."
-          />
+          <>
+            <EmptyState
+              icono="📭"
+              titulo="Aún no hay entregas registradas"
+              descripcion="Registra la primera entrega de una finca con el botón '+ Registrar entrega'."
+            />
+            <p className="md:hidden py-8 text-center text-sm text-gray-400">Aún no hay entregas registradas</p>
+          </>
         ) : (
-          <table className="w-full min-w-[760px] text-sm">
-            <thead>
-              <tr className="text-left text-gray-500 bg-gray-50 border-b border-gray-100">
-                <th className="py-3 px-5 font-medium">Finca</th>
-                <th className="py-3 px-5 font-medium">Lote</th>
-                <th className="py-3 px-5 font-medium">Kg</th>
-                <th className="py-3 px-5 font-medium">Valor</th>
-                <th className="py-3 px-5 font-medium">Fecha</th>
-                <th className="py-3 px-5 font-medium">Estado</th>
-                <th className="py-3 px-5 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[760px] text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500 bg-gray-50 border-b border-gray-100">
+                    <th className="py-3 px-5 font-medium">Finca</th>
+                    <th className="py-3 px-5 font-medium">Lote</th>
+                    <th className="py-3 px-5 font-medium">Kg</th>
+                    <th className="py-3 px-5 font-medium">Valor</th>
+                    <th className="py-3 px-5 font-medium">Fecha</th>
+                    <th className="py-3 px-5 font-medium">Estado</th>
+                    <th className="py-3 px-5 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entregas.map((e) => (
+                    <tr key={e.id_entrega} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-5 text-gray-800">{e.finca_nombre}</td>
+                      <td className="py-3 px-5 text-gray-600">{e.codigo_lote}</td>
+                      <td className="py-3 px-5 text-gray-600">{e.cantidad_kg} kg</td>
+                      <td className="py-3 px-5 text-gray-800 font-medium">{formatMoney(e.valor)}</td>
+                      <td className="py-3 px-5 text-gray-500">{new Date(e.fecha).toLocaleDateString('es-CO')}</td>
+                      <td className="py-3 px-5">
+                        {e.estado_pago === 'pagado' ? (
+                          <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">Pagado</span>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={guardando}
+                            onClick={() => marcarPagado(e)}
+                            className="text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 disabled:opacity-50"
+                          >
+                            Marcar pagado
+                          </button>
+                        )}
+                      </td>
+                      <td className="py-3 px-5">
+                        <button
+                          type="button"
+                          onClick={() => setAnulandoEntrega(e)}
+                          className="text-xs text-gray-400 hover:text-red-500"
+                          title="Anular entrega"
+                        >
+                          Anular
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="md:hidden divide-y divide-gray-100 border-t border-gray-100">
               {entregas.map((e) => (
-                <tr key={e.id_entrega} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
-                  <td className="py-3 px-5 text-gray-800">{e.finca_nombre}</td>
-                  <td className="py-3 px-5 text-gray-600">{e.codigo_lote}</td>
-                  <td className="py-3 px-5 text-gray-600">{e.cantidad_kg} kg</td>
-                  <td className="py-3 px-5 text-gray-800 font-medium">{formatMoney(e.valor)}</td>
-                  <td className="py-3 px-5 text-gray-500">{new Date(e.fecha).toLocaleDateString('es-CO')}</td>
-                  <td className="py-3 px-5">
+                <div key={e.id_entrega} className="p-4 flex flex-col gap-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{e.finca_nombre}</p>
+                      <p className="text-xs text-gray-400">Lote {e.codigo_lote}</p>
+                    </div>
                     {e.estado_pago === 'pagado' ? (
-                      <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">Pagado</span>
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 whitespace-nowrap">Pagado</span>
                     ) : (
                       <button
                         type="button"
                         disabled={guardando}
                         onClick={() => marcarPagado(e)}
-                        className="text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 disabled:opacity-50"
+                        className="text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 disabled:opacity-50 whitespace-nowrap"
                       >
                         Marcar pagado
                       </button>
                     )}
-                  </td>
-                  <td className="py-3 px-5">
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500">{e.cantidad_kg} kg</span>
+                    <span className="text-gray-800 font-medium">{formatMoney(e.valor)}</span>
+                  </div>
+                  <p className="text-xs text-gray-400">{new Date(e.fecha).toLocaleDateString('es-CO')}</p>
+                  <div className="flex flex-wrap gap-2 mt-1">
                     <button
                       type="button"
                       onClick={() => setAnulandoEntrega(e)}
@@ -193,11 +254,11 @@ function ControlLotes() {
                     >
                       Anular
                     </button>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </PanelCard>
 
@@ -218,10 +279,12 @@ function ControlLotes() {
                 <option value="">Selecciona el lote</option>
                 {lotesDeFincaSeleccionada.map((l) => <option key={l.id_lote} value={l.id_lote}>{l.codigo_lote}</option>)}
               </select>
-              <input required placeholder="Kg entregados" type="number" min="0" onKeyDown={bloquearNoNumerico} value={form.cantidad_kg}
+              <input required min="0.01" step="0.01" placeholder="Kg entregados" type="number" value={form.cantidad_kg}
+                onKeyDown={bloquearNoNumerico}
                 onChange={(e) => setForm({ ...form, cantidad_kg: normalizarNumerico(e.target.value) })}
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[#1D9E75] transition placeholder:text-gray-400" />
-              <input required placeholder="Valor a pagar" type="number" min="0" onKeyDown={bloquearEntero} value={form.valor}
+              <input required min="1" step="1" placeholder="Valor a pagar" type="number" value={form.valor}
+                onKeyDown={bloquearEntero}
                 onChange={(e) => setForm({ ...form, valor: normalizarEntero(e.target.value) })}
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[#1D9E75] transition placeholder:text-gray-400" />
               <p className="text-xs text-gray-400">Este kg se suma al lote, no reemplaza lo que ya había.</p>

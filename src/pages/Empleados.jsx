@@ -16,6 +16,7 @@ function iniciales(nombre, apellido) {
 function Empleados() {
   const [empleados, setEmpleados] = useState([])
   const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
 
   const [modalNuevo, setModalNuevo] = useState(false)
   const [nombre, setNombre] = useState('')
@@ -26,12 +27,12 @@ function Empleados() {
   const [credenciales, setCredenciales] = useState(null)
 
   const [seleccionado, setSeleccionado] = useState(null)
-  const [reportearA, setReportearA] = useState(null)
   const [editando, setEditando] = useState(false)
   const [formEdit, setFormEdit] = useState({ nombre: '', apellido: '', estado: 'activo' })
   const [reportes, setReportes] = useState([])
   const [modalReporte, setModalReporte] = useState(false)
   const [motivoReporte, setMotivoReporte] = useState('')
+  const [reportearA, setReportearA] = useState(null)
   const [vista, setVista] = useState(null) // null | 'reportes' | 'historial'
   const [historial, setHistorial] = useState([])
   const [resumenHistorial, setResumenHistorial] = useState(null)
@@ -40,7 +41,7 @@ function Empleados() {
     setCargando(true)
     api.get('/empleados', { headers: authHeaders() })
       .then((res) => setEmpleados(res.data.empleados))
-      .catch((err) => toast.error(err.response?.data?.error || err.message))
+      .catch((err) => setError(err.response?.data?.error || err.message))
       .finally(() => setCargando(false))
   }
 
@@ -57,9 +58,8 @@ function Empleados() {
       setApellido('')
       setModalNuevo(false)
       cargar()
-      toast.success('Empleado creado correctamente')
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message)
+      setError(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -73,11 +73,12 @@ function Empleados() {
     refrescarDetalle(emp.id_usuario)
   }
 
-  // Refresca SOLO el detalle (reportes + historial) y ajusta el contador de
-  // la tarjeta, sin volver a bajar toda la lista de empleados (ese doble
-  // fetch era el que congelaba la ventana tras reportar).
+  // Refresca SOLO el detalle (reportes + historial + resumen) y ajusta el
+  // contador de la tarjeta, sin volver a bajar toda la lista de empleados
+  // (ese doble fetch era el que congelaba la ventana tras reportar).
   // Recibe el id explícito: el estado `seleccionado` se setea de forma
-  // asíncrona, así que leerlo acá dentro daba null al abrir el detalle.
+  // asíncrona, así que leerlo acá dentro daba null al abrir el detalle y
+  // dejaba reportes/historial vacíos la primera vez.
   async function refrescarDetalle(id = seleccionado?.id_usuario) {
     if (!id) return 0
     try {
@@ -108,10 +109,11 @@ function Empleados() {
       setMotivoReporte('')
       setModalReporte(false)
       setReportearA(null)
+      setError('')
       await refrescarDetalle(objetivo.id_usuario)
       toast.success('Reporte enviado')
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message)
+      setError(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -121,10 +123,10 @@ function Empleados() {
     setGuardando(true)
     try {
       await api.delete(`/empleados/${seleccionado.id_usuario}/reportes/${idReporte}`, { headers: authHeaders() })
+      setError('')
       await refrescarDetalle(seleccionado.id_usuario)
-      toast.success('Reporte eliminado')
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message)
+      setError(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -134,10 +136,10 @@ function Empleados() {
     setGuardando(true)
     try {
       await api.delete(`/empleados/${seleccionado.id_usuario}/reportes`, { headers: authHeaders() })
+      setError('')
       await refrescarDetalle(seleccionado.id_usuario)
-      toast.success('Todos los reportes fueron eliminados')
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message)
+      setError(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -150,9 +152,8 @@ function Empleados() {
       await api.patch(`/empleados/${seleccionado.id_usuario}/${accion}`, {}, { headers: authHeaders() })
       setSeleccionado(null)
       cargar()
-      toast.success(accion === 'bloquear' ? 'Empleado bloqueado' : 'Empleado desbloqueado')
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message)
+      setError(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -164,9 +165,8 @@ function Empleados() {
       await api.patch(`/empleados/${seleccionado.id_usuario}`, formEdit, { headers: authHeaders() })
       setSeleccionado(null)
       cargar()
-      toast.success('Cambios guardados')
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message)
+      setError(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -178,9 +178,8 @@ function Empleados() {
       await api.delete(`/empleados/${seleccionado.id_usuario}`, { headers: authHeaders() })
       setSeleccionado(null)
       cargar()
-      toast.success('Empleado eliminado')
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message)
+      setError(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -193,7 +192,7 @@ function Empleados() {
       setCredenciales({ email: seleccionado.email, password: res.data.password })
       setSeleccionado(null)
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message)
+      setError(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -214,6 +213,13 @@ function Empleados() {
           </button>
         }
       />
+
+      {error && (
+        <div className="panel-come text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex justify-between items-center">
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600 transition ml-3">✕</button>
+        </div>
+      )}
 
       {cargando ? (
         <PanelSkeleton filas={2} columnas={3} />
@@ -253,8 +259,8 @@ function Empleados() {
               <span
                 role="button"
                 tabIndex={0}
-                onClick={(e) => { e.stopPropagation(); setReportearA(emp); setModalReporte(true) }}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setReportearA(emp); setModalReporte(true) } }}
+                onClick={(e) => { e.stopPropagation(); setReportearA(emp); setMotivoReporte(''); setModalReporte(true) }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setReportearA(emp); setMotivoReporte(''); setModalReporte(true) } }}
                 title="Reportar a este empleado"
                 className="w-9 h-9 rounded-lg border border-orange-200 text-orange-500 hover:bg-orange-50 hover:border-orange-300 flex items-center justify-center flex-shrink-0 transition"
               >
@@ -370,20 +376,53 @@ function Empleados() {
                           <button onClick={() => borrarReporte(r.id_reporte)} className="text-gray-300 hover:text-red-500 flex-shrink-0 transition">✕</button>
                         </div>
                         <p className="text-xs text-gray-400 mt-1">
-                          {r.creado_por_nombre || 'Admin'} · {new Date(r.fecha).toLocaleString('es-CO')}
+                          {r.creado_por_nombre || 'Admin'} · {new Date(r.fecha).toLocaleDateString('es-CO')}
                         </p>
-                        {(r.respuestas || []).map((resp) => (
-                          <div key={resp.id_respuesta} className="mt-2 bg-emerald-50 border border-emerald-100 rounded-lg p-2">
-                            <p className="text-emerald-800">→ {resp.respuesta}</p>
-                            <p className="text-[10px] text-emerald-600 mt-0.5">
-                              El empleado · {new Date(resp.fecha).toLocaleString('es-CO')}
-                            </p>
+                        {(r.respuestas?.length || 0) > 0 && (
+                          <div className="mt-3 space-y-2 border-t border-gray-200 pt-2">
+                            {r.respuestas.map((res) => (
+                              <div key={res.id_respuesta} className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
+                                <p className="text-emerald-800 text-sm">El empleado respondió: {res.respuesta}</p>
+                                <p className="text-[10px] text-emerald-600 mt-0.5">
+                                  {res.fecha ? new Date(res.fecha).toLocaleString('es-CO') : '—'}
+                                </p>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
                     ))}
                   </div>
                 )}
+                <button onClick={() => setVista(null)} className="w-full text-sm px-4 py-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition">Volver</button>
+              </div>
+            ) : vista === 'respuestas' ? (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-admin-heading">Respuestas del empleado a sus reportes</p>
+                {(() => {
+                  const todas = reportes.flatMap((r) =>
+                    (r.respuestas || []).map((res) => ({
+                      ...res,
+                      motivo: r.motivo,
+                      reporteFecha: r.fecha,
+                    }))
+                  ).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+                  if (todas.length === 0) {
+                    return <p className="text-sm text-gray-400">El empleado aún no ha respondido ningún reporte.</p>
+                  }
+                  return (
+                    <div className="space-y-2 max-h-72 overflow-y-auto">
+                      {todas.map((res) => (
+                        <div key={res.id_respuesta} className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
+                          <p className="text-emerald-800 text-sm">El empleado respondió: {res.respuesta}</p>
+                          <p className="text-[10px] text-emerald-600 mt-0.5">
+                            Sobre: {res.motivo} · {res.fecha ? new Date(res.fecha).toLocaleString('es-CO') : '—'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
                 <button onClick={() => setVista(null)} className="w-full text-sm px-4 py-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition">Volver</button>
               </div>
             ) : vista === 'historial' ? (
@@ -448,10 +487,8 @@ function Empleados() {
                     <span>Historial</span>
                   </button>
                   <button onClick={() => setVista('reportes')} className="text-xs text-gray-400 underline text-left hover:text-gray-600 transition">Ver reportes ({reportes.length})</button>
-                  <button onClick={() => { setReportearA(seleccionado); setModalReporte(true); }}
-                    className="text-sm px-4 py-2 rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-50 transition flex items-center justify-between">
-                    <span>Reporte</span>
-                    {reportes.length > 0 && <span className="text-xs">{reportes.length}</span>}
+                  <button onClick={() => setVista('respuestas')} className="text-sm px-4 py-2 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-50 transition flex items-center justify-between">
+                    <span>Respuestas del empleado</span>
                   </button>
                   <button onClick={() => setEditando(true)} className="text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition">Editar</button>
                   <button onClick={resetearPassword} className="text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition">Generar nueva contraseña</button>

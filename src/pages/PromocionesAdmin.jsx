@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
-import { bloquearEntero, normalizarEntero, normalizarTexto } from '../utils/validacion'
-import ErrorModal from '../components/ui/ErrorModal'
 import { PageHeader, PanelCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
+import { bloquearEntero, normalizarEntero, normalizarTexto } from '../utils/validacion'
 
 // ── ADMIN: PROMOCIONES (crear/editar/desactivar) ───────────
 // Solo el administrador gestiona las ofertas que ve el cliente.
@@ -73,16 +72,22 @@ function PromocionesAdmin() {
 
   async function guardar(e) {
     e.preventDefault()
-    if (!form.nombre.trim() || !form.valor_descuento) {
-      setError('Nombre y % de descuento son obligatorios')
+    const descuento = Number(form.valor_descuento)
+    if (!form.nombre.trim()) {
+      setError('El nombre de la promoción es obligatorio')
       return
     }
-    const nombreClave = form.nombre.trim().toLowerCase()
-    const existeNombre = promos.some((p) =>
-      p.id_promocion !== editando?.id_promocion && String(p.nombre).trim().toLowerCase() === nombreClave
-    )
-    if (existeNombre) {
-      setError(`Ya existe una promoción llamada "${form.nombre}"`)
+    if (!Number.isFinite(descuento) || descuento < 1 || descuento > 100) {
+      setError('El % de descuento debe estar entre 1 y 100')
+      return
+    }
+    if (!form.fecha_fin) {
+      setError('La fecha de fin es obligatoria')
+      return
+    }
+    const esCierre = form.estado === 'finalizada' || form.estado === 'inactiva'
+    if (!esCierre && new Date(form.fecha_fin) < new Date(new Date().toDateString())) {
+      setError('La fecha de fin no puede estar en el pasado')
       return
     }
     setGuardando(true)
@@ -91,16 +96,16 @@ function PromocionesAdmin() {
       if (editando) {
         await api.patch(`/admin/promociones/${editando.id_promocion}`, {
           nombre: form.nombre,
-          valor_descuento: Number(form.valor_descuento),
-          fecha_fin: form.fecha_fin || null,
+          valor_descuento: descuento,
+          fecha_fin: form.fecha_fin,
           estado: form.estado,
           productos: form.productos,
         })
       } else {
         await api.post('/admin/promociones', {
           nombre: form.nombre,
-          valor_descuento: Number(form.valor_descuento),
-          fecha_fin: form.fecha_fin || null,
+          valor_descuento: descuento,
+          fecha_fin: form.fecha_fin,
           productos: form.productos,
         })
       }
@@ -123,7 +128,12 @@ function PromocionesAdmin() {
         )}
       />
 
-      <ErrorModal mensaje={error} onClose={() => setError(null)} />
+      {error && (
+        <div className="panel-come text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 flex justify-between">
+          <span>{error}</span>
+          <button type="button" onClick={() => setError(null)} className="text-red-400">✕</button>
+        </div>
+      )}
 
       {/* Formulario */}
       {mostrarForm && (
@@ -140,16 +150,14 @@ function PromocionesAdmin() {
               type="number"
               min="1"
               max="100"
-              onKeyDown={bloquearEntero}
               placeholder="% descuento"
               value={form.valor_descuento}
-              onChange={(e) => {
-                const limpio = normalizarEntero(e.target.value)
-                setForm({ ...form, valor_descuento: limpio === '' ? '' : String(Math.min(100, Number(limpio))) })
-              }}
-              onBlur={() => {
-                const v = Number(form.valor_descuento)
-                if (form.valor_descuento !== '' && v < 1) setForm({ ...form, valor_descuento: '1' })
+              onKeyDown={bloquearEntero}
+              onChange={(e) => setForm({ ...form, valor_descuento: normalizarEntero(e.target.value) })}
+              onBlur={(e) => {
+                const v = Number(normalizarEntero(e.target.value))
+                if (v < 1) setForm((prev) => ({ ...prev, valor_descuento: '1' }))
+                if (v > 100) setForm((prev) => ({ ...prev, valor_descuento: '100' }))
               }}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:outline-none focus:border-[#1D9E75] transition"
             />

@@ -1,8 +1,20 @@
 import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import registerBg from '../assets/register-bg.mp4'
 import toast from 'react-hot-toast'
-import { API_URL } from "../config";
+import { API_URL, TURNSTILE_SITE_KEY } from "../config";
+
+// ═══════════════════════════════════════════════════════════════
+// CLOUDFLARE TURNSTILE — Configuración
+// ═══════════════════════════════════════════════════════════════
+// Para obtener tu Site Key:
+// 1. Crea cuenta gratis en https://dash.cloudflare.com/sign-up
+// 2. Ve a Turnstile → Manage Widgets → Create Widget
+// 3. Copia la "Site Key" y pégala en tu .env como VITE_TURNSTILE_SITE_KEY
+// 4. La "Secret Key" va en el backend (.env → TURNSTILE_SECRET_KEY)
+// ═══════════════════════════════════════════════════════════════
+const TURNSTILE_SCRIPT = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+// ═══════════════════════════════════════════════════════════════
 
 const REGEX_EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{1,24}$/
 const REGEX_MAYUSCULA = /[A-Z]/
@@ -45,6 +57,11 @@ function Register() {
   const [verContraseña, setVerContraseña] = useState(false)
   const [verConfirmar, setVerConfirmar] = useState(false)
   const [contraseñaFocus, setContraseñaFocus] = useState(false)
+  const [aceptaTerminos, setAceptaTerminos] = useState(false)
+  const [modalTerminosAbierto, setModalTerminosAbierto] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const turnstileRef = useRef(null)
+  const turnstileWidgetId = useRef(null)
 
   const [reglasContraseña, setReglasContraseña] = useState({
     longitud: false,
@@ -54,6 +71,41 @@ function Register() {
   })
   const [erroresNombre, setErroresNombre] = useState('')
   const [erroresEmail, setErroresEmail] = useState('')
+
+  // ── Cloudflare Turnstile: cargar script y renderizar widget en el Paso 2 ──
+  useEffect(() => {
+    if (step !== 2) return
+    if (turnstileWidgetId.current) return
+
+    function onTurnstileReady() {
+      if (!turnstileRef.current || !window.turnstile) return
+      turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        callback: (token) => setTurnstileToken(token),
+        'error-callback': () => setTurnstileToken(''),
+        theme: 'dark',
+        size: 'normal',
+      })
+    }
+
+    if (window.turnstile) {
+      onTurnstileReady()
+    } else {
+      const script = document.createElement('script')
+      script.src = TURNSTILE_SCRIPT
+      script.async = true
+      script.onload = onTurnstileReady
+      document.head.appendChild(script)
+    }
+
+    return () => {
+      if (turnstileWidgetId.current && window.turnstile) {
+        try { window.turnstile.remove(turnstileWidgetId.current) } catch {}
+        turnstileWidgetId.current = null
+        setTurnstileToken('')
+      }
+    }
+  }, [step])
 
   const contraseñaValida = Object.values(reglasContraseña).every(Boolean)
   const confirmarTocado = formData.confirmarContraseña.length > 0
@@ -161,6 +213,16 @@ function Register() {
       return
     }
 
+    if (!aceptaTerminos) {
+      toast.error('Debes aceptar los Términos y Condiciones', { id: 'error-register' })
+      return
+    }
+
+    if (!turnstileToken) {
+      toast.error('Completa la verificación anti-bot', { id: 'error-register' })
+      return
+    }
+
     setCargando(true)
 
     const [nombre, ...resto] = formData.nombreCompleto.trim().split(' ')
@@ -175,6 +237,7 @@ function Register() {
           apellido,
           email: formData.email,
           contraseña: formData.contraseña,
+          turnstileToken,
         }),
       })
 
@@ -356,11 +419,41 @@ function Register() {
               <p className="text-xs text-[#9DC9B4] mb-6">✓ Coinciden</p>
             )}
 
+            {/* Cloudflare Turnstile — verificación anti-bot */}
+            <div className="mb-4">
+              <p className="text-xs text-white/40 mb-2">Verificación de seguridad</p>
+              <div ref={turnstileRef} className="flex justify-center" />
+              {!turnstileToken && (
+                <p className="text-[11px] text-white/30 mt-1.5 text-center">Esperando verificación...</p>
+              )}
+            </div>
+
+            {/* Términos y Condiciones */}
+            <label className="flex items-start gap-3 mb-6 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={aceptaTerminos}
+                onChange={(e) => setAceptaTerminos(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded accent-[#6FA98C] cursor-pointer"
+              />
+              <span className="text-xs text-white/60 leading-relaxed group-hover:text-white/80 transition">
+                Acepto los{' '}
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setModalTerminosAbierto(true) }}
+                  className="text-[#9DC9B4] underline underline-offset-2 hover:text-white transition"
+                >
+                  Términos y Condiciones
+                </button>
+                {' '}y la Política de Privacidad
+              </span>
+            </label>
+
             <div className="flex gap-3">
               <button type="button" onClick={() => setStep(1)} disabled={cargando} className="flex-1 py-3 rounded-xl text-sm text-white/70 hover:bg-white/10 transition disabled:opacity-50" style={{ border: '1px solid rgba(255,255,255,0.15)' }}>
                 Atrás
               </button>
-              <button type="button" onClick={handleRegister} disabled={cargando || !puedeContinuarPaso2} className="flex-1 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50">
+              <button type="button" onClick={handleRegister} disabled={cargando || !puedeContinuarPaso2 || !aceptaTerminos || !turnstileToken} className="flex-1 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50">
                 {cargando ? 'Registrando...' : 'Crear cuenta'}
               </button>
             </div>
@@ -392,6 +485,81 @@ function Register() {
               Inicia sesión
             </button>
           </p>
+        )}
+
+        {/* Modal de Términos y Condiciones */}
+        {modalTerminosAbierto && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+            onClick={() => setModalTerminosAbierto(false)}
+          >
+            <div
+              className="w-full max-w-lg max-h-[80vh] flex flex-col rounded-2xl overflow-hidden"
+              style={{ background: 'rgba(15,29,19,0.98)', border: '1px solid rgba(255,255,255,0.12)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                <h3 className="text-white font-semibold text-sm">Términos y Condiciones</h3>
+                <button
+                  type="button"
+                  onClick={() => setModalTerminosAbierto(false)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/40 hover:text-white transition"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-5 py-4 text-xs text-white/60 leading-relaxed space-y-4">
+                <p><strong className="text-white/80">1. Aceptación de los Términos</strong><br />
+                Al crear una cuenta en Granova, usted acepta estos Términos y Condiciones de uso. Si no está de acuerdo, por favor no utilice nuestro servicio.</p>
+
+                <p><strong className="text-white/80">2. Registro de Cuenta</strong><br />
+                Para acceder a nuestros servicios, usted debe crear una cuenta proporcionando información veraz y actualizada. Usted es responsable de mantener la confidencialidad de sus credenciales de acceso.</p>
+
+                <p><strong className="text-white/80">3. Productos y Precios</strong><br />
+                Todos los precios mostrados incluyen los impuestos aplicables salvo indicación contraria. Los precios pueden cambiar sin previo aviso. Nos reservamos el derecho de modificar el catálogo de productos en cualquier momento.</p>
+
+                <p><strong className="text-white/80">4. Pedidos y Pagos</strong><br />
+                Al realizar un pedido, usted está realizando una oferta de compra. Nos reservamos el derecho de aceptar o rechazar cualquier pedido. Los pagos se procesan de forma segura a través de nuestras pasarelas de pago habilitadas.</p>
+
+                <p><strong className="text-white/80">5. Envíos y Entregas</strong><br />
+                Los tiempos de entrega son estimados y pueden variar según la ubicación y disponibilidad del producto. Granova no se hace responsable por retrasos causados por terceros.</p>
+
+                <p><strong className="text-white/80">6. Devoluciones</strong><br />
+                Si no está satisfecho con su compra, puede solicitar una devolución dentro de los 14 días posteriores a la recepción del producto, siempre que este se encuentre en condiciones originales.</p>
+
+                <p><strong className="text-white/80">7. Programa de Lealtad</strong><br />
+                Los puntos de lealtad son acumulables según las condiciones del programa. Granova se reserva el derecho de modificar o cancelar el programa de lealtad en cualquier momento con aviso previo.</p>
+
+                <p><strong className="text-white/80">8. Protección de Datos</strong><br />
+                Sus datos personales serán tratados de conformidad con nuestra Política de Privacidad y la normatividad vigente en materia de protección de datos personales (Ley 1581 de 2012 en Colombia).</p>
+
+                <p><strong className="text-white/80">9. Uso del Servicio</strong><br />
+                Usted se compromete a utilizar el servicio de manera lícita y respetuosa. Está prohibido el uso fraudulento, la suplantación de identidad o cualquier actividad que pueda dañar la integridad del servicio.</p>
+
+                <p><strong className="text-white/80">10. Limitación de Responsabilidad</strong><br />
+                Granova no será responsable por daños indirectos, incidentales o consecuentes derivados del uso de nuestro servicio. Nuestra responsabilidad máxima será limitada al valor del último pedido realizado.</p>
+
+                <p className="text-white/40 italic">Última actualización: Septiembre 2026</p>
+              </div>
+              <div className="flex gap-3 px-5 py-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setModalTerminosAbierto(false)}
+                  className="flex-1 py-2.5 rounded-xl text-sm text-white/60 hover:bg-white/10 transition"
+                  style={{ border: '1px solid rgba(255,255,255,0.12)' }}
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAceptaTerminos(true); setModalTerminosAbierto(false) }}
+                  className="flex-1 py-2.5 rounded-xl bg-[#6FA98C] text-white text-sm font-medium hover:bg-[#4F8A70] transition"
+                >
+                  Acepto
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
       </div>

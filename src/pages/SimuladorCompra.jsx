@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCarrito } from "../context/CarritoContext";
+import { leerParametro } from "../services/parametros";
 import { API_URL as BASE_API_URL } from "../config";
 import FadeIn from "../components/ui/FadeIn";
 import { SkeletonCard } from "../components/ui/Skeleton";
@@ -19,7 +20,7 @@ function volarProducto(producto, elementoOrigen) {
     if (!origen) return;
 
     const volador = document.createElement("img");
-    volador.src = producto.img || "/logoGranova.jpeg";
+    volador.src = producto.img || "/logoGranova.png";
     volador.style.cssText = [
       "position: fixed",
       "z-index: 9999",
@@ -162,7 +163,7 @@ function SimuladorInterno() {
   const volumenPct = tier ? Number(tier.descuento_pct) : 0;
   const fuentes = [
     { fuente: "volumen", pct: volumenPct },
-    { fuente: "empresa", pct: esJuridica ? 10 : 0 },
+    { fuente: "empresa", pct: esJuridica ? leerParametro('descuento_empresa_pct', 15) : 0 },
     { fuente: "premio", pct: tienePremio && !esJuridica ? 10 : 0 },
   ].filter(f => f.pct > 0).sort((a, b) => b.pct - a.pct);
   const ganador = fuentes[0] || { fuente: null, pct: 0 };
@@ -244,7 +245,7 @@ function SimuladorInterno() {
                       type="button"
                       key={p.id}
                       onClick={(e) => agregarProducto(p, e.currentTarget)}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition ${yaEsta ? "bg-[#6FA98C]/[0.07]" : "hover:bg-white/[0.04]"}`}
+                      className={`w-full flex items-center gap-3 px-4 py-3 sm:py-2.5 text-left transition ${yaEsta ? "bg-[#6FA98C]/[0.07]" : "hover:bg-white/[0.04]"}`}
                     >
                       <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#14291B] shrink-0">
                         <ImagenProducto src={p.img} alt={p.nombre} className="w-full h-full object-cover" />
@@ -288,6 +289,7 @@ function SimuladorInterno() {
                 ) : (
                   <ul className="divide-y divide-white/[0.06]">
                     {lineas.map(l => {
+                      const f = formatoDe(l);
                       const pu = precioUnitario(l);
                       const pctItem = Math.max(Number(l.p.promoPct) || 0, ganador.pct);
                       const puFinal = Math.round(pu * (1 - pctItem / 100));
@@ -303,7 +305,7 @@ function SimuladorInterno() {
                               <select
                                 value={l.formatoSel}
                                 onChange={e => cambiarFormato(l.key, e.target.value)}
-                                className="mt-1 h-7 px-2 rounded-lg bg-[#14291B] border border-white/10 text-xs text-white/70 outline-none focus:border-[#6FA98C]/50 cursor-pointer"
+                                className="mt-1 h-9 sm:h-7 px-2 rounded-lg bg-[#14291B] border border-white/10 text-xs text-white/70 outline-none focus:border-[#6FA98C]/50 cursor-pointer w-full sm:w-auto"
                               >
                                 {l.p.formatos.map(fm => (
                                   <option key={fm.id_formato} value={fm.id_formato}>{fm.etiqueta} · ${Number(fm.precio).toLocaleString("es-CO")}</option>
@@ -315,14 +317,14 @@ function SimuladorInterno() {
                           </div>
 
                           {/* Cantidad */}
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center justify-between sm:justify-start gap-1.5 shrink-0">
                             <button type="button" onClick={() => cambiarCant(l.key, -1)} disabled={l.cant <= 1} className="w-8 h-8 rounded-lg bg-[#14291B] border border-white/10 text-white/70 hover:bg-[#1B3624] disabled:opacity-30 transition">−</button>
                             <span className="w-9 text-center text-sm font-semibold">{l.cant}</span>
                             <button type="button" onClick={() => cambiarCant(l.key, +1)} disabled={l.cant >= (l.p.stock || 999)} className="w-8 h-8 rounded-lg bg-[#14291B] border border-white/10 text-white/70 hover:bg-[#1B3624] disabled:opacity-30 transition">+</button>
                           </div>
 
                           {/* Precio línea */}
-                          <div className="text-right shrink-0 sm:w-28">
+                          <div className="text-left sm:text-right shrink-0 sm:w-28">
                             {puFinal !== pu ? (
                               <>
                                 <span className="block text-xs text-white/30 line-through">${(pu * l.cant).toLocaleString("es-CO")}</span>

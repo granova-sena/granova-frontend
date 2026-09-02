@@ -71,8 +71,17 @@ function AsistenteWidgetCliente() {
   ])
   const [entrada, setEntrada] = useState('')
   const [cargando, setCargando] = useState(false)
+  const [carritoAbierto, setCarritoAbierto] = useState(false)
   const finalRef = useRef(null)
   const inputRef = useRef(null)
+
+  useEffect(() => {
+    function onCarritoToggle(e) {
+      setCarritoAbierto(e.detail?.abierto ?? false)
+    }
+    window.addEventListener('carrito-toggle', onCarritoToggle)
+    return () => window.removeEventListener('carrito-toggle', onCarritoToggle)
+  }, [])
 
   const panel = {
     background: 'linear-gradient(180deg, rgba(8,14,11,0.97), rgba(4,8,6,0.98))',
@@ -135,10 +144,16 @@ function AsistenteWidgetCliente() {
   }
 
   return (
-    <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end gap-3">
+    <div
+      className={`fixed z-50 flex flex-col items-end gap-3 transition-all duration-500 ease-out ${carritoAbierto ? 'hidden sm:flex' : ''}`}
+      style={{
+        bottom: '1.5rem',
+        right: carritoAbierto ? 'calc(24rem + 2rem)' : '1.5rem',
+      }}
+    >
       {abierto && (
         <div
-          className="w-72 sm:w-80 h-[22rem] sm:h-[24rem] flex flex-col rounded-2xl overflow-hidden animate-[granova-pop_0.18s_ease-out]"
+          className="w-80 sm:w-[22rem] h-[26rem] sm:h-[28rem] flex flex-col rounded-2xl overflow-hidden animate-[granova-pop_0.18s_ease-out]"
           style={panel}
         >
           {/* Header */}
@@ -286,22 +301,43 @@ function AsistenteWidgetCliente() {
           }
           setAbierto((v) => !v)
         }}
-        aria-label={abierto ? 'Cerrar chat de asistente' : 'Abrir chat de asistente'}
-        className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-full transition-all duration-300 hover:scale-105 relative"
+        aria-label={abierto ? 'Cerrar chat de asistente' : '¿Necesitas ayuda?'}
+        className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl transition-all duration-300 hover:scale-105 relative group"
         style={{
-          background: 'radial-gradient(circle at 30% 30%, #0f2b1c, #04140c)',
-          border: `1px solid ${NEON_DIM}`,
-          boxShadow: `0 0 0 1px rgba(57,255,138,0.15), 0 0 20px rgba(57,255,138,0.35), 0 8px 24px rgba(0,0,0,0.4)`,
+          background: abierto
+            ? 'radial-gradient(circle at 30% 30%, #1a3d2a, #0a2016)'
+            : 'radial-gradient(circle at 30% 30%, #0f2b1c, #04140c)',
+          border: `1.5px solid ${NEON_DIM}`,
+          boxShadow: abierto
+            ? `0 0 0 1px rgba(57,255,138,0.2), 0 0 24px rgba(57,255,138,0.3), 0 8px 32px rgba(0,0,0,0.5)`
+            : `0 0 0 1px rgba(57,255,138,0.2), 0 0 28px rgba(57,255,138,0.45), 0 8px 32px rgba(0,0,0,0.5)`,
         }}
       >
+        {!abierto && (
+          <span
+            className="absolute inset-0 rounded-2xl pointer-events-none"
+            style={{ animation: 'granova-ring 2.5s infinite' }}
+          />
+        )}
         <span
-          className="absolute inset-0 rounded-full pointer-events-none"
-          style={{ animation: abierto ? 'none' : 'granova-ring 2.2s infinite' }}
-        />
-        <span className="text-sm sm:text-base relative" style={{ filter: `drop-shadow(0 0 4px ${NEON})` }}>☕</span>
-        <span className="text-[11px] sm:text-xs font-medium relative" style={{ color: NEON }}>
-          {abierto ? 'Cerrar chat' : ''}
+          className="text-xl sm:text-2xl relative transition-transform duration-300"
+          style={{ filter: `drop-shadow(0 0 6px ${NEON})` }}
+        >
+          ☕
         </span>
+        {!abierto && (
+          <span
+            className="text-xs sm:text-sm font-semibold relative whitespace-nowrap"
+            style={{ color: NEON, textShadow: `0 0 8px rgba(57,255,138,0.4)` }}
+          >
+            ¿Necesitas ayuda?
+          </span>
+        )}
+        {abierto && (
+          <span className="text-xs sm:text-sm font-medium relative" style={{ color: 'rgba(234,255,242,0.6)' }}>
+            Cerrar
+          </span>
+        )}
       </button>
 
       <style>{`
@@ -319,7 +355,7 @@ function AsistenteWidgetCliente() {
         }
         @keyframes granova-ring {
           0% { box-shadow: 0 0 0 0 rgba(57,255,138,0.4); }
-          70% { box-shadow: 0 0 0 10px rgba(57,255,138,0); }
+          70% { box-shadow: 0 0 0 12px rgba(57,255,138,0); }
           100% { box-shadow: 0 0 0 0 rgba(57,255,138,0); }
         }
         @media (prefers-reduced-motion: reduce) {

@@ -3,7 +3,7 @@ import { useCarrito } from '../context/CarritoContext'
 
 function ResumenPedido() {
   const navigate = useNavigate()
-  const { subtotalBase, descuentoProductos, descuentoCuponMonto, total, esMayorista, unidadesFaltantes, cuponPct, esJuridica } = useCarrito()
+  const { subtotal, subtotalBase, descuentoProductos, descuentoCuponMonto, total, DESCUENTO, esMayorista, unidadesFaltantes, cuponPct, esJuridica } = useCarrito()
 
   return (
     <div className="w-full lg:w-80 flex flex-col gap-4">

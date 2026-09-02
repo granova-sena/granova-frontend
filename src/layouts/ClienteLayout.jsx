@@ -1,16 +1,18 @@
 import { useState, useRef, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import logo from '../assets/logo.png'
+import LogoGranova from '../components/ui/LogoGranova'
 import AsistenteWidgetCliente from '../components/AsistenteWidgetCliente'
 import CampanitaNotificaciones from '../components/CampanitaNotificaciones'
 import ModalResenaPedido from '../components/ModalResenaPedido'
 import { useCarrito } from '../context/CarritoContext'
+import { cargarFavoritos } from '../pages/Catalogo'
 
 const ENLACES = [
   { to: '/cliente', label: 'Inicio', end: true },
   { to: '/cliente/catalogo', label: 'Catálogo' },
   { to: '/cliente/foros', label: 'Foros' },
-  { to: '/cliente/pedidos', label: 'Mis pedidos' },
+  { to: '/cliente/pedidos', label: 'Mis compras' },
+  { to: '/cliente/cotizacion', label: 'Cotizaciones' },
   { to: '/cliente/promociones', label: 'Promociones' },
 ]
 
@@ -20,6 +22,7 @@ function ClienteLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [cuentaOpen, setCuentaOpen] = useState(false)
   const [resenaPedido, setResenaPedido] = useState(null)
+  const [numFavoritos, setNumFavoritos] = useState(() => (cargarFavoritos() || new Set()).size)
   const cuentaRef = useRef(null)
 
   const cliente = (() => {
@@ -38,8 +41,17 @@ function ClienteLayout() {
         setCuentaOpen(false)
       }
     }
+    function refrescarFavoritos() {
+      setNumFavoritos((cargarFavoritos() || new Set()).size)
+    }
     document.addEventListener('mousedown', cerrarSiClicFuera)
-    return () => document.removeEventListener('mousedown', cerrarSiClicFuera)
+    window.addEventListener('granova-favoritos', refrescarFavoritos)
+    window.addEventListener('storage', refrescarFavoritos)
+    return () => {
+      document.removeEventListener('mousedown', cerrarSiClicFuera)
+      window.removeEventListener('granova-favoritos', refrescarFavoritos)
+      window.removeEventListener('storage', refrescarFavoritos)
+    }
   }, [])
 
   function cerrarSesion() {
@@ -57,10 +69,7 @@ function ClienteLayout() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8 sm:gap-10">
             <button type="button" onClick={() => navigate('/cliente')} className="flex items-center gap-2.5 shrink-0">
-              <span className="w-9 h-9 rounded-full bg-[#6FA98C] flex items-center justify-center p-[7px] shrink-0">
-                <img src={logo} alt="Granova" className="w-full h-full object-contain" />
-              </span>
-              <span className="text-[#E1F5EE] text-lg font-medium tracking-tight">Granova</span>
+              <LogoGranova />
             </button>
             <div className="hidden md:flex items-center gap-7">
               {ENLACES.map((l) => (
@@ -77,6 +86,23 @@ function ClienteLayout() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Favoritos ❤️ (con contador) */}
+            <button
+              type="button"
+              id="boton-favoritos-header"
+              onClick={() => navigate('/cliente/favoritos')}
+              className="relative w-9 h-9 rounded-xl flex items-center justify-center text-white/60 hover:text-white hover:bg-white/[0.06] transition"
+              aria-label="Favoritos"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M12 21s-6.5-4.35-9-8a5.5 5.5 0 0110-3.27A5.5 5.5 0 0121 13c-2.5 3.65-9 8-9 8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {numFavoritos > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#D85A30] text-white text-[10px] font-semibold flex items-center justify-center">
+                  {numFavoritos > 99 ? '99+' : numFavoritos}
+                </span>
+              )}
+            </button>
             {/* Notificaciones 🔔 */}
             <CampanitaNotificaciones onAbrirResena={(idPedido) => setResenaPedido(idPedido)} />
             {/* Cuenta (desktop) */}
@@ -162,13 +188,13 @@ function ClienteLayout() {
               >
                 Mi cuenta
               </button>
-              <button
+<button
   type="button"
   onClick={() => { setMenuOpen(false); navigate('/cliente/favoritos') }}
   className="text-left text-sm py-2.5 text-white/60"
-              >
-                Favoritos
-              </button>
+>
+  Favoritos {numFavoritos > 0 && <span className="text-[#D85A30] font-semibold">({numFavoritos})</span>}
+</button>
               <button type="button" onClick={cerrarSesion} className="text-left text-sm py-2.5 text-[#D85A30]">
                 Cerrar sesión
               </button>

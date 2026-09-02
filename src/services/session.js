@@ -32,24 +32,39 @@ export function getActiveToken() {
     : localStorage.getItem(CLAVE_EMPLEADO)
 }
 
-/** Guarda el token del cliente (login). */
+/** Guarda el token del cliente (login). Elimina cualquier sesión de panel previa. */
 export function setClienteToken(token) {
+  localStorage.removeItem(CLAVE_EMPLEADO)
+  localStorage.removeItem('usuario')
   localStorage.setItem(CLAVE_CLIENTE, token)
 }
 
-/** Guarda el token del empleado/admin (login-admin). */
+/** Guarda el token del empleado/admin (login-admin). Elimina la sesión de cliente previa. */
 export function setEmpleadoToken(token) {
+  localStorage.removeItem(CLAVE_CLIENTE)
+  localStorage.removeItem('cliente')
   localStorage.setItem(CLAVE_EMPLEADO, token)
 }
 
 /** Limpia la sesión del cliente (logout desde panel cliente). */
 export function clearClienteToken() {
   localStorage.removeItem(CLAVE_CLIENTE)
+  localStorage.removeItem('cliente')
 }
 
 /** Limpia la sesión del empleado/admin (logout desde dashboard). */
 export function clearEmpleadoToken() {
   localStorage.removeItem(CLAVE_EMPLEADO)
+  localStorage.removeItem('usuario')
+}
+
+/** Elimina TODA sesión (cliente y panel) y tokens legacy: logout completo. */
+export function limpiarTodo() {
+  localStorage.removeItem(CLAVE_CLIENTE)
+  localStorage.removeItem(CLAVE_EMPLEADO)
+  localStorage.removeItem('cliente')
+  localStorage.removeItem('usuario')
+  LEGACY.forEach((k) => localStorage.removeItem(k))
 }
 
 /**
@@ -67,5 +82,22 @@ export function idDeTokenCliente() {
     return datos?.id ?? null
   } catch {
     return null
+  }
+}
+
+/**
+ * Identificador de cuenta usado para aislar carrito, favoritos y vistos en
+ * localStorage. Prioriza el id del JWT de cliente (fuente de verdad, nunca
+ * deja la sesión compartida aunque el objeto `cliente` esté corrupto o falte),
+ * luego el `id` del objeto `cliente` guardado, y sin sesión devuelve
+ * "invitado" (lista compartida para visitantes sin cuenta).
+ */
+export function idClienteActual() {
+  const idToken = idDeTokenCliente()
+  if (idToken) return idToken
+  try {
+    return JSON.parse(localStorage.getItem('cliente'))?.id ?? "invitado"
+  } catch {
+    return "invitado"
   }
 }

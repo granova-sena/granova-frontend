@@ -4,6 +4,17 @@
   --font-display: 'Fraunces', serif;
   --font-sans: 'Inter', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
+
+  /* Paleta Granova (landing / paneles oscuros) */
+  --color-granova-100: #E1F5EE;
+  --color-granova-200: #9DC9B4;
+  --color-granova-300: #8BBDA3;
+  --color-granova-400: #6FA98C;
+  --color-granova-500: #4F8A70;
+  --color-granova-600: #3A6B55;
+  --color-granova-ink: #0a1a0a;
+  --color-granova-card: #0F1D13;
+  --color-granova-card2: #14291B;
 }
 
 /* ── Entradas de modales / paneles ─────────────────────── */
@@ -97,6 +108,26 @@ button:not(:disabled):active {
 
 html {
   scroll-behavior: smooth;
+}
+
+/* Los anclas no quedan ocultos bajo el header fijo */
+[id] {
+  scroll-margin-top: 96px;
+}
+
+/* ── Marquesina (cinta de valores bajo el hero) ──────────── */
+@keyframes marquesina {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.anim-marquee {
+  animation: marquesina 30s linear infinite;
+}
+.anim-marquee:hover {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-marquee { animation: none; }
 }
 /* ─────────────────────────────────────────────
    Modo oscuro del panel admin (alcance general,

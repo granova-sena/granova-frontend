@@ -1,7 +1,14 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
-import { bloquearNoNumerico, normalizarNumerico } from '../utils/validacion'
 import { PageHeader, StatCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
+import { normalizarNumerico } from '../utils/validacion'
+
+// Bloquea letras, símbolos y notación científica (e/+/-) en inputs numéricos.
+function bloquearNoNumerico(e) {
+  if (['e', 'E', '+', '-'].includes(e.key)) {
+    e.preventDefault()
+  }
+}
 
 const coloresProducto = ['#E8C786', '#2B1B12', '#8B4A3C', '#5C7A4A', '#A65A3C', '#6B4226']
 
@@ -155,7 +162,7 @@ function AlertasStock() {
                     <p className="text-gray-800 font-medium truncate">{a.nombre}</p>
                     <p className="text-xs text-gray-400 truncate">{a.origen || 'Sin origen registrado'}</p>
                     <p className={`text-xs mt-1 ${estilo.textColor}`}>
-                      {a.stock} {a.categoriaProducto === 'maquina' ? 'unid.' : 'bolsas'} disponibles{a.capacidad > 0 ? ` · ${a.pct}% de la capacidad del lote` : ''}
+                      {a.stock} kg disponibles{a.capacidad > 0 ? ` · ${a.pct}% del stock máximo` : ''}
                     </p>
                   </div>
                 </div>
@@ -202,7 +209,7 @@ function AlertasStock() {
           >
             <h3 className="text-base font-semibold text-admin-heading mb-1">Restablecer stock de {productoModal.nombre}</h3>
             <p className="text-xs text-gray-400 mb-4">
-              Stock actual: {productoModal.stock} {productoModal.categoriaProducto === 'maquina' ? 'unid.' : 'bolsas'}{productoModal.capacidad > 0 ? ` de ${productoModal.capacidad} kg del lote` : ''}
+              Stock actual: {productoModal.stock} kg{productoModal.capacidad > 0 ? ` de ${productoModal.capacidad} kg del lote` : ''}
             </p>
 
             <form onSubmit={confirmarReabastecimiento}>
@@ -221,7 +228,7 @@ function AlertasStock() {
                 step="0.1"
                 autoFocus
                 value={cantidad}
-                onChange={(e) => setCantidad(normalizarNumerico(e.target.value))}
+                 onChange={(e) => setCantidad(normalizarNumerico(e.target.value))}
                 placeholder="Ej: 80"
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[#1D9E75] mb-5 transition placeholder:text-gray-400"
               />

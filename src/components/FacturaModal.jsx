@@ -3,16 +3,53 @@
   import autoTable from 'jspdf-autotable'
   import api from '../services/api'
   import { formatMoney, formatFecha } from '../utils/format'
-  import ErrorModal from './ui/ErrorModal'
 
   function FacturaModal({ idPedido, onClose }) {
     const [factura, setFactura] = useState(null)
     const [error, setError] = useState(null)
+    const [creando, setCreando] = useState(false)
 
     useEffect(() => {
-      api.get(`/facturas/${idPedido}`)
-        .then(res => setFactura(res.data.data))
-        .catch(err => setError(err.response?.data?.error || err.message))
+      let cancelado = false
+
+      async function cargarFactura() {
+        try {
+          const res = await api.get(`/facturas/${idPedido}`)
+          if (!cancelado) setFactura(res.data.data)
+        } catch (err) {
+          const status = err.response?.status
+          // ¿No existe? La generamos automáticamente y volvemos a leerla.
+          if (status === 404) {
+            try {
+              setCreando(true)
+              await api.post('/facturas', { id_pedido: idPedido })
+              const res2 = await api.get(`/facturas/${idPedido}`)
+              if (!cancelado) setFactura(res2.data.data)
+            } catch (errCrear) {
+              // Puede fallar con 400 si otro proceso ya generó la factura
+              // justo después del 404; en ese caso reintentamos leerla.
+              if (errCrear.response?.status === 400) {
+                try {
+                  const res3 = await api.get(`/facturas/${idPedido}`)
+                  if (!cancelado) setFactura(res3.data.data)
+                } catch {
+                  if (!cancelado) setError(errCrear.response?.data?.mensaje || 'La factura no está disponible')
+                }
+              } else if (!cancelado) {
+                setError(errCrear.response?.data?.mensaje || 'No se pudo generar la factura')
+              }
+            } finally {
+              if (!cancelado) setCreando(false)
+            }
+          } else if (!cancelado) {
+            setError(err.response?.data?.error || err.message)
+          }
+        }
+      }
+
+      cargarFactura()
+
+      return () => { cancelado = true }
     }, [idPedido])
 
     // Compatibilidad con campos nuevos del contrato y sus versiones previas.
@@ -24,6 +61,8 @@
     const estadoPago = factura?.estado_pago
     const impuestosPorTasa = factura?.impuestos_por_tasa || []
     const productos = factura?.productos || factura?.pedido?.items || []
+    const descuento = Number(factura?.descuento ?? 0)
+    const envio = Number(factura?.envio ?? factura?.costo_envio ?? 0)
 
     // Datos fiscales
     const tipoPersona = factura?.tipo_persona
@@ -65,7 +104,7 @@
         head: [['Producto', 'Cantidad', 'Precio unit.', 'Subtotal']],
         body: (productos || []).map(it => [
           it.producto_nombre || it.nombre,
-          `${it.cantidad} ${it.producto_presentacion ? 'bolsa(s)' : 'unid.'}`,
+          `${it.cantidad} kg`,
           formatMoney(it.precio_unitario),
           formatMoney(it.subtotal),
         ]),
@@ -75,31 +114,45 @@
 
       const finalY = doc.lastAutoTable.finalY + 8
       doc.setFontSize(10)
+      doc.setTextColor(60, 60, 60)
       doc.text(`Subtotal: ${formatMoney(subtotal)}`, 150, finalY, { align: 'right' })
-      doc.text(`Impuestos: ${formatMoney(impuestos)}`, 150, finalY + 6, { align: 'right' })
+      let linea = finalY + 6
+      if (descuento > 0) {
+        doc.setTextColor(200, 60, 60)
+        doc.text(`Descuento: -${formatMoney(descuento)}`, 150, linea, { align: 'right' })
+        linea += 6
+      }
+      doc.setTextColor(60, 60, 60)
+      if (envio > 0) {
+        doc.text(`Envío: ${formatMoney(envio)}`, 150, linea, { align: 'right' })
+        linea += 6
+      }
+      doc.text(`Impuestos: ${formatMoney(impuestos)}`, 150, linea, { align: 'right' })
+      linea += 6
       if (impuestosPorTasa.length > 0) {
         impuestosPorTasa.forEach((t, i) => {
-          doc.text(`IVA ${t.tasa}%: ${formatMoney(t.valor)}`, 150, finalY + 12 + i * 5, { align: 'right' })
+          doc.text(`IVA ${t.tasa}%: ${formatMoney(t.valor)}`, 150, linea + i * 5, { align: 'right' })
         })
+        linea += impuestosPorTasa.length * 5
       }
       doc.setFontSize(12)
-      doc.text(`Total: ${formatMoney(total)}`, 150, finalY + 12 + impuestosPorTasa.length * 5 + 6, { align: 'right' })
+      doc.setTextColor(30, 30, 30)
+      doc.text(`Total: ${formatMoney(total)}`, 150, linea, { align: 'right' })
 
       if (estadoPago) {
-        const estadoY = finalY + 28 + impuestosPorTasa.length * 5
+        const estadoY = linea + 10
         doc.setFontSize(9)
         doc.setTextColor(120, 120, 120)
         doc.text(`Estado de pago: ${estadoPago === 'pagado' ? 'Pagado' : estadoPago}`, 14, estadoY)
       }
       doc.setTextColor(29, 158, 117)
       doc.setFontSize(12)
-      doc.text('¡Gracias por tu compra!', 14, (estadoPago ? finalY + 36 : finalY + 28) + impuestosPorTasa.length * 5)
+      doc.text('¡Gracias por tu compra!', 14, (estadoPago ? linea + 18 : linea + 10))
 
       doc.save(`factura-${nFactura}.pdf`)
     }
 
     return (
-      <>
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -117,8 +170,14 @@
             </div>
           </div>
 
+          {error && (
+            <div className="p-6 text-sm text-red-600">{error}</div>
+          )}
+
           {!factura && !error && (
-            <div className="p-6 text-sm text-gray-400">Cargando factura...</div>
+            <div className="p-6 text-sm text-gray-400">
+              {creando ? 'Generando la factura del pedido...' : 'Cargando factura...'}
+            </div>
           )}
 
           {factura && (
@@ -164,7 +223,7 @@
                     {(productos || []).map((it, i) => (
                       <tr key={i} className="border-t border-gray-100">
                         <td className="py-2 px-3 text-gray-700">{it.producto_nombre || it.nombre}</td>
-                        <td className="py-2 px-3 text-gray-600">{it.cantidad} {it.producto_presentacion ? 'bolsa(s)' : 'unid.'}</td>
+                        <td className="py-2 px-3 text-gray-600">{it.cantidad} kg</td>
                         <td className="py-2 px-3 text-gray-600">{formatMoney(it.precio_unitario)}</td>
                         <td className="py-2 px-3 text-gray-800 text-right">{formatMoney(it.subtotal)}</td>
                       </tr>
@@ -175,6 +234,12 @@
 
               <div className="flex flex-col items-end gap-1 text-sm">
                 <p className="text-gray-500">Subtotal: <span className="text-gray-800">{formatMoney(subtotal)}</span></p>
+                {descuento > 0 && (
+                  <p className="text-gray-500">Descuento: <span className="text-red-500">-{formatMoney(descuento)}</span></p>
+                )}
+                {envio > 0 && (
+                  <p className="text-gray-500">Envío: <span className="text-gray-800">{formatMoney(envio)}</span></p>
+                )}
                 <p className="text-gray-500">Impuestos: <span className="text-gray-800">{formatMoney(impuestos)}</span></p>
                 {impuestosPorTasa.length > 0 && impuestosPorTasa.map((t, i) => (
                   <p key={i} className="text-gray-500">IVA {t.tasa}%: <span className="text-gray-800">{formatMoney(t.valor)}</span></p>
@@ -198,9 +263,6 @@
           )}
         </div>
       </div>
-
-      <ErrorModal mensaje={error} onClose={() => setError(null)} />
-      </>
     )
   }
 

@@ -1,0 +1,3 @@
+Failed to load resource: the server responded with a status of 403 ()
+(index):1 FedCM was disabled either temporarily based on previous user action or permanently via site settings. Try manage third-party sign-in via the icon to the left of the URL bar or via site settings.
+client:88 [GSI_LOGGER]: FedCM get() rejects with NetworkError: Error retrieving a token.

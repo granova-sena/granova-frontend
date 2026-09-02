@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import AuthCallback from './pages/AuthCallback'
@@ -8,12 +8,16 @@ import RutaProtegidaCliente from './components/RutaProtegidaCliente'
 import NotFound from './pages/NotFound'
 import DashboardLayout from './layouts/DashboardLayout'
 import EmpleadoLayout from './layouts/EmpleadoLayout'
+import LogisticaLayout from './layouts/LogisticaLayout'
+import Despachos from './pages/Despachos'
+import PedidosReparto from './pages/PedidosReparto'
 import ControlEmpleado from './pages/ControlEmpleado'
 import ControlLotes from './pages/ControlLotes'
 import CosechasPlaneadas from './pages/CosechasPlaneadas'
-import ReportesEmpleado from './pages/ReportesEmpleado'
 import DashboardHome from './pages/DashboardHome'
+import ParametrosAdmin from './pages/ParametrosAdmin'
 import Empleados from './pages/Empleados'
+import Logistica from './pages/Logistica'
 import { Toaster } from 'react-hot-toast'
 import ResetPassword from './pages/Reset-Password'
 import OlvidePassword from './pages/OlvidePassword'
@@ -24,10 +28,14 @@ import AlertasDeStock from './pages/AlertasDeStock'
 import ControlStock from './pages/ControlStock'
 import Envios from './pages/Envios'
 import GestionPedidos from './pages/GestionPedidos'
+import CotizacionesAdmin from './pages/CotizacionesAdmin'
 import RegistroDeVentas from './pages/RegistroDeVentas'
 import ReportesVentas from './pages/ReportesVentas'
+import ReportesEmpleado from './pages/ReportesEmpleado'
+import RespuestasEmpleados from './pages/RespuestasEmpleados'
 import Transportadoras from './pages/Transportadoras'
 import Catalogo from './pages/Catalogo'
+import CatalogoPublico from './pages/CatalogoPublico'
 import Favoritos from './pages/Favoritos'
 import SimuladorCompra from './pages/SimuladorCompra'
 import Foros from './pages/Foros'
@@ -48,6 +56,7 @@ import PagarPage from './pages/PagarPage'
 import TrazabilidadLotePage from './pages/TrazabilidadLotePage'
 import ComparacionPage from './pages/ComparacionPage'
 import Empresas from './pages/Empresas'
+import TiendaPublica from './layouts/TiendaPublica'
 
 function App() {
   return (
@@ -80,6 +89,9 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/registro-empresa" element={<RegistroEmpresa />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        {/* Catálogo público de exhibición: invitados solo ven información de los productos.
+            La compra y el catálogo funcional (carrito) viven en /cliente/catalogo. */}
+        <Route path="/catalogo" element={<TiendaPublica><CatalogoPublico /></TiendaPublica>} />
         <Route path="/control-interno" element={<AdminLogin />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/olvide-password" element={<OlvidePassword />} />
@@ -110,8 +122,8 @@ function App() {
           <Route path="empresas" element={<Empresas />} />
         </Route>
 
-        {/* Compatibilidad: cualquier link viejo a /catalogo cae en la vista nueva */}
-        <Route path="/catalogo" element={<Navigate to="/cliente/catalogo" replace />} />
+        {/* Compatibilidad: los links viejos a /catalogo AHORA van a la vista pública completa */}
+        {/* (ver ruta pública /catalogo más arriba) */}
 
         <Route path="/panel-empleado" element={
           <RutaProtegida rolesPermitidos={["empleado"]}>
@@ -128,6 +140,15 @@ function App() {
           <Route path="reportes" element={<ReportesEmpleado />} />
         </Route>
 
+        <Route path="/panel-logistica" element={
+          <RutaProtegida rolesPermitidos={["logistica"]}><LogisticaLayout /></RutaProtegida>
+        }>
+          <Route index element={<Despachos />} />
+          <Route path="despachos" element={<Despachos />} />
+          <Route path="reparto" element={<PedidosReparto />} />
+          <Route path="transportadoras" element={<Transportadoras />} />
+        </Route>
+
         <Route path="/dashboard" element={
           <RutaProtegida rolesPermitidos={["admin"]}>
             <DashboardLayout />
@@ -135,6 +156,9 @@ function App() {
         }>
           <Route index element={<DashboardHome />} />
           <Route path="empleados" element={<Empleados />} />
+          <Route path="respuestas" element={<RespuestasEmpleados />} />
+          <Route path="logistica" element={<Logistica />} />
+          <Route path="usuarios" element={<Logistica />} />
 
           {/* Ventas */}
           <Route path="ventas" element={<RegistroDeVentas />} />
@@ -146,10 +170,14 @@ function App() {
           <Route path="transportadoras" element={<Transportadoras />} />
           <Route path="promociones" element={<PromocionesAdmin />} />
           <Route path="resenas" element={<ResenasAdmin />} />
+          <Route path="cotizaciones" element={<CotizacionesAdmin />} />
 
           {/* Inventario */}
           <Route path="inventario" element={<ControlStock />} />
           <Route path="inventario/alertas" element={<AlertasDeStock />} />
+
+          {/* Configuración */}
+          <Route path="parametros" element={<ParametrosAdmin />} />
         </Route>
 
         {/* Catch-all: siempre al final por claridad, aunque en RR v6 el orden no cambia la prioridad del wildcard */}

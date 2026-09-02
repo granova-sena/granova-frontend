@@ -2,7 +2,8 @@ import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { API_URL } from "../config";
-import { idDeTokenCliente } from '../services/session'
+import { idDeTokenCliente, limpiarTodo } from '../services/session'
+import { leerParametro } from '../services/parametros'
 import { useCarrito } from '../context/CarritoContext'
 import { calcularNivel } from '../utils/lealtad'
 import LoyaltyRing from '../components/ui/LoyaltyRing'
@@ -111,7 +112,7 @@ function MiCuenta() {
         const msg = datos.error ?? datos.mensaje ?? 'Error al actualizar'
         toast.error(msg, { id: 'perfil-identificacion' })
         if (respuesta.status === 401 || respuesta.status === 403) {
-          setTimeout(() => { localStorage.removeItem('token_cliente'); window.location.href = '/login'; }, 1500)
+          setTimeout(() => { limpiarTodo(); window.location.href = '/login'; }, 1500)
         }
         return
       }
@@ -143,6 +144,8 @@ function MiCuenta() {
   const [canjeando, setCanjeando] = useState(false)
   const [cuponObtenido, setCuponObtenido] = useState(null)
   const [cupones, setCupones] = useState([])
+  const [historialCupones, setHistorialCupones] = useState([])
+  const [opcionesCanje, setOpcionesCanje] = useState([])
 
   // Los cupones viven en la BD: aunque el cliente cierre sesión y vuelva,
   // sus cupones activos siguen apareciendo aquí. 🎟️
@@ -156,7 +159,11 @@ function MiCuenta() {
     })
       .then(res => res.json())
       .then(json => {
-        if (json.ok) setCupones(json.data || [])
+        if (json.ok) {
+          setCupones(json.data.activos || [])
+          setHistorialCupones(json.data.historial || [])
+          setOpcionesCanje(json.data.opciones_canje || [])
+        }
       })
       .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps -- carga una vez al entrar
@@ -276,9 +283,9 @@ function MiCuenta() {
         <div className={`rounded-2xl p-6 sm:p-8 mb-5 border shadow-sm ${(esJuridica || tienePremio) ? 'bg-[#6FA98C]/15 border-[#6FA98C]/40' : 'bg-white/[0.08] border-white/15'}`}>
           {esJuridica ? (
             <>
-              <p className="text-lg font-semibold text-white mb-1">🏢 Tienes 10% de descuento en todos tus pedidos</p>
+              <p className="text-lg font-semibold text-white mb-1">🏢 Tienes {leerParametro('descuento_empresa_pct', 15)}% de descuento en todos tus pedidos</p>
               <p className="text-sm text-white/60 leading-relaxed">
-                Por comprar como empresa, el 10% se aplica automáticamente en cada pedido.
+                Por comprar como empresa, el {leerParametro('descuento_empresa_pct', 15)}% se aplica automáticamente en cada pedido.
               </p>
             </>
           ) : tienePremio ? (
@@ -331,29 +338,30 @@ function MiCuenta() {
             </div>
           ) : esJuridica ? (
             <p className="text-sm text-white/50 leading-relaxed">
-              🏢 Tu descuento de empresa (10%) ya supera los cupones de lealtad — tus puntos se siguen acumulando para tu rango.
+              🏢 Tu descuento de empresa ({leerParametro('descuento_empresa_pct', 15)}%) ya supera los cupones de lealtad — tus puntos se siguen acumulando para tu rango.
             </p>
           ) : (
             <>
               <p className="text-xs text-white/50 mb-3">Canjea tus puntos por un cupón de descuento para tu próxima compra:</p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  type="button"
-                  onClick={() => canjearPuntos(500)}
-                  disabled={canjeando || puntos < 500}
-                  className="flex-1 py-3 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  🎟️ 500 pts → Cupón 5%
-                </button>
-                <button
-                  type="button"
-                  onClick={() => canjearPuntos(1000)}
-                  disabled={canjeando || puntos < 1000}
-                  className="flex-1 py-3 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                   🎟️ 1.000 pts → Cupón 10%
-                </button>
-              </div>
+              {opcionesCanje.length === 0 ? (
+                <p className="text-sm text-white/50 leading-relaxed">
+                  Cargando opciones de canje...
+                </p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {opcionesCanje.map(op => (
+                    <button
+                      key={op.nombre}
+                      type="button"
+                      onClick={() => canjearPuntos(Number(op.canje_puntos))}
+                      disabled={canjeando || !op.canjeable}
+                      className="flex-1 py-3 rounded-xl text-sm font-medium bg-[#6FA98C] text-white hover:bg-[#4F8A70] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {op.nombre === 'Oro' ? '🥇' : op.nombre === 'Plata' ? '🥈' : '🥉'} {Number(op.canje_puntos).toLocaleString()} pts → Cupón {Number(op.descuento_pct)}%{!op.alcanzado ? ` (alcanza con ${Number(op.puntos_min).toLocaleString()} pts acumulados)` : ''}
+                    </button>
+                  ))}
+                </div>
+              )}
             </>
           )}
             </div>
@@ -393,6 +401,41 @@ function MiCuenta() {
           )}
         </div>
         )}
+
+        {/* HISTORIAL DE CUPONES (usados y vencidos) — solo personas naturales */}
+        {!esJuridica && (
+        <div className="rounded-2xl p-6 sm:p-8 mb-5 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+          <span className="text-xl">🎟️</span>
+          <p className="text-sm font-semibold text-white">Historial de cupones</p>
+        </div>
+        <p className="text-xs text-white/40 mb-3 leading-relaxed">
+          Recuerda: en cada pedido solo puedes usar <span className="text-white/70 font-medium">un (1) cupón</span>, se aplica en el checkout.
+        </p>
+        {historialCupones.length === 0 ? (
+          <p className="text-sm text-white/50 leading-relaxed">
+            Aquí verás los cupones que ya usaste o que vencieron.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {historialCupones.map(c => (
+              <div key={c.codigo} className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 bg-white/[0.05] border border-white/[0.08] opacity-75">
+                <div className="min-w-0">
+                  <p className="text-sm font-mono font-medium text-white/70">{c.codigo}</p>
+                  <p className="text-xs text-white/40 mt-0.5">
+                    {Number(c.descuento_pct)}% · {c.estado_usado === 'usado' ? 'Usado' : 'Vencido'}
+                    {c.fecha_vencimiento ? ` · venció ${new Date(c.fecha_vencimiento).toLocaleDateString('es-CO')}` : ''}
+                  </p>
+                </div>
+                <span className={`shrink-0 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wide ${c.estado_usado === 'usado' ? 'bg-[#657] text-white/60' : 'bg-[#73513A]/60 text-white/60'}`}>
+                  {c.estado_usado === 'usado' ? 'Usado' : 'Vencido'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      )}
 
         {/* IDENTIFICACIÓN */}
         <div className="rounded-2xl p-6 sm:p-8 mb-8 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">

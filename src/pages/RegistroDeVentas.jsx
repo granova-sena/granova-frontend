@@ -22,7 +22,7 @@ function esAdmin() {
   }
 }
 
-const LIMITE = 10
+const LIMITE = 5
 
 function FilaVenta({ v, menuAbierto, setMenuAbierto, confirmarVenta, confirmando }) {
   const esPendiente = (v.estado || '').toLowerCase().startsWith('pend')
@@ -82,29 +82,82 @@ function FilaVenta({ v, menuAbierto, setMenuAbierto, confirmarVenta, confirmando
 
 function FragmentoGrupoVentas({ finca, filas, ...propsFila }) {
   const totalGrupo = filas.reduce((s, f) => s + f.total, 0)
-  const lotes = filas.reduce((grupos, v) => {
-    const clave = v.lote || 'Sin lote'
-    grupos[clave] = grupos[clave] || []
-    grupos[clave].push(v)
-    return grupos
-  }, {})
-  const filasConLotes = Object.entries(lotes).flatMap(([lote, filasLote]) => {
-    const totalLote = filasLote.reduce((s, f) => s + f.total, 0)
-    return [
-      <tr key={`lote-${lote}`} className="bg-emerald-50/60">
-        <td colSpan={8} className="py-1.5 px-5 pl-9 text-xs font-medium text-[#178a64]">
-          ◆ {lote} — {filasLote.length} venta{filasLote.length === 1 ? '' : 's'} · {formatMoney(totalLote)}
-        </td>
-      </tr>,
-      ...filasLote.map((v) => <FilaVenta key={v.factura} v={v} {...propsFila} />),
-    ]
-  })
   return (
     <FilaGrupo
       span={8}
       datos={`${finca} — ${filas.length} venta${filas.length === 1 ? '' : 's'} · ${formatMoney(totalGrupo)}`}
-      filas={filasConLotes}
+      filas={filas.map((v) => <FilaVenta key={v.factura} v={v} {...propsFila} />)}
     />
+  )
+}
+
+function TarjetaVentaMovil({ v, menuAbierto, setMenuAbierto, confirmarVenta, confirmando }) {
+  const esPendiente = (v.estado || '').toLowerCase().startsWith('pend')
+  return (
+    <div className="p-4 flex flex-col gap-1.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
+            {v.cliente.charAt(0)}
+          </div>
+          <div className="min-w-0">
+            <p className="text-gray-800 truncate">{v.cliente}</p>
+            <p className="text-xs text-gray-400 truncate">{v.email}</p>
+          </div>
+        </div>
+        <p className="text-gray-800 font-medium flex-shrink-0">{formatMoney(v.total)}</p>
+      </div>
+      <div>
+        <p className="text-xs text-gray-400">Factura</p>
+        <p className="text-sm text-gray-600">{v.factura}</p>
+      </div>
+      <div>
+        <p className="text-xs text-gray-400">Producto</p>
+        <p className="text-sm text-gray-600">{v.producto}</p>
+      </div>
+      <div>
+        <p className="text-xs text-gray-400">Finca / Lote</p>
+        <p className="text-sm text-gray-600">{v.finca ? <>{v.finca}{v.lote && <>{' · '}Lote {v.lote}</>}</> : '—'}</p>
+      </div>
+      <div>
+        <p className="text-xs text-gray-400">Cantidad</p>
+        <p className="text-sm text-gray-600">{v.cantidad} {v.esMaquina ? 'unidades' : 'kg'}</p>
+      </div>
+      <div>
+        <p className="text-xs text-gray-400">Fecha</p>
+        <p className="text-sm text-gray-600">{formatFecha(v.fecha)}</p>
+      </div>
+      <div className="flex items-center justify-between gap-2 pt-1">
+        <span className="text-xs text-gray-400">Estado</span>
+        {esPendiente ? (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuAbierto(menuAbierto === v.id ? null : v.id)}
+              className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex items-center gap-1 ${estadoStyle(v.estado)}`}
+            >
+              {v.estado} ▾
+            </button>
+            {menuAbierto === v.id && (
+              <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-100 py-1 w-36 z-10">
+                <button
+                  type="button"
+                  onClick={() => confirmarVenta(v.id)}
+                  disabled={confirmando === v.id}
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+                >
+                  {confirmando === v.id ? 'Confirmando...' : 'Confirmado'}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${estadoStyle(v.estado)}`}>
+            {v.estado}
+          </span>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -118,6 +171,7 @@ function RegistroVentas() {
   const [totalFiltrados, setTotalFiltrados] = useState(0)
 
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [mostrarModal, setMostrarModal] = useState(false)
   const [exportando, setExportando] = useState(false)
   const [menuAbierto, setMenuAbierto] = useState(null)
@@ -126,7 +180,7 @@ function RegistroVentas() {
   const cargarResumen = () => {
     api.get('/ventas/resumen')
       .then(res => setResumen(res.data))
-      .catch(err => toast.error('Error al cargar resumen: ' + err.message))
+      .catch(err => setError(err.message))
   }
 
   const cargarVentas = () => {
@@ -137,7 +191,7 @@ function RegistroVentas() {
         setTotalPaginas(res.data.totalPaginas)
         setTotalFiltrados(res.data.totalFiltrados)
       })
-      .catch(err => toast.error('Error al cargar ventas: ' + err.message))
+      .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }
 
@@ -167,7 +221,6 @@ function RegistroVentas() {
       setMenuAbierto(null)
       cargarResumen()
       cargarVentas()
-      toast.success('Venta confirmada')
     } catch (err) {
       toast.error(err.response?.data?.error || 'No se pudo confirmar la venta.')
     } finally {
@@ -199,6 +252,8 @@ function RegistroVentas() {
       setExportando(false)
     }
   }
+
+  if (error) return <p className="text-red-500">Error al cargar ventas: {error}</p>
 
   const stats = resumen ? [
     { label: 'Ventas del mes', value: formatMoney(resumen.ventasDelMes), sub: `${resumen.cambioVentas >= 0 ? '↑ +' : ''}${resumen.cambioVentas}% vs mes anterior`, tono: 'verde', icono: '💰' },
@@ -269,7 +324,7 @@ function RegistroVentas() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <div className="flex justify-end px-1 pb-2 pt-3">
             <button
               type="button"
@@ -336,6 +391,25 @@ function RegistroVentas() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="md:hidden divide-y divide-gray-100 border-t border-gray-100">
+          {loading ? (
+            <p className="py-6 px-4 text-center text-sm text-gray-400">Cargando ventas...</p>
+          ) : ventas.length === 0 ? (
+            <p className="md:hidden py-8 text-center text-sm text-gray-400">No se encontraron ventas. Prueba con otro término de búsqueda o registra una nueva venta.</p>
+          ) : (
+            ventas.map((v) => (
+              <TarjetaVentaMovil
+                key={v.factura}
+                v={v}
+                menuAbierto={menuAbierto}
+                setMenuAbierto={setMenuAbierto}
+                confirmarVenta={confirmarVenta}
+                confirmando={confirmando}
+              />
+            ))
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-5 py-4 border-t border-gray-100">

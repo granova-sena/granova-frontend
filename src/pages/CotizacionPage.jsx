@@ -1,7 +1,9 @@
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCarrito } from '../context/CarritoContext'
 import { API_URL } from '../config'
+import api from '../services/api'
+import LogoGranova from '../components/ui/LogoGranova'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import toast from 'react-hot-toast'
@@ -28,6 +30,10 @@ function CotizacionPage() {
   const navigate = useNavigate()
   const { productos, subtotal, descuentoMonto, total, DESCUENTO, datosCliente, cliente } = useCarrito()
 
+  const [guardando, setGuardando] = useState(false)
+  const [misCotizaciones, setMisCotizaciones] = useState([])
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
+
   const clienteSesion = (() => {
     try {
       return JSON.parse(localStorage.getItem('cliente')) || null
@@ -35,6 +41,64 @@ function CotizacionPage() {
       return null
     }
   })()
+
+  useEffect(() => {
+    if (!clienteSesion) return
+    let activo = true
+    setCargandoHistorial(true)
+    api.get('/cotizaciones')
+      .then(({ data }) => {
+        if (activo && data?.ok) setMisCotizaciones(data.cotizaciones || [])
+      })
+      .catch(() => {
+        if (activo) setMisCotizaciones([])
+      })
+      .finally(() => {
+        if (activo) setCargandoHistorial(false)
+      })
+    return () => { activo = false }
+  }, [])
+
+  const guardarCotizacion = async () => {
+    if (!clienteSesion) {
+      toast.error('Inicia sesión para guardar tu cotización')
+      return
+    }
+    if (productos.length === 0) return
+    setGuardando(true)
+    try {
+      const { data } = await api.post('/cotizaciones', {
+        numero_cotizacion: numero,
+        items: productos.map(p => ({
+          id_producto: p.id,
+          nombre: p.nombre,
+          presentacion: p.presentacion || p.etiqueta_formato || null,
+          cantidad: Number(p.cantidad ?? p.cant ?? 1),
+          precio: Number(p.precio),
+          subtotal: Number(p.precio) * Number(p.cantidad ?? p.cant ?? 1),
+        })),
+        subtotal,
+        descuento: descuentoMonto,
+        total,
+        validez_dias: DIAS_VALIDEZ,
+      })
+      if (data?.ok) {
+        toast.success(`Cotización ${numero} guardada`)
+        api.get('/cotizaciones')
+          .then(({ data: historial }) => {
+            if (historial?.ok) setMisCotizaciones(historial.cotizaciones || [])
+          })
+          .catch(() => {})
+      } else {
+        toast.error(data?.error || 'No se pudo guardar la cotización')
+      }
+    } catch (error) {
+      console.error('Error guardando cotización:', error)
+      toast.error(error?.response?.data?.error || 'No se pudo conectar con el servidor')
+    } finally {
+      setGuardando(false)
+    }
+  }
 
   const infoCliente = {
     nombre: datosCliente?.nombre || clienteSesion?.nombre || '—',
@@ -47,11 +111,9 @@ function CotizacionPage() {
     nit: clienteSesion?.numero_documento || null,
   }
 
-  const { fechaHoy, fechaValida, numero } = useMemo(() => ({
-    fechaHoy: new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }),
-    fechaValida: new Date(Date.now() + DIAS_VALIDEZ * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }),
-    numero: numeroCotizacion(),
-  }), [])
+  const fechaHoy = new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
+  const fechaValida = new Date(Date.now() + DIAS_VALIDEZ * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
+  const numero = numeroCotizacion()
 
   const generarPDF = () => {
     const doc = new jsPDF()
@@ -176,6 +238,23 @@ function CotizacionPage() {
         ← Volver
       </button>
 
+      {productos.length === 0 ? (
+        <div className="max-w-2xl mx-auto bg-[#FDFBF5] rounded-2xl p-10 text-center shadow-2xl">
+          <p className="text-xl font-bold text-[#1a2e1a] mb-2">No hay productos para cotizar</p>
+          <p className="text-sm text-[#3D3D3D]/70 mb-6">
+            Agrega productos a tu carrito para generar la cotización.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/cliente/catalogo')}
+            className="bg-[#6FA98C] text-white text-sm px-6 py-3 rounded-xl hover:bg-[#4F8A70] transition-colors"
+          >
+            Ir al catálogo
+          </button>
+        </div>
+      ) : (
+      <>
+
       {/* ── Documento ── */}
       <div className="max-w-4xl mx-auto bg-[#FDFBF5] rounded-xl overflow-hidden shadow-2xl mb-8">
         {/* Cabecera verde */}
@@ -183,7 +262,7 @@ function CotizacionPage() {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
             <div>
               <div className="flex items-center gap-3">
-                <img src="/logoGranova.jpeg" alt="Granova" className="w-14 h-14 object-contain rounded bg-white p-1" />
+                <LogoGranova tamano="lg" fondo="blanco" mostrarTexto={false} />
                 <div>
                   <p className="text-2xl font-bold text-white tracking-widest">GRANOVA</p>
                   <p className="text-[11px] text-white/60">{INFO_GRANOVA.lema}</p>
@@ -296,12 +375,72 @@ function CotizacionPage() {
         </button>
         <button
           type="button"
+          onClick={guardarCotizacion}
+          disabled={guardando || productos.length === 0}
+          className="flex-1 bg-[#B8860B] text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#9d740a] transition-colors disabled:opacity-60"
+        >
+          💾 {guardando ? 'Guardando...' : 'Guardar cotización'}
+        </button>
+        <button
+          type="button"
           onClick={() => navigate('/cliente/configurar-pedido')}
           className="flex-1 bg-[#6FA98C] text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#4F8A70] transition-colors"
         >
           Confirmar pedido
         </button>
       </div>
+
+      {/* ── Historial ── */}
+      {clienteSesion && (
+        <div className="max-w-4xl mx-auto mt-10 mb-4">
+          <p className="text-white font-semibold text-sm mb-3">📂 Mis cotizaciones guardadas</p>
+          {cargandoHistorial ? (
+            <div className="bg-white/[0.05] border border-white/10 rounded-xl p-6 text-white/50 text-sm">Cargando…</div>
+          ) : misCotizaciones.length === 0 ? (
+            <div className="bg-white/[0.05] border border-white/10 rounded-xl p-6 text-white/50 text-sm">
+              Aún no tienes cotizaciones guardadas.
+            </div>
+          ) : (
+            <div className="bg-white/[0.05] border border-white/10 rounded-xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-white/[0.08]">
+                    <th className="text-left px-4 py-3 font-semibold text-white/80">N°</th>
+                    <th className="text-left px-4 py-3 font-semibold text-white/80">Fecha</th>
+                    <th className="text-right px-4 py-3 font-semibold text-white/80">Total</th>
+                    <th className="text-right px-4 py-3 font-semibold text-white/80">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {misCotizaciones.map((c) => (
+                    <tr key={c.id_cotizacion} className="border-t border-white/10">
+                      <td className="px-4 py-3 text-white/90">{c.numero_cotizacion || `COT-${c.id_cotizacion}`}</td>
+                      <td className="px-4 py-3 text-white/60">
+                        {new Date(c.creada_en).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-4 py-3 text-right text-white/90">
+                        ${Number(c.total).toLocaleString('es-CO')}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={
+                          c.estado === 'aceptada' ? 'text-emerald-300'
+                          : c.estado === 'vencida' ? 'text-amber-300'
+                          : c.estado === 'anulada' ? 'text-red-300'
+                          : 'text-sky-300'
+                        }>
+                          {c.estado}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+      </>
+      )}
     </div>
   )
 }

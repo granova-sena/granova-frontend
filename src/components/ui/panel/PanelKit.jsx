@@ -111,7 +111,7 @@ export function Paginado({ pagina, totalPaginas, onChange }) {
 }
 
 /* Fragmento de agrupación de tablas (fila resumen col-span completo) */
-export function FilaGrupo({ datos, span, filas }) {
+export function FilaGrupo({ datos, span, filas, nombre }) {
   return (
     <Fragment>
       <tr className="bg-gray-50/70">
