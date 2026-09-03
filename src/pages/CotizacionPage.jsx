@@ -1,9 +1,11 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useParams, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useCarrito } from '../context/CarritoContext'
 import { API_URL } from '../config'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import toast from 'react-hot-toast'
+import { guardarCotizacion,obtenerCotizacion, comprarCotizacion} from '../services/cotizacionApi'
 
 const INFO_GRANOVA = {
   nombre: 'GRANOVA',
@@ -26,7 +28,112 @@ function numeroCotizacion() {
 function CotizacionPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { id } = useParams() 
   const { productos, subtotal: subtotalCarrito, descuentoMonto: descuentoMontoCarrito, total: totalCarrito, DESCUENTO, datosCliente, cliente, sincronizarCarrito } = useCarrito()
+  const [cotizacionGuardadaDatos, setCotizacionGuardadaDatos] = useState(null)
+  const [cargandoCotizacion, setCargandoCotizacion] = useState(!!id)
+  const [errorCarga, setErrorCarga] = useState(null)
+  const [guardando, setGuardando] = useState(false)
+  const [cotizacionGuardada, setCotizacionGuardada] = useState(false)
+  const [metodoPago, setMetodoPago] = useState('nequi')
+  const [comprando, setComprando] = useState(false)
+
+  const METODOS_PAGO_COTIZACION = [
+    { id: 'nequi', nombre: 'Nequi', icono: '📱' },
+    { id: 'tarjeta', nombre: 'Tarjeta', icono: '💳' },
+    { id: 'pse', nombre: 'PSE', icono: '🏦' },
+    { id: 'contra_entrega', nombre: 'Pago contra entrega', icono: '🚚' },
+
+  ]
+  async function manejarComprarCotizacion() {
+  const direccion = datosCliente?.direccion || clienteSesion?.direccion
+  const ciudad = datosCliente?.ciudad || clienteSesion?.ciudad
+
+  if (!direccion || !ciudad) {
+    toast.error('Necesitamos tu dirección de envío para procesar la compra')
+    return
+  }
+
+  setComprando(true)
+  try {
+    const resultado = await comprarCotizacion(cotizacionGuardadaDatos.id_cotizacion, {
+      metodo_pago: metodoPago,
+      direccion_envio: direccion,
+      ciudad_envio: ciudad,
+    })
+    toast.success('¡Pedido creado! Ya puedes continuar con el pago')
+    navigate(`/cliente/pedidos/${resultado.id_pedido}`)
+  } catch (error) {
+    if (error.response?.status === 409) {
+      const { totalCotizado, totalActual } = error.response.data
+      const confirmar = window.confirm(
+        `El precio cambió de $${totalCotizado.toLocaleString('es-CO')} a $${totalActual.toLocaleString('es-CO')}. ¿Deseas continuar con el precio actual?`
+      )
+      if (confirmar) {
+        try {
+          const resultado = await comprarCotizacion(cotizacionGuardadaDatos.id_cotizacion, {
+            metodo_pago: metodoPago,
+            direccion_envio: direccion,
+            ciudad_envio: ciudad,
+            confirmarCambioPrecio: true,
+          })
+          toast.success('¡Pedido creado! Ya puedes continuar con el pago')
+          navigate(`/cliente/pedidos/${resultado.id_pedido}`)
+        } catch (segundoError) {
+          toast.error(segundoError.response?.data?.mensaje ?? 'No se pudo procesar la compra')
+        } finally {
+          setComprando(false)
+        }
+      } else {
+        setComprando(false)
+      }
+      return
+    }
+    toast.error(error.response?.data?.mensaje ?? 'No se pudo procesar la compra')
+    setComprando(false)
+  }
+}
+ 
+
+  useEffect(() => {
+    if (!id) return
+
+    let cancelado = false
+    async function cargar() {
+      try {
+        setCargandoCotizacion(true)
+        const datos = await obtenerCotizacion(id)
+        if (!cancelado) setCotizacionGuardadaDatos(datos)
+      } catch (err) {
+        console.error('Error cargando cotización:', err) 
+        if (!cancelado) setErrorCarga(err.response?.data?.mensaje ?? 'No se pudo cargar la cotización')
+      } finally {
+        if (!cancelado) setCargandoCotizacion(false)
+      }
+    }
+    cargar()
+    return () => { cancelado = true }
+  }, [id])
+
+  async function manejarGuardarCotizacion() {
+  setGuardando(true)
+  try {
+    await guardarCotizacion({
+      items,
+      subtotal,
+      descuentoMonto,
+      total,
+      descuentoPct,
+      descuentoFuente: estadoCotizacion.descuentoFuente ?? null,
+    })
+    setCotizacionGuardada(true)
+    toast.success('Cotización guardada. Podrás verla en "Mis cotizaciones"')
+  } catch (error) {
+    const mensaje = error.response?.data?.mensaje ?? 'No se pudo guardar la cotizacion'
+    toast.error(mensaje)}
+    finally{
+      setGuardando(false)
+    }}
 
   const clienteSesion = (() => {
     try {
@@ -49,20 +156,53 @@ function CotizacionPage() {
 
   const fechaHoy = new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
   const fechaValida = new Date(Date.now() + DIAS_VALIDEZ * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
-  const numero = numeroCotizacion()
 
   // Cotización generada desde el simulador: llega por estado de navegación y
   // refleja EXACTAMENTE lo que se armó ahí (sin mezclar con el carrito).
   // Si se abre directa (sin estado), se usa el carrito como respaldo.
-  const estadoCotizacion = location.state || {}
-  const items = Array.isArray(estadoCotizacion.items) && estadoCotizacion.items.length > 0
+
+ const estadoCotizacion = location.state || {}
+
+const items = cotizacionGuardadaDatos?.productos
+  ? cotizacionGuardadaDatos.productos.map((p) => ({
+      id: p.id_producto,
+      nombre: p.nombre,
+      presentacion: p.presentacion,
+      etiqueta_formato: p.etiqueta_formato,
+      precio: Number(p.precio_unitario),
+      cantidad: p.cantidad,
+      id_formato: p.id_formato,
+      peso_kg: p.peso_kg,
+      promo_pct: p.promo_pct,
+      iva_pct: p.iva_pct,
+    }))
+  : Array.isArray(estadoCotizacion.items) && estadoCotizacion.items.length > 0
     ? estadoCotizacion.items
     : productos
 
-  const subtotal = estadoCotizacion.subtotal ?? subtotalCarrito
-  const descuentoMonto = estadoCotizacion.descuentoMonto ?? descuentoMontoCarrito
-  const total = estadoCotizacion.total ?? totalCarrito
-  const descuentoPct = estadoCotizacion.descuentoPct ?? (DESCUENTO * 100)
+
+
+  const subtotal = cotizacionGuardadaDatos ? Number(cotizacionGuardadaDatos.subtotal) : estadoCotizacion.subtotal ?? subtotalCarrito
+  const descuentoMonto = cotizacionGuardadaDatos ? Number(cotizacionGuardadaDatos.descuento) : estadoCotizacion.descuentoMonto ?? descuentoMontoCarrito
+  const total = cotizacionGuardadaDatos ? Number(cotizacionGuardadaDatos.total) : estadoCotizacion.total ?? totalCarrito
+  const descuentoPct = cotizacionGuardadaDatos ? Number(cotizacionGuardadaDatos.descuento_pct) : estadoCotizacion.descuentoPct ?? (DESCUENTO * 100)
+  const numero = cotizacionGuardadaDatos?.numero_cotizacion ?? numeroCotizacion()
+
+  if (cargandoCotizacion) {
+  return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1a0a' }}>
+      <p className="text-white/50 text-sm">Cargando cotización...</p>
+    </div>
+  )
+}
+
+if (errorCarga) {
+  return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1a0a' }}>
+      <p className="text-[#D85A30] text-sm">{errorCarga}</p>
+    </div>
+  )
+}
 
   // Sin productos (ni de simulación ni de carrito) no hay documento que mostrar.
   if (items.length === 0) {
@@ -86,6 +226,7 @@ function CotizacionPage() {
       </div>
     )
   }
+
 
   // Confirma la compra de ESTA cotización: sincroniza sus ítems al carrito
   // (reemplazando lo que hubiera) para que el checkout confirme exactamente esto.
@@ -178,41 +319,58 @@ function CotizacionPage() {
   }
 
   const enviarPorCorreo = async () => {
-    if (!clienteSesion?.email) {
-      toast.error('No hay sesión activa')
-      return
-    }
-    try {
-      const res = await fetch(`${API_URL}/api/correo/cotizacion`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: clienteSesion.email,
-          nombre: clienteSesion.nombre,
-          numero,
-          productos: items.map(p => ({
-            nombre: p.nombre,
-            presentacion: p.presentacion,
-            cantidad: p.cantidad ?? p.cant ?? 1,
-            precio: p.precio,
-          })),
-          subtotal,
-          descuento: descuentoMonto,
-          total,
-        }),
-      })
-      const json = await res.json()
-      if (json.ok) {
-        toast.success('Cotización enviada a ' + clienteSesion.email)
-      } else {
-        toast.error(json.mensaje)
-      }
-    } catch (error) {
-      console.error('Error en CotizacionPage:', error)
-      toast.error('No se pudo conectar con el servidor')
-    }
+  if (!clienteSesion?.email) {
+    toast.error('No hay sesión activa')
+    return
   }
 
+  try {
+    // Si aún no está guardada, la guardamos primero para tener un número real
+    let numeroReal = numero
+    if (!cotizacionGuardadaDatos) {
+      const cotizacionNueva = await guardarCotizacion({
+        items,
+        subtotal,
+        descuentoMonto,
+        total,
+        descuentoPct,
+        descuentoFuente: estadoCotizacion.descuentoFuente ?? null,
+      })
+      numeroReal = cotizacionNueva.numero_cotizacion
+      setCotizacionGuardadaDatos(cotizacionNueva) // así el botón "Guardar" también refleja que ya se guardó
+      setCotizacionGuardada(true)
+    }
+
+    const res = await fetch(`${API_URL}/api/correo/cotizacion`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: clienteSesion.email,
+        nombre: clienteSesion.nombre,
+        numero: numeroReal,
+        id_cotizacion: cotizacionGuardadaDatos?.id_cotizacion,
+        productos: items.map(p => ({
+          nombre: p.nombre,
+          presentacion: p.presentacion,
+          cantidad: p.cantidad ?? p.cant ?? 1,
+          precio: p.precio,
+        })),
+        subtotal,
+        descuento: descuentoMonto,
+        total,
+      }),
+    })
+    const json = await res.json()
+    if (json.ok) {
+      toast.success('Cotización enviada a ' + clienteSesion.email)
+    } else {
+      toast.error(json.mensaje)
+    }
+  } catch (error) {
+    console.error('Error en CotizacionPage:', error)
+    toast.error('No se pudo conectar con el servidor')
+  }
+}
   return (
     <div className="min-h-screen px-4 sm:px-8 py-6" style={{ background: '#0a1a0a' }}>
       <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#9DC9B4] text-sm mb-6 hover:underline">
@@ -320,10 +478,41 @@ function CotizacionPage() {
           </div>
         </div>
       </div>
+        {cotizacionGuardadaDatos && cotizacionGuardadaDatos.estado === 'activa' && (
+  <div className="max-w-4xl mx-auto mb-6">
+    <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl p-5 sm:p-6">
+      <h3 className="text-sm font-semibold text-white mb-4">Selecciona tu método de pago</h3>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {METODOS_PAGO_COTIZACION.map((m) => (
+          <button
+            type="button"
+            key={m.id}
+            onClick={() => setMetodoPago(m.id)}
+            className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-center transition-colors
+              ${metodoPago === m.id ? 'border-[#6FA98C] bg-[#6FA98C]/10' : 'border-white/15 bg-white/[0.04] hover:border-[#6FA98C]/50'}`}
+          >
+            <span className="text-xl">{m.icono}</span>
+            <span className="text-xs font-medium text-white">{m.nombre}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Botones */}
       <div className="max-w-4xl mx-auto flex flex-col sm:flex-row gap-4">
-        <button
+        {estadoCotizacion.desdeSimulador && (
+    <button
+      type="button"
+      onClick={manejarGuardarCotizacion}
+      disabled={guardando || cotizacionGuardada}
+      className="flex-1 border border-white/15 bg-white/[0.08] backdrop-blur-xl text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/[0.14] transition-colors disabled:opacity-50"
+    >
+      {cotizacionGuardada ? '✅ Guardada' : guardando ? 'Guardando...' : '💾 Guardar cotización'}
+    </button>
+  )}
+      <button
           type="button"
           onClick={enviarPorCorreo}
           className="flex-1 border border-white/15 bg-white/[0.08] backdrop-blur-xl text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/[0.14] transition-colors"
@@ -337,13 +526,27 @@ function CotizacionPage() {
         >
           📄 Descargar PDF
         </button>
-        <button
-          type="button"
-          onClick={confirmarPedidoDesdeCotizacion}
-          className="flex-1 bg-[#6FA98C] text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#4F8A70] transition-colors"
-        >
-          Confirmar pedido
-        </button>
+      {cotizacionGuardadaDatos && cotizacionGuardadaDatos.estado === 'activa' ? (
+  <button type="button" onClick={manejarComprarCotizacion}
+            className="flex-1 border border-white/15 bg-white/[0.08] backdrop-blur-xl text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/[0.14] transition-colors"
+ disabled={comprando} >
+    {comprando ? 'Procesando...' : '🛒 Comprar esta cotización'}
+  </button>
+) : cotizacionGuardadaDatos && cotizacionGuardadaDatos.estado === 'comprada' ? (
+  <button
+    type="button"
+    onClick={() => navigate(`/cliente/pedidos/${cotizacionGuardadaDatos.id_pedido}`)}
+    className="flex-1 bg-[#6FA98C] text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#4F8A70] transition-colors"
+  >
+    Ver mi pedido
+  </button>
+) : (
+  <button type="button" onClick={confirmarPedidoDesdeCotizacion} 
+      className="flex-1 bg-[#6FA98C] text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#4F8A70] transition-colors"
+>
+    Confirmar pedido
+  </button>
+)}
       </div>
     </div>
   )
