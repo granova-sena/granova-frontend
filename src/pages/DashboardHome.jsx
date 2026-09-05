@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import api from '../services/api'
 import { formatMoney } from '../utils/format'
 import { PageHeader, StatCard, PanelCard } from '../components/ui/panel/PanelKit'
@@ -41,6 +42,20 @@ function DashboardHome() {
       setCargando(false)
     })
   }, [])
+
+  const alertasVistas = useRef(sessionStorage.getItem('alertas_reportes_toast_vistos') === '1')
+  useEffect(() => {
+    if (alertasVistas.current || alertasEmpleados.length === 0) return
+    alertasVistas.current = true
+    sessionStorage.setItem('alertas_reportes_toast_vistos', '1')
+    alertasEmpleados.slice(0, 3).forEach((a) => {
+      toast(`${a.nombre} ${a.apellido} llegó a ${a.reportes} reportes`, {
+        icon: '⚠️',
+        duration: 6000,
+        style: { background: '#FEE2E2', color: '#B91C1C', fontWeight: 500 },
+      })
+    })
+  }, [alertasEmpleados])
 
   const saludo = () => {
     const h = hora.getHours()
@@ -102,29 +117,6 @@ function DashboardHome() {
         titulo={`${saludo()}, ${usuario?.nombre || 'Administrador'} 👋`}
         subtitulo={`${hora.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}, ${hora.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} · Bienvenido al panel de Granova`}
       />
-
-      {/* Alerta: empleados con 3+ reportes acumulados */}
-      {alertasEmpleados.length > 0 && (
-        <div className="panel-come rounded-2xl p-4 bg-red-50 border border-red-200 flex flex-col gap-2">
-          {alertasEmpleados.map((a) => (
-            <button
-              key={a.id_usuario}
-              onClick={() => navigate('/dashboard/empleados')}
-              className="flex items-start gap-3 text-left"
-            >
-              <span className="text-red-500 mt-0.5">⚠</span>
-              <div>
-                <p className="text-sm font-medium text-red-700">
-                  {a.nombre} {a.apellido} llegó a {a.reportes} reportes
-                </p>
-                {a.ultimo_motivo && (
-                  <p className="text-xs text-red-500/80 mt-0.5">Último motivo: "{a.ultimo_motivo}"</p>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Tarjetas de resumen */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
