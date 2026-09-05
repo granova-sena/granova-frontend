@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { formatMoney } from '../utils/format'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
+import { toastErrorUnico } from '../utils/toastError'
 import { PageHeader, PanelCard, PanelSkeleton, EmptyState, BotonPrimario, Paginado } from '../components/ui/panel/PanelKit'
 
 function authHeaders() {
@@ -11,9 +13,9 @@ function authHeaders() {
 }
 
 function CosechasPlaneadas() {
+  const navigate = useNavigate()
   const [cosechas, setCosechas] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [confirmacion, setConfirmacion] = useState({ abierto: false, mensaje: '', accion: null, cosecha: null })
   const [pagina, setPagina] = useState(1)
@@ -22,39 +24,46 @@ function CosechasPlaneadas() {
     setLoading(true)
     api.get('/inventario/cosechas?estado=planeada', { headers: authHeaders() })
       .then((res) => setCosechas(res.data.cosechas))
-      .catch((err) => setError(err.response?.data?.error || err.message))
+      .catch((err) => toastErrorUnico(err.response?.data?.error || err.message))
       .finally(() => setLoading(false))
   }
 
   useEffect(() => { cargar() }, [])
 
-  async function confirmarLlegada() {
-    const cosecha = confirmacion.cosecha
+  async function confirmarLlegada(cosecha) {
     setConfirmacion({ abierto: false, mensaje: '', accion: null, cosecha: null })
     if (!cosecha) return
     setGuardando(true)
     try {
       await api.patch(`/inventario/cosechas/${cosecha.id_cosecha}/confirmar`, {}, { headers: authHeaders() })
-      cargar()
+      // Overlay sigue visible: espera 1.5s para que el usuario vea la animación
+      await new Promise((r) => setTimeout(r, 1500))
       toast.success('Café sumado al catálogo')
     } catch (err) {
+      await new Promise((r) => setTimeout(r, 1500))
       toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
+      cargar()
     }
   }
 
-  async function cancelarPlan() {
-    const cosecha = confirmacion.cosecha
+  async function cancelarPlan(cosecha) {
     setConfirmacion({ abierto: false, mensaje: '', accion: null, cosecha: null })
     if (!cosecha) return
     setGuardando(true)
     try {
       await api.patch(`/inventario/cosechas/${cosecha.id_cosecha}/cancelar`, {}, { headers: authHeaders() })
-      cargar()
-      toast.success('Plan cancelado')
+      toast.success('Plan eliminado — kg devueltos al lote')
+      // Restablece al control de inventario en la finca/lote de esa cosecha
+      if (cosecha.id_finca) {
+        navigate(`/panel-empleado?finca=${cosecha.id_finca}&lote=${cosecha.id_lote ?? ''}`)
+      } else {
+        cargar()
+      }
     } catch (err) {
       toast.error(err.response?.data?.error || err.message)
+      cargar()
     } finally {
       setGuardando(false)
     }
@@ -78,13 +87,6 @@ function CosechasPlaneadas() {
         titulo="Cosechas planeadas"
         subtitulo="Aquí verás las cosechas planeadas. Nada se suma al catálogo hasta que se confirme."
       />
-
-      {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2 flex justify-between items-center panel-come">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400">✕</button>
-        </div>
-      )}
 
       {cosechas.length === 0 ? (
         <EmptyState
@@ -126,10 +128,10 @@ function CosechasPlaneadas() {
                 <button
                   type="button"
                   disabled={guardando}
-                  onClick={() => setConfirmacion({ abierto: true, mensaje: '¿Cancelar este plan? No se pierde nada porque todavía no se aplicó a la DB.', accion: cancelarPlan, cosecha: c })}
+                  onClick={() => setConfirmacion({ abierto: true, mensaje: `¿Eliminar este plan? Como el café aún no se procesó, se devolverá a ${c.finca_nombre} / Lote ${c.codigo_lote} en el control de inventario.`, accion: cancelarPlan, cosecha: c })}
                   className="flex-1 text-xs py-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition disabled:opacity-50"
                 >
-                  Cancelar plan
+                  Eliminar plan
                 </button>
               </div>
             </PanelCard>
@@ -148,9 +150,21 @@ function CosechasPlaneadas() {
         titulo="¿Estás seguro?"
         mensaje={confirmacion.mensaje}
         confirmarTexto="Confirmar"
-        onConfirmar={() => confirmacion.accion?.()}
+        onConfirmar={() => confirmacion.accion?.(confirmacion.cosecha)}
         onCancelar={() => setConfirmacion({ abierto: false, mensaje: '', accion: null, cosecha: null })}
       />
+
+      {guardando && (
+        <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center gap-4 bg-black/40 anim-overlay">
+          <div className="flex flex-col items-center gap-3 panel-card bg-white rounded-2xl border border-gray-200 px-8 py-8 shadow-xl anim-pop">
+            <div
+              className="w-12 h-12 rounded-full border-4 border-[#1D9E75]/25 border-t-[#1D9E75] animate-spin"
+            />
+            <p className="text-sm font-medium text-admin-heading">Confirmando llegada…</p>
+            <p className="text-xs text-gray-500 -mt-2">Sumando el café al catálogo</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

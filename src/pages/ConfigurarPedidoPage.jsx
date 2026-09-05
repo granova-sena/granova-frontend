@@ -278,8 +278,11 @@ function ConfigurarPedidoPage() {
       <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
 
         {/* Volver */}
-        <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#9DC9B4] text-sm mb-6 hover:underline">
-          ← Volver
+        <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/15 text-[#9DC9B4] text-sm mb-6 hover:bg-white/[0.06] active:scale-[0.97] transition">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
+          </svg>
+          Volver
         </button>
 
         {/* Indicador de pasos */}
@@ -734,9 +737,12 @@ function ConfigurarPedidoPage() {
             <button
               type="button"
               onClick={pasoActual === 0 ? () => navigate(-1) : pasoAnterior}
-              className="w-full sm:w-auto border border-white/15 bg-white/[0.06] text-white/70 text-sm px-6 sm:px-8 py-3 rounded-xl hover:bg-white/10 transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-white/15 bg-white/[0.06] text-white/70 text-sm px-6 sm:px-8 py-3 rounded-xl hover:bg-white/10 transition-colors"
             >
-              ← Volver
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
+              </svg>
+              Volver
             </button>
             <button
               type="button"

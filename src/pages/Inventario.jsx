@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import { toastErrorUnico } from '../utils/toastError'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import { existeDuplicado } from '../utils/validacion'
 import { PageHeader, StatCard, PanelCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
@@ -22,7 +23,6 @@ function formatFecha(fecha) {
 function Inventario() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
 
   const [showModal, setShowModal] = useState(false)
   const [menuOpenId, setMenuOpenId] = useState(null)
@@ -36,7 +36,7 @@ function Inventario() {
     setLoading(true)
     api.get('/usuarios')
       .then(res => setUsers(res.data.usuarios))
-      .catch(err => setError(err.response?.data?.error || err.message))
+      .catch(err => toastErrorUnico(err.response?.data?.error || err.message))
       .finally(() => setLoading(false))
   }
 
@@ -125,12 +125,6 @@ function Inventario() {
           </BotonPrimario>
         }
       />
-
-      {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 panel-come">
-          Error al cargar usuarios: {error}
-        </div>
-      )}
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">

@@ -28,10 +28,10 @@ export function PageHeader({ titulo, subtitulo, acciones, className = '' }) {
 }
 
 /* Tarjeta de estadística con ícono, valor grande y sub-línea */
-export function StatCard({ icono, label, value, sub, tono = 'verde', delay = '' }) {
+export function StatCard({ icono, label, value, sub, tono = 'verde', delay = '', animacion = 'panel-come' }) {
   const t = TONOS[tono] || TONOS.verde
   return (
-    <div className={`panel-card panel-come bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4 ${delay}`}>
+    <div className={`panel-card ${animacion} bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4 ${delay}`}>
       <div
         className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl"
         style={{ background: t.bg, color: t.color }}
@@ -133,6 +133,22 @@ export function BotonPrimario({ children, className = '', ...rest }) {
       {...rest}
     >
       {children}
+    </button>
+  )
+}
+
+/* Botón de volver / retroceder con flecha grande */
+export function BotonVolver({ onClick, texto = 'Volver', className = '' }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 active:scale-[0.97] transition ${className}`}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+        <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
+      </svg>
+      {texto}
     </button>
   )
 }

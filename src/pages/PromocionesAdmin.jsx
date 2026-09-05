@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
+import toast from 'react-hot-toast'
+import { toastErrorUnico } from '../utils/toastError'
 import { PageHeader, PanelCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
 import { bloquearEntero, normalizarEntero, normalizarTexto } from '../utils/validacion'
 
@@ -9,7 +11,6 @@ function PromocionesAdmin() {
   const [promos, setPromos] = useState([])
   const [productos, setProductos] = useState([])
   const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [mostrarForm, setMostrarForm] = useState(false)
   const [editando, setEditando] = useState(null) // promo en edición (null = creando)
@@ -32,7 +33,7 @@ function PromocionesAdmin() {
         setPromos(p.data.data || [])
         setProductos((prod.data.data || []).filter((x) => x.estado === 'activo'))
       })
-      .catch((err) => setError(err.response?.data?.mensaje || err.message))
+      .catch((err) => toastErrorUnico(err.response?.data?.mensaje || err.message))
       .finally(() => setCargando(false))
   }
 
@@ -74,24 +75,23 @@ function PromocionesAdmin() {
     e.preventDefault()
     const descuento = Number(form.valor_descuento)
     if (!form.nombre.trim()) {
-      setError('El nombre de la promoción es obligatorio')
+      toast.error('El nombre de la promoción es obligatorio')
       return
     }
     if (!Number.isFinite(descuento) || descuento < 1 || descuento > 100) {
-      setError('El % de descuento debe estar entre 1 y 100')
+      toast.error('El % de descuento debe estar entre 1 y 100')
       return
     }
     if (!form.fecha_fin) {
-      setError('La fecha de fin es obligatoria')
+      toast.error('La fecha de fin es obligatoria')
       return
     }
     const esCierre = form.estado === 'finalizada' || form.estado === 'inactiva'
     if (!esCierre && new Date(form.fecha_fin) < new Date(new Date().toDateString())) {
-      setError('La fecha de fin no puede estar en el pasado')
+      toast.error('La fecha de fin no puede estar en el pasado')
       return
     }
     setGuardando(true)
-    setError(null)
     try {
       if (editando) {
         await api.patch(`/admin/promociones/${editando.id_promocion}`, {
@@ -112,7 +112,7 @@ function PromocionesAdmin() {
       abrirNueva()
       cargar()
     } catch (err) {
-      setError(err.response?.data?.mensaje || 'No se pudo guardar la promoción')
+      toast.error(err.response?.data?.mensaje || 'No se pudo guardar la promoción')
     } finally {
       setGuardando(false)
     }
@@ -127,13 +127,6 @@ function PromocionesAdmin() {
           <BotonPrimario onClick={abrirNueva}>+ Nueva promoción</BotonPrimario>
         )}
       />
-
-      {error && (
-        <div className="panel-come text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 flex justify-between">
-          <span>{error}</span>
-          <button type="button" onClick={() => setError(null)} className="text-red-400">✕</button>
-        </div>
-      )}
 
       {/* Formulario */}
       {mostrarForm && (

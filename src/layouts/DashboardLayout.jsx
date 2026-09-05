@@ -566,7 +566,9 @@ function DashboardLayout() {
               </div>
             </div>
 
+            <div key={location.pathname} className="panel-stage">
             <Outlet />
+          </div>
           </main>
 
         </div>

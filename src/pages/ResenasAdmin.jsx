@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
+import toast from 'react-hot-toast'
+import { toastErrorUnico } from '../utils/toastError'
 import { PageHeader, PanelCard, PanelSkeleton, EmptyState, Paginado } from '../components/ui/panel/PanelKit'
 
 // ── ADMIN: MODERACIÓN DE RESEÑAS ───────────────────────────
@@ -8,7 +10,6 @@ import { PageHeader, PanelCard, PanelSkeleton, EmptyState, Paginado } from '../c
 function ResenasAdmin() {
   const [resenas, setResenas] = useState([])
   const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState(null)
   const [procesando, setProcesando] = useState(null)
   const [filtro, setFiltro] = useState('visibles') // visibles | ocultas
   const [pagina, setPagina] = useState(1)
@@ -17,7 +18,7 @@ function ResenasAdmin() {
     setCargando(true)
     api.get('/admin/resenas')
       .then((res) => setResenas(res.data.data || []))
-      .catch((err) => setError(err.response?.data?.mensaje || err.message))
+      .catch((err) => toastErrorUnico(err.response?.data?.mensaje || err.message))
       .finally(() => setCargando(false))
   }
 
@@ -29,7 +30,7 @@ function ResenasAdmin() {
       await api.patch(`/admin/resenas/${r.id_resena}/visibilidad`, { visible })
       setResenas((prev) => prev.map((x) => (x.id_resena === r.id_resena ? { ...x, visible } : x)))
     } catch (err) {
-      setError(err.response?.data?.mensaje || 'No se pudo actualizar la reseña')
+      toast.error(err.response?.data?.mensaje || 'No se pudo actualizar la reseña')
     } finally {
       setProcesando(null)
     }
@@ -45,13 +46,6 @@ function ResenasAdmin() {
         titulo="Moderación de reseñas"
         subtitulo="Las reseñas ocultas dejan de verse en el catálogo y en los foros del cliente."
       />
-
-      {error && (
-        <div className="panel-come text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 flex justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400">✕</button>
-        </div>
-      )}
 
       <div className="flex items-center gap-2">
         {[['visibles', 'Visibles'], ['ocultas', 'Ocultas']].map(([val, label]) => (

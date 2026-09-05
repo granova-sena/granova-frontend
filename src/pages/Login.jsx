@@ -198,9 +198,12 @@ function Login() {
       <button
         type="button"
         onClick={() => navigate('/')}
-        className="absolute top-6 left-6 z-20 flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition"
+        className="absolute top-6 left-6 z-20 inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/15 text-white/50 text-sm hover:bg-white/[0.06] hover:text-white active:scale-[0.97] transition"
       >
-        ← Volver
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
+        </svg>
+        Volver
       </button>
 
       <div

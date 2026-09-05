@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '../services/api'
 import { PageHeader, StatCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
 import { normalizarNumerico } from '../utils/validacion'
+import { toastErrorUnico } from '../utils/toastError'
 
 // Bloquea letras, símbolos y notación científica (e/+/-) en inputs numéricos.
 function bloquearNoNumerico(e) {
@@ -39,7 +40,6 @@ function AlertasStock() {
   const [resumen, setResumen] = useState(null)
   const [alertas, setAlertas] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
 
   const [productoModal, setProductoModal] = useState(null)
   const [cantidad, setCantidad] = useState('')
@@ -49,11 +49,11 @@ function AlertasStock() {
   const cargarDatos = () => {
     api.get('/alertas/resumen')
       .then(res => setResumen(res.data))
-      .catch(err => setError(err.message))
+      .catch(err => toastErrorUnico(err.message))
 
     api.get('/alertas/listado')
       .then(res => setAlertas(res.data.alertas))
-      .catch(err => setError(err.message))
+      .catch(err => toastErrorUnico(err.message))
       .finally(() => setLoading(false))
   }
 
@@ -88,14 +88,6 @@ function AlertasStock() {
     } finally {
       setGuardando(false)
     }
-  }
-
-  if (error) {
-    return (
-      <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
-        Error al cargar alertas: {error}
-      </div>
-    )
   }
 
   const stats = resumen ? [

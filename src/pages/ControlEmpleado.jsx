@@ -1,10 +1,12 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import api from '../services/api'
 import { formatMoney } from '../utils/format'
 import ProductoModal from '../components/ProductoModal'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
-import { PageHeader, StatCard, PanelCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
+import { toastErrorUnico } from '../utils/toastError'
+import { PageHeader, StatCard, PanelCard, PanelSkeleton, EmptyState, BotonPrimario, BotonVolver } from '../components/ui/panel/PanelKit'
 import { bloquearNoNumerico, bloquearEntero, normalizarEntero, normalizarNumerico, normalizarCoordenada, normalizarTexto } from '../utils/validacion'
 
 function authHeaders() {
@@ -42,15 +44,17 @@ function coincideAproximado(texto, query) {
 const kgDisponibleDe = (lote) => lote.cantidad_kg - lote.kg_perdido - lote.kg_en_proceso
 
 function ControlEmpleado() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [fincas, setFincas] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [eliminandoProducto, setEliminandoProducto] = useState(null)
   const [mensaje, setMensaje] = useState(null)
 
   const [paso, setPaso] = useState(1)
   const [fincaId, setFincaId] = useState(null)
+  const [loteDestacado, setLoteDestacado] = useState(null)
+  const loteDestacadoRef = useRef(null)
   const [busquedaFinca, setBusquedaFinca] = useState('')
   const [busquedaLote, setBusquedaLote] = useState('')
 
@@ -74,20 +78,42 @@ function ControlEmpleado() {
 
   const [editandoPerdida, setEditandoPerdida] = useState(null)
   const [formPerdida, setFormPerdida] = useState({ kg_perdido: '' })
-  const [loteLiberar, setLoteLiberar] = useState(null)
-  const [kgLiberar, setKgLiberar] = useState('')
   const [loteEvento, setLoteEvento] = useState(null)
   const [formEvento, setFormEvento] = useState({ tipo_evento: 'cosecha', descripcion: '', ubicacion: '' })
+  const [validacionPerdidas, setValidacionPerdidas] = useState(null)
 
   function cargar() {
     setLoading(true)
     api.get('/inventario/por-finca', { headers: authHeaders() })
-      .then((res) => setFincas(res.data.fincas || []))
-      .catch((err) => setError(err.response?.data?.error || err.message))
+      .then((res) => {
+        const nuevas = res.data.fincas || []
+        setFincas(nuevas)
+        // Si venimos de eliminar una cosecha llegamos con ?finca=<id>&lote=<id>
+        // para restablecer al control de inventario marcando ese lote.
+        const fincaParam = searchParams.get('finca')
+        const loteParam = searchParams.get('lote')
+        if (fincaParam) {
+          const id = Number(fincaParam)
+          if (nuevas.some((f) => f.id_finca === id)) {
+            setFincaId(id)
+            setSeleccionados([])
+            setBusquedaLote('')
+            setPaso(2)
+            if (loteParam) setLoteDestacado(Number(loteParam))
+          }
+          setSearchParams({}, { replace: true })
+        }
+      })
+      .catch((err) => toastErrorUnico(err.response?.data?.error || err.message))
       .finally(() => setLoading(false))
   }
 
   useEffect(() => { cargar() }, [])
+
+  useEffect(() => {
+    if (!loteDestacado || !loading || !loteDestacadoRef.current) return
+    loteDestacadoRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [loteDestacado, loading])
 
   useEffect(() => {
     api.get('/inventario/presentaciones', { headers: authHeaders() })
@@ -120,6 +146,7 @@ function ControlEmpleado() {
     setFincaId(id)
     setSeleccionados([])
     setBusquedaLote('')
+    setLoteDestacado(null)
     setPaso(2)
   }
 
@@ -137,7 +164,7 @@ function ControlEmpleado() {
       setFormFinca(fincaVacia)
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -153,7 +180,7 @@ function ControlEmpleado() {
       setFormLote(loteVacio)
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -184,7 +211,7 @@ function ControlEmpleado() {
       cargar()
       toast.success('Lote actualizado')
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -235,7 +262,7 @@ function ControlEmpleado() {
       setEditandoPerdida(null)
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -294,25 +321,34 @@ function ControlEmpleado() {
       )
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
   }
 
-  async function liberarProceso(idLote) {
-    if (!kgLiberar || Number(kgLiberar) <= 0) return
-    setGuardando(true)
-    try {
-      await api.patch(`/inventario/lotes/${idLote}/liberar-proceso`, { kg: kgLiberar }, { headers: authHeaders() })
-      setLoteLiberar(null)
-      setKgLiberar('')
-      cargar()
-    } catch (err) {
-      setError(err.response?.data?.error || err.message)
-    } finally {
-      setGuardando(false)
+  function validarPerdidas(lotes) {
+    const conCero = lotes.filter((l) => Number(l.kg_perdido || 0) === 0)
+    if (conCero.length > 0) {
+      const nombres = conCero.map((l) => l.codigo_lote).join(', ')
+      setValidacionPerdidas({
+        titulo: 'Actualiza las pérdidas',
+        mensaje: `El${conCero.length > 1 ? 's lote' + (conCero.length > 1 ? 's' : '') : ' lote'} ${nombres} tiene${conCero.length === 1 ? '' : 'n'} 0 kg de pérdidas registradas. Actualiza las pérdidas antes de planear la cosecha para que el inventario sea correcto.`,
+        lotes,
+      })
+      return
     }
+    setValidacionPerdidas({
+      titulo: '¿Revisaste las pérdidas?',
+      mensaje: '¿Ya verificaste que las pérdidas de cada lote sean correctas? Al confirmar se creará la cosecha planeada y el café pasará a "en proceso".',
+      lotes,
+    })
+  }
+
+  function confirmarValidacionPerdidas() {
+    const lotes = validacionPerdidas?.lotes
+    setValidacionPerdidas(null)
+    if (lotes && lotes.length > 0) abrirPlanear(lotes)
   }
 
   async function guardarEventoLote(e) {
@@ -325,7 +361,7 @@ function ControlEmpleado() {
       setFormEvento({ tipo_evento: 'cosecha', descripcion: '', ubicacion: '' })
       setMensaje('Evento registrado — ya aparece en "Ver origen" del cliente.')
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -335,6 +371,10 @@ function ControlEmpleado() {
     (p) => Number(datosLote(id).repartos[p.id_presentacion]) > 0
   )
   const puedeEnviar = lotesPlanear ? lotesPlanear.some((l) => hayRepartoEn(l.id_lote)) : false
+
+  const seleccionadosConDisponibilidad = finca
+    ? seleccionados.filter((id) => kgDisponibleDe(finca.lotes.find((l) => l.id_lote === id)) > 0)
+    : []
 
   if (loading) return <PanelSkeleton filas={3} columnas={4} />
 
@@ -358,13 +398,6 @@ function ControlEmpleado() {
           <StatCard icono="📦" label="Lotes activos" value={totalLotes} tono="cielo" delay="panel-come-d2" />
           <StatCard icono="🫘" label="Productos" value={totalProductos} tono="ambar" delay="panel-come-d3" />
           <StatCard icono="⚖️" label="Kg en inventario" value={`${totalKg} kg`} tono="violeta" delay="panel-come-d4" />
-        </div>
-      )}
-
-      {error && (
-        <div className="panel-come text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex justify-between items-center">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 transition ml-3">✕</button>
         </div>
       )}
 
@@ -419,13 +452,7 @@ function ControlEmpleado() {
         <>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
-              <button
-                type="button"
-                onClick={() => setPaso(1)}
-                className="text-xs text-[#0F6E56] underline hover:opacity-70 transition"
-              >
-                ← Cambiar de finca
-              </button>
+              <BotonVolver onClick={() => setPaso(1)} texto="Cambiar de finca" />
               <h2 className="font-semibold text-admin-heading mt-1">{finca?.nombre}</h2>
             </div>
             <button
@@ -458,8 +485,12 @@ function ControlEmpleado() {
                 {lotesFiltrados.map((lote) => {
                   const seleccionado = seleccionados.includes(lote.id_lote)
                   const dispon = kgDisponibleDe(lote)
+                  const destacado = lote.id_lote === loteDestacado
                   return (
-                    <PanelCard key={lote.id_lote} className={`p-5 transition ${seleccionado ? 'border-[#1D9E75] ring-1 ring-[#1D9E75]/40' : ''}`}>
+                    <div key={lote.id_lote} ref={destacado ? loteDestacadoRef : undefined}>
+                    <PanelCard
+                      className={`p-5 transition ${seleccionado ? 'border-[#1D9E75] ring-1 ring-[#1D9E75]/40' : ''} ${destacado ? 'border-[#1D9E75]/70 ring-2 ring-[#1D9E75]/30 anim-pop' : ''}`}
+                    >
                       <div className="flex items-center justify-between mb-3 gap-3">
                         <div className="flex items-center gap-3 min-w-0">
                           <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -499,23 +530,6 @@ function ControlEmpleado() {
                           </button>
                         )}
                         <span className="text-xs text-gray-400">En proceso: {lote.kg_en_proceso} kg</span>
-                        {lote.kg_en_proceso > 0 && (
-                          loteLiberar === lote.id_lote ? (
-                            <span className="flex items-center gap-1">
-                              <input type="number" min="0" max={lote.kg_en_proceso} value={kgLiberar}
-                                onKeyDown={bloquearNoNumerico}
-                                onChange={(e) => setKgLiberar(normalizarNumerico(e.target.value))}
-                                placeholder="kg listos"
-                                className="w-20 px-1.5 py-0.5 border border-gray-200 rounded text-xs" />
-                              <button type="button" disabled={guardando} onClick={() => liberarProceso(lote.id_lote)} className="text-[#0F6E56] underline">OK</button>
-                              <button type="button" onClick={() => { setLoteLiberar(null); setKgLiberar('') }} className="text-gray-400">✕</button>
-                            </span>
-                          ) : (
-                            <button type="button" onClick={() => setLoteLiberar(lote.id_lote)} className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
-                              Ya terminó de procesarse
-                            </button>
-                          )
-                        )}
                       </div>
 
                       {lote.productos.length === 0 ? (
@@ -578,14 +592,20 @@ function ControlEmpleado() {
                           className="flex-1 border border-dashed border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50 transition">
                           + Agregar producto a este lote
                         </button>
-                        {dispon > 0 && (
-                          <button type="button" onClick={() => abrirPlanear([lote])}
+                        {dispon > 0 ? (
+                          <button type="button" onClick={() => validarPerdidas([lote])}
                             className="flex-1 border border-[#1D9E75]/40 text-[#0F6E56] text-xs py-1.5 rounded-lg hover:bg-[#1D9E75]/5 transition">
+                            Planear cosecha
+                          </button>
+                        ) : (
+                          <button type="button" disabled
+                            className="flex-1 border border-gray-200 text-gray-300 text-xs py-1.5 rounded-lg cursor-not-allowed">
                             Planear cosecha
                           </button>
                         )}
                       </div>
                     </PanelCard>
+                    </div>
                   )
                 })}
               </div>
@@ -598,8 +618,9 @@ function ControlEmpleado() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => abrirPlanear(finca.lotes.filter((l) => seleccionados.includes(l.id_lote)))}
-                    className="text-sm px-4 py-2 rounded-xl bg-[#1D9E75] text-white hover:bg-[#178a64] transition"
+                    disabled={seleccionadosConDisponibilidad.length === 0}
+                    onClick={() => validarPerdidas(finca.lotes.filter((l) => seleccionados.includes(l.id_lote)))}
+                    className="text-sm px-4 py-2 rounded-xl bg-[#1D9E75] text-white hover:bg-[#178a64] transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Planear cosecha ({seleccionados.length}) →
                   </button>
@@ -873,6 +894,16 @@ function ControlEmpleado() {
         confirmarTexto="Eliminar"
         onConfirmar={eliminarProducto}
         onCancelar={() => setEliminandoProducto(null)}
+      />
+
+      <ConfirmDialog
+        abierto={!!validacionPerdidas}
+        titulo={validacionPerdidas?.titulo || '¿Continuar?'}
+        mensaje={validacionPerdidas?.mensaje || ''}
+        confirmarTexto="Continuar"
+        colorConfirmar="#1D9E75"
+        onConfirmar={confirmarValidacionPerdidas}
+        onCancelar={() => setValidacionPerdidas(null)}
       />
     </div>
   )

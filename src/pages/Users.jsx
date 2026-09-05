@@ -39,7 +39,6 @@ function Users() {
   const [contraseñaFocus, setContraseñaFocus] = useState(false)
 
   const [idEnProceso, setIdEnProceso] = useState(null)
-  const [errorAccion, setErrorAccion] = useState('')
   const [eliminandoUsuario, setEliminandoUsuario] = useState(null)
 
   const [importando, setImportando] = useState(false)
@@ -145,7 +144,7 @@ function Users() {
   }
 
   async function toggleEstado(usuario) {
-    setErrorAccion('')
+    
     setIdEnProceso(usuario.id_usuario)
 
     try {
@@ -158,7 +157,7 @@ function Users() {
       const datos = await respuesta.json()
 
       if (!respuesta.ok) {
-        setErrorAccion(datos.error || 'No se pudo cambiar el estado')
+        toast.error(datos.error || 'No se pudo cambiar el estado')
         return
       }
 
@@ -166,7 +165,7 @@ function Users() {
 
     } catch (error) {
       console.error('Error en Users:', error)
-      setErrorAccion('Error de conexión con el servidor')
+      toast.error('Error de conexión con el servidor')
     } finally {
       setIdEnProceso(null)
     }
@@ -175,7 +174,7 @@ function Users() {
   async function cambiarRol(usuario, nuevoRol) {
     if (nuevoRol === usuario.rol) return
 
-    setErrorAccion('')
+    
     setIdEnProceso(usuario.id_usuario)
 
     try {
@@ -192,7 +191,7 @@ function Users() {
       const datos = await respuesta.json()
 
       if (!respuesta.ok) {
-        setErrorAccion(datos.error || 'No se pudo cambiar el rol')
+        toast.error(datos.error || 'No se pudo cambiar el rol')
         return
       }
 
@@ -200,7 +199,7 @@ function Users() {
 
     } catch (error) {
       console.error('Error en Users:', error)
-      setErrorAccion('Error de conexión con el servidor')
+      toast.error('Error de conexión con el servidor')
     } finally {
       setIdEnProceso(null)
     }
@@ -211,7 +210,7 @@ function Users() {
     setEliminandoUsuario(null)
     if (!usuario) return
 
-    setErrorAccion('')
+    
     setIdEnProceso(usuario.id_usuario)
 
     try {
@@ -224,7 +223,7 @@ function Users() {
       const datos = await respuesta.json()
 
       if (!respuesta.ok) {
-        setErrorAccion(datos.error || 'No se pudo eliminar el usuario')
+        toast.error(datos.error || 'No se pudo eliminar el usuario')
         toast.error(datos.error || 'No se pudo eliminar el usuario')
         return
       }
@@ -234,7 +233,7 @@ function Users() {
 
     } catch (error) {
       console.error('Error en Users:', error)
-      setErrorAccion('Error de conexión con el servidor')
+      toast.error('Error de conexión con el servidor')
       toast.error('Error de conexión con el servidor')
     } finally {
       setIdEnProceso(null)
@@ -250,7 +249,7 @@ function Users() {
     if (!archivo) return
 
     setResumenImportacion(null)
-    setErrorAccion('')
+    
     setImportando(true)
 
     try {
@@ -269,7 +268,7 @@ function Users() {
       const datos = await respuesta.json()
 
       if (!respuesta.ok) {
-        setErrorAccion(datos.error || 'No se pudo importar el archivo')
+        toast.error(datos.error || 'No se pudo importar el archivo')
         return
       }
 
@@ -278,7 +277,7 @@ function Users() {
 
     } catch (error) {
       console.error('Error en Users:', error)
-      setErrorAccion('Error de conexión con el servidor')
+      toast.error('Error de conexión con el servidor')
     } finally {
       setImportando(false)
       e.target.value = '' // permite volver a elegir el mismo archivo si hace falta reintentar
@@ -420,18 +419,6 @@ function Users() {
               ))}
             </ul>
           )}
-        </div>
-      )}
-      {errorAccion && (
-        <div
-          className="panel-come text-xs px-4 py-2.5 rounded-xl mb-3 flex items-center justify-between bg-red-50 text-red-600 border border-red-200"
-        >
-          <span>{errorAccion}</span>
-          <button type="button" onClick={() => setErrorAccion('')} className="opacity-60 hover:opacity-100 transition">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </button>
         </div>
       )}
       <PanelCard animado={false} className="overflow-hidden">

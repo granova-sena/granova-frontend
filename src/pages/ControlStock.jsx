@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
+import { toastErrorUnico } from '../utils/toastError'
 import * as XLSX from 'xlsx'
 import api from '../services/api'
 import { formatMoney } from '../utils/format'
@@ -52,7 +53,6 @@ function ControlStock() {
   const [totalFiltrados, setTotalFiltrados] = useState(0)
 
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [mostrarModal, setMostrarModal] = useState(false)
   const [productoEditar, setProductoEditar] = useState(null)
   const [exportando, setExportando] = useState(false)
@@ -60,7 +60,7 @@ function ControlStock() {
   const cargarResumen = () => {
     api.get('/inventario/resumen')
       .then(res => setResumen(res.data))
-      .catch(err => setError(err.message))
+      .catch(err => toastErrorUnico(err.message))
   }
 
   const cargarProductos = () => {
@@ -74,7 +74,7 @@ function ControlStock() {
         setTotalPaginas(res.data.totalPaginas)
         setTotalFiltrados(res.data.totalFiltrados)
       })
-      .catch(err => setError(err.message))
+      .catch(err => toastErrorUnico(err.message))
       .finally(() => setLoading(false))
   }
 
@@ -135,14 +135,6 @@ function ControlStock() {
     } finally {
       setExportando(false)
     }
-  }
-
-  if (error) {
-    return (
-      <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
-        Error al cargar inventario: {error}
-      </div>
-    )
   }
 
   const stats = resumen ? [

@@ -46,10 +46,43 @@
 /* Barras de gráfico que crecen al cargar */
 .panel-barra { animation: panel-barra 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
 
-/* Accesibilidad: animaciones reducidas */
+/* Overlay de carga: fundido semitransparente */
+.anim-overlay { animation: overlay-fade 0.25s ease both; }
+@keyframes overlay-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Tarjeta emergente dentro del overlay (spinner + texto) */
+.anim-pop { animation: panel-pop 0.35s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+
+/* Subida: los datos "entran" desde abajo con un rebote suave (dashboard) */
+@keyframes panel-subir {
+  0%   { opacity: 0; transform: translateY(42px) scale(0.97); }
+  60%  { opacity: 1; transform: translateY(-8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.panel-subir      { animation: panel-subir 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.panel-subir-d1   { animation-delay: 0.08s; }
+.panel-subir-d2   { animation-delay: 0.16s; }
+.panel-subir-d3   { animation-delay: 0.24s; }
+.panel-subir-d4   { animation-delay: 0.32s; }
+.panel-subir-d5   { animation-delay: 0.40s; }
+.panel-subir-d6   { animation-delay: 0.48s; }
+
+/* Entrada por vista: todo el contenido del panel "sube" al cambiar de página.
+   Cada hijo directo de la página entra escalonado para no verse estático. */
+.panel-stage > *            { animation: panel-subir 0.65s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.panel-stage > *:nth-child(2)  { animation-delay: 0.08s; }
+.panel-stage > *:nth-child(3)  { animation-delay: 0.14s; }
+.panel-stage > *:nth-child(4)  { animation-delay: 0.20s; }
+.panel-stage > *:nth-child(5)  { animation-delay: 0.26s; }
+.panel-stage > *:nth-child(6)  { animation-delay: 0.32s; }
+.panel-stage > *:nth-child(7)  { animation-delay: 0.38s; }
+.panel-stage > *:nth-child(8)  { animation-delay: 0.44s; }
+.panel-stage > *:nth-child(n+9) { animation-delay: 0.50s; }
+
+/* Accesibilidad: solo se reducen las animaciones de superposición/emergentes,
+   pero la entrada del panel SIEMPRE se muestra (así lo pidió el usuario). */
 @media (prefers-reduced-motion: reduce) {
-  .panel-come, .panel-pop, .panel-barra, .panel-icono-flotante { animation: none !important; }
-  .panel-card:hover { transform: none !important; }
+  .anim-overlay, .anim-pop { animation: none !important; }
 }
 
 /* ============================================================

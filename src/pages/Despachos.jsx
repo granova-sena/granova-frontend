@@ -3,6 +3,7 @@ import { useModalBehavior } from '../hooks/useModalBehavior'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import { toastErrorUnico } from '../utils/toastError'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import EstadoPagoBadge from '../components/ui/EstadoPagoBadge'
 import FacturaModal from '../components/FacturaModal'
@@ -149,14 +150,12 @@ function ModalNuevaSalida({ abierto, onCerrar, onCreado, seleccionInicial = [] }
   const [form, setForm] = useState({ id: '', sector: '', fecha: '' })
   const [seleccionados, setSeleccionados] = useState(seleccionInicial)
   const [guardando, setGuardando] = useState(false)
-  const [error, setError] = useState(null)
 
   useModalBehavior(() => { if (abierto && !guardando) onCerrar() }, abierto)
 
   const reset = () => {
     setForm({ id: '', sector: '', fecha: '' })
     setSeleccionados(seleccionInicial)
-    setError(null)
   }
 
   const cargarOpciones = useCallback(() => {
@@ -175,11 +174,10 @@ function ModalNuevaSalida({ abierto, onCerrar, onCreado, seleccionInicial = [] }
   if (!abierto) return null
 
   const crear = async () => {
-    if (!form.sector) { setError('Selecciona el sector de destino (*)'); return }
-    if (!form.fecha) { setError('Selecciona la fecha programada (*)'); return }
-    if (seleccionados.length === 0) { setError('Selecciona al menos un pedido de reparto'); return }
+    if (!form.sector) { toast.error('Selecciona el sector de destino (*)'); return }
+    if (!form.fecha) { toast.error('Selecciona la fecha programada (*)'); return }
+    if (seleccionados.length === 0) { toast.error('Selecciona al menos un pedido de reparto'); return }
     setGuardando(true)
-    setError(null)
     try {
       const body = {
         sector_destino: form.sector,
@@ -192,7 +190,7 @@ function ModalNuevaSalida({ abierto, onCerrar, onCreado, seleccionInicial = [] }
       onCerrar()
       onCreado()
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -207,10 +205,6 @@ function ModalNuevaSalida({ abierto, onCerrar, onCreado, seleccionInicial = [] }
         </div>
 
         <div className="p-6 space-y-4">
-          {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>
-          )}
-
           <div>
             <label className="block text-sm text-gray-600 mb-1">Transportadora / vehículo</label>
             <select
@@ -585,7 +579,6 @@ function Despachos() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [despachos, setDespachos] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [filtroEstado, setFiltroEstado] = useState('Todos')
   const [pagina, setPagina] = useState(1)
   const [modalNuevo, setModalNuevo] = useState(false)
@@ -603,7 +596,7 @@ function Despachos() {
     setLoading(true)
     api.get('/despachos')
       .then((res) => setDespachos(res.data.despachos || []))
-      .catch((err) => setError(err.response?.data?.error || err.message))
+      .catch((err) => toastErrorUnico(err.response?.data?.error || err.message))
       .finally(() => setLoading(false))
   }, [])
 
@@ -666,13 +659,6 @@ function Despachos() {
           <BotonPrimario onClick={() => setModalNuevo(true)}>+ Nueva salida</BotonPrimario>
         )}
       />
-
-      {error && (
-        <div className="panel-come text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 flex justify-between">
-          <span>{error} {error.includes('404') ? ' · El backend de despachos aún no está desplegado.' : ''}</span>
-          <button onClick={() => setError(null)} className="text-red-400">✕</button>
-        </div>
-      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((s, i) => (

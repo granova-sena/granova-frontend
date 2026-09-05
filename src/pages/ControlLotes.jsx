@@ -3,6 +3,7 @@ import api from '../services/api'
 import { formatMoney } from '../utils/format'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
+import { toastErrorUnico } from '../utils/toastError'
 import { PageHeader, StatCard, PanelCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
 import { bloquearNoNumerico, normalizarNumerico, bloquearEntero, normalizarEntero } from '../utils/validacion'
 
@@ -19,7 +20,6 @@ function ControlLotes() {
   const [resumenPorFinca, setResumenPorFinca] = useState([])
   const [fincas, setFincas] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [anulandoEntrega, setAnulandoEntrega] = useState(null)
 
@@ -38,7 +38,7 @@ function ControlLotes() {
         setResumenPorFinca(entregasRes.data.resumenPorFinca || [])
         setFincas(fincasRes.data.fincas)
       })
-      .catch((err) => setError(err.response?.data?.error || err.message))
+      .catch((err) => toastErrorUnico(err.response?.data?.error || err.message))
       .finally(() => setLoading(false))
   }
 
@@ -52,22 +52,21 @@ function ControlLotes() {
     const valor = Number(form.valor)
     if (!form.id_finca || !form.id_lote) return
     if (!Number.isFinite(cantidad) || cantidad <= 0) {
-      setError('La cantidad en kg debe ser un número mayor que 0')
+      toast.error('La cantidad en kg debe ser un número mayor que 0')
       return
     }
     if (!Number.isFinite(valor) || valor <= 0) {
-      setError('El valor debe ser un número mayor que 0')
+      toast.error('El valor debe ser un número mayor que 0')
       return
     }
     setGuardando(true)
-    setError(null)
     try {
       await api.post('/inventario/entregas', { ...form, cantidad_kg: cantidad, valor }, { headers: authHeaders() })
       setModalEntrega(false)
       setForm(entregaVacia)
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -79,7 +78,7 @@ function ControlLotes() {
       await api.patch(`/inventario/entregas/${entrega.id_entrega}/pagar`, {}, { headers: authHeaders() })
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -124,13 +123,6 @@ function ControlLotes() {
           </BotonPrimario>
         }
       />
-
-      {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2 flex justify-between items-center panel-come">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400">✕</button>
-        </div>
-      )}
 
       {resumen && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import { toastErrorUnico } from '../utils/toastError'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import { PageHeader, EmptyState, PanelSkeleton } from '../components/ui/panel/PanelKit'
 
@@ -16,7 +17,6 @@ function iniciales(nombre, apellido) {
 function Empleados() {
   const [empleados, setEmpleados] = useState([])
   const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState('')
 
   const [modalNuevo, setModalNuevo] = useState(false)
   const [nombre, setNombre] = useState('')
@@ -41,7 +41,7 @@ function Empleados() {
     setCargando(true)
     api.get('/empleados', { headers: authHeaders() })
       .then((res) => setEmpleados(res.data.empleados))
-      .catch((err) => setError(err.response?.data?.error || err.message))
+      .catch((err) => toastErrorUnico(err.response?.data?.error || err.message))
       .finally(() => setCargando(false))
   }
 
@@ -59,7 +59,7 @@ function Empleados() {
       setModalNuevo(false)
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -109,11 +109,10 @@ function Empleados() {
       setMotivoReporte('')
       setModalReporte(false)
       setReportearA(null)
-      setError('')
       await refrescarDetalle(objetivo.id_usuario)
       toast.success('Reporte enviado')
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -123,10 +122,9 @@ function Empleados() {
     setGuardando(true)
     try {
       await api.delete(`/empleados/${seleccionado.id_usuario}/reportes/${idReporte}`, { headers: authHeaders() })
-      setError('')
       await refrescarDetalle(seleccionado.id_usuario)
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -136,10 +134,9 @@ function Empleados() {
     setGuardando(true)
     try {
       await api.delete(`/empleados/${seleccionado.id_usuario}/reportes`, { headers: authHeaders() })
-      setError('')
       await refrescarDetalle(seleccionado.id_usuario)
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -153,7 +150,7 @@ function Empleados() {
       setSeleccionado(null)
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -166,7 +163,7 @@ function Empleados() {
       setSeleccionado(null)
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -179,7 +176,7 @@ function Empleados() {
       setSeleccionado(null)
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -192,7 +189,7 @@ function Empleados() {
       setCredenciales({ email: seleccionado.email, password: res.data.password })
       setSeleccionado(null)
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toast.error(err.response?.data?.error || err.message)
     } finally {
       setGuardando(false)
     }
@@ -213,13 +210,6 @@ function Empleados() {
           </button>
         }
       />
-
-      {error && (
-        <div className="panel-come text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex justify-between items-center">
-          <span>{error}</span>
-          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600 transition ml-3">✕</button>
-        </div>
-      )}
 
       {cargando ? (
         <PanelSkeleton filas={2} columnas={3} />
@@ -394,7 +384,12 @@ function Empleados() {
                     ))}
                   </div>
                 )}
-                <button onClick={() => setVista(null)} className="w-full text-sm px-4 py-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition">Volver</button>
+                <button onClick={() => setVista(null)} className="w-full inline-flex items-center justify-center gap-2 text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                    <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
+                  </svg>
+                  Volver
+                </button>
               </div>
             ) : vista === 'respuestas' ? (
               <div className="space-y-3">
@@ -423,7 +418,12 @@ function Empleados() {
                     </div>
                   )
                 })()}
-                <button onClick={() => setVista(null)} className="w-full text-sm px-4 py-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition">Volver</button>
+                <button onClick={() => setVista(null)} className="w-full inline-flex items-center justify-center gap-2 text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                    <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
+                  </svg>
+                  Volver
+                </button>
               </div>
             ) : vista === 'historial' ? (
               <div className="space-y-3">
@@ -459,7 +459,12 @@ function Empleados() {
                     ))}
                   </div>
                 )}
-                <button onClick={() => setVista(null)} className="w-full text-sm px-4 py-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition">Volver</button>
+                <button onClick={() => setVista(null)} className="w-full inline-flex items-center justify-center gap-2 text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                    <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
+                  </svg>
+                  Volver
+                </button>
               </div>
             ) : editando ? (
               <div className="space-y-3">

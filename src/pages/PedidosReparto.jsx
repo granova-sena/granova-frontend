@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import { toastErrorUnico } from '../utils/toastError'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import EstadoPagoBadge from '../components/ui/EstadoPagoBadge'
 import FacturaModal from '../components/FacturaModal'
@@ -53,7 +54,6 @@ function PedidosReparto() {
   const [pedidos, setPedidos] = useState([])
   const [disponiblesIds, setDisponiblesIds] = useState(new Set())
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [busqueda, setBusqueda] = useState('')
   const [reclasificar, setReclasificar] = useState(null)
   const [porCobrar, setPorCobrar] = useState(null)
@@ -75,7 +75,7 @@ function PedidosReparto() {
       setPedidos(todos)
       setDisponiblesIds(new Set((disp.data.pedidos || []).map((p) => p.id)))
     } catch (err) {
-      setError(err.response?.data?.error || err.message)
+      toastErrorUnico(err.response?.data?.error || err.message)
     } finally {
       setLoading(false)
     }
@@ -166,13 +166,6 @@ function PedidosReparto() {
         titulo="Pedidos de reparto"
         subtitulo="Pedidos grandes/empresas que coordina el módulo de Despacho por sector"
       />
-
-      {error && (
-        <div className="panel-come text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 flex justify-between">
-          <span>{error} {error.includes('404') ? ' · El backend de despachos aún no está desplegado.' : ''}</span>
-          <button onClick={() => setError(null)} className="text-red-400">✕</button>
-        </div>
-      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s, i) => (

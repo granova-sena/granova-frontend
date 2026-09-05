@@ -1,4 +1,4 @@
-import { useSearchParams, useNavigate, Link } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { API_URL } from "../config";
 import { SkeletonTable } from '../components/ui/Skeleton';
@@ -47,7 +47,12 @@ function ComparacionPage() {
   if (error) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: '#0a1a0a' }}>
       <p className="text-[#D85A30] text-sm">{error}</p>
-      <Link to="/cliente/catalogo" className="text-[#9DC9B4] text-sm hover:underline">← Volver al catálogo</Link>
+      <button onClick={() => navigate('/cliente/catalogo')} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/15 text-[#9DC9B4] text-sm hover:bg-white/[0.06] active:scale-[0.97] transition">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
+        </svg>
+        Volver al catálogo
+      </button>
     </div>
   )
 
@@ -110,9 +115,12 @@ function ComparacionPage() {
         <button
           type="button"
           onClick={() => navigate('/cliente/catalogo')}
-          className="mt-6 flex items-center gap-2 text-[#9DC9B4] text-sm hover:underline"
+          className="mt-6 inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/15 text-[#9DC9B4] text-sm hover:bg-white/[0.06] active:scale-[0.97] transition"
         >
-          ← Volver al catálogo
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
+          </svg>
+          Volver al catálogo
         </button>
 
       </div>

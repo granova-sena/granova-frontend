@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useModalBehavior } from '../hooks/useModalBehavior'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import { toastErrorUnico } from '../utils/toastError'
 import EstadoPagoBadge from '../components/ui/EstadoPagoBadge'
 import { PageHeader, StatCard, PanelCard, PanelSkeleton, EmptyState } from '../components/ui/panel/PanelKit'
 import { formatFecha, formatMoney } from '../utils/format'
@@ -47,7 +48,6 @@ function FotoTransportadora({ url, vehiculo }) {
 function Envios() {
   const [despachos, setDespachos] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [ultimaActualizacion, setUltimaActualizacion] = useState(null)
 
   const [filtroEstado, setFiltroEstado] = useState('')
@@ -63,7 +63,7 @@ function Envios() {
         setDespachos(res.data.despachos || [])
         setUltimaActualizacion(new Date())
       })
-      .catch((err) => setError(err.response?.data?.error || err.message))
+      .catch((err) => toastErrorUnico(err.response?.data?.error || err.message))
       .finally(() => setLoading(false))
   }, [])
 
@@ -136,13 +136,6 @@ function Envios() {
         subtitulo="Seguimiento en tiempo real de los despachos de reparto"
         acciones={null}
       />
-
-      {error && (
-        <div className="panel-come text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 flex justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400">✕</button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {stats.map((stat, i) => (

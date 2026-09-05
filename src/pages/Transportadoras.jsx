@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useModalBehavior } from '../hooks/useModalBehavior'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import { toastErrorUnico } from '../utils/toastError'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import { PageHeader, StatCard, PanelCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
 import { bloquearEntero, normalizarEntero, normalizarTexto } from '../utils/validacion'
@@ -22,7 +23,6 @@ function usuarioPuedeEditar() {
 function Transportadoras() {
   const [transportadoras, setTransportadoras] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [eliminando, setEliminando] = useState(null)
 
@@ -30,7 +30,7 @@ function Transportadoras() {
     setLoading(true)
     api.get('/logistica/transportadoras')
       .then((res) => setTransportadoras(res.data.transportadoras))
-      .catch((err) => setError(err.response?.data?.error || err.message))
+      .catch((err) => toastErrorUnico(err.response?.data?.error || err.message))
       .finally(() => setLoading(false))
   }
 
@@ -202,13 +202,6 @@ function Transportadoras() {
           <BotonPrimario onClick={abrirModal}>+ Agregar transportadora</BotonPrimario>
         )}
       />
-
-      {error && (
-        <div className="panel-come text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 flex justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400">✕</button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {stats.map((stat, i) => (

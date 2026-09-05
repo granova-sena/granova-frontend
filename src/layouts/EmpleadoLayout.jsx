@@ -342,7 +342,9 @@ function EmpleadoLayout() {
             </div>
           </div>
 
-          <Outlet />
+          <div key={location.pathname} className="panel-stage">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
