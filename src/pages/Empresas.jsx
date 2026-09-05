@@ -4,6 +4,7 @@ import { API_URL as BASE_API_URL } from "../config";
 import { useCarrito } from '../context/CarritoContext'
 import { leerParametro } from '../services/parametros'
 import FadeIn from '../components/ui/FadeIn'
+import Breadcrumb from '../components/ui/Breadcrumb';
 
 const API_URL = `${BASE_API_URL}/productos`
 
@@ -62,7 +63,7 @@ function Empresas() {
   const bruto = formato ? Math.min(Number(formato.precio) * cantidad, Number.MAX_SAFE_INTEGER) : 0
   const tier = descuentosVolumen.find(t => kgTotales >= Number(t.kg_min) && (t.kg_max === null || kgTotales <= Number(t.kg_max)))
   const volumenPct = tier ? Number(tier.descuento_pct) : 0
-  const pctEmpresa = leerParametro('descuento_empresa_pct', 15)
+  const pctEmpresa = leerParametro('descuento_empresa_pct', 20)
   const pctFinal = Math.max(volumenPct, pctEmpresa)
   const total = Math.round(bruto * (1 - pctFinal / 100))
   const ahorro = bruto - total
@@ -75,6 +76,7 @@ function Empresas() {
   return (
     <div className="min-h-screen text-white" style={{ background: '#0a1a0a' }}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+        <Breadcrumb items={[{ label: 'Empresas' }]} />
 
         {/* HERO */}
         <FadeIn>
@@ -82,12 +84,12 @@ function Empresas() {
             <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Granova Empresas</span>
             <h1 className="text-3xl sm:text-4xl font-semibold mt-3 tracking-tight">Tu café al por mayor, sin papeleo</h1>
             <p className="text-white/50 text-sm sm:text-base mt-4 leading-relaxed">
-              Si compras para tu negocio, Granova te premia desde el primer pedido: 10% siempre,
+              Si compras para tu negocio, Granova te premia desde el primer pedido: {pctEmpresa}% siempre,
               precios por bulto y descuentos que crecen con tu volumen.
             </p>
             {esJuridica ? (
               <p className="inline-block mt-5 text-sm text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/30 rounded-full px-4 py-2">
-                🏢 Ya estás registrado como empresa: tienes 10% en todos tus pedidos
+                🏢 Ya estás registrado como empresa: tienes {pctEmpresa}% en todos tus pedidos
               </p>
             ) : (
               <button
@@ -95,7 +97,7 @@ function Empresas() {
                 onClick={() => navigate('/cliente/cuenta')}
                 className="mt-6 h-12 px-8 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition"
               >
-                Registra tu NIT y obtén tu 10% →
+                Registra tu NIT y obtén tu {pctEmpresa}% →
               </button>
             )}
           </div>

@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { getActiveToken, clearClienteToken } from '../services/session'
 
@@ -20,10 +20,11 @@ function tokenClienteValido(token) {
 function RutaProtegidaCliente({ children }) {
 
     const token = getActiveToken();
+    const location = useLocation();
 
     if (!tokenClienteValido(token)) {
         clearClienteToken();
-        return <Navigate to="/login" replace />
+        return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
     }
 
     return children;

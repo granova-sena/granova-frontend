@@ -4,6 +4,7 @@ import { API_URL as BASE_API_URL } from "../config";
 import FadeIn from "../components/ui/FadeIn";
 import { SkeletonCard } from "../components/ui/Skeleton";
 import { ImagenProducto } from "./Catalogo";
+import Breadcrumb from '../components/ui/Breadcrumb';
 
 const API_URL = `${BASE_API_URL}/api/resenas`;
 
@@ -85,6 +86,7 @@ function ForosInterno() {
   return (
     <div className="min-h-screen text-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
+        <Breadcrumb items={[{ label: 'Foros' }]} />
 
         {/* Encabezado */}
         <FadeIn>
@@ -197,7 +199,7 @@ function ForosInterno() {
                           <span className="text-[11px] text-white/25">Solo quienes compraron este producto pueden reseñarlo</span>
                           <button
                             type="button"
-                            onClick={() => navigate(`/cliente/catalogo`)}
+                            onClick={() => navigate(`/cliente/catalogo?producto=${h.id_producto}`)}
                             className="text-xs font-semibold text-[#9DC9B4] hover:text-white transition shrink-0"
                           >
                             Ver producto →

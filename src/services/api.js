@@ -14,9 +14,6 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
-  if (config.url && config.url.includes('cosechas')) {
-    console.log('[API->]', config.method.toUpperCase(), config.url, '| token?', token ? 'SÍ' : 'NO')
-  }
   return config
 })
 

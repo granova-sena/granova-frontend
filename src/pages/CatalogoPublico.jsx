@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { API_URL } from '../config'
 import { ImagenProducto, adaptarProducto, eliminarDuplicados } from './Catalogo'
+import { useModalBehavior } from '../hooks/useModalBehavior'
 
 const REGEX_ORDEN = /[^a-z0-9áéíóúñ\s]/gi
 
@@ -81,6 +82,15 @@ export default function CatalogoPublico() {
 
   return (
     <div className="min-h-screen text-white" style={{ background: '#0a1a0a' }}>
+      {/* Breadcrumb */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+        <nav className="flex items-center gap-2 text-sm mb-6">
+          <Link to="/" className="text-[#9DC9B4] hover:underline">Inicio</Link>
+          <span className="text-[#9DC9B4]/50">›</span>
+          <span className="text-white/90 font-medium">Catálogo</span>
+        </nav>
+      </div>
+
       {/* Encabezado de la vitrina */}
       <div className="border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
@@ -259,6 +269,8 @@ export default function CatalogoPublico() {
 function DetallePublicoSeleccionado({ producto, onClose }) {
   const navigate = useNavigate()
   const [resenas, setResenas] = useState(null)
+
+  useModalBehavior(onClose)
 
   useEffect(() => {
     let cancelado = false

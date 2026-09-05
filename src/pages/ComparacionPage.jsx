@@ -1,7 +1,8 @@
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { API_URL } from "../config";
 import { SkeletonTable } from '../components/ui/Skeleton';
+import Breadcrumb from '../components/ui/Breadcrumb'
 
 function ComparacionPage() {
   const navigate = useNavigate()
@@ -47,12 +48,7 @@ function ComparacionPage() {
   if (error) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: '#0a1a0a' }}>
       <p className="text-[#D85A30] text-sm">{error}</p>
-      <button onClick={() => navigate('/cliente/catalogo')} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/15 text-[#9DC9B4] text-sm hover:bg-white/[0.06] active:scale-[0.97] transition">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
-        </svg>
-        Volver al catálogo
-      </button>
+      <Link to="/cliente/catalogo" className="text-[#9DC9B4] text-sm hover:underline">← Volver al catálogo</Link>
     </div>
   )
 
@@ -72,6 +68,9 @@ function ComparacionPage() {
   return (
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
       <div className="max-w-4xl mx-auto px-4 sm:px-8 py-10 text-white">
+
+        {/* Breadcrumb + volver */}
+        <Breadcrumb items={[{ label: 'Catálogo', ruta: '/cliente/catalogo' }, { label: 'Comparación' }]} />
 
         <h1 className="text-2xl sm:text-3xl font-semibold mb-1 tracking-tight">Comparar cafés</h1>
         <p className="text-xs text-white/40 mb-8">{productos.length} productos seleccionados</p>
@@ -111,17 +110,6 @@ function ComparacionPage() {
             </tbody>
           </table>
         </div>
-
-        <button
-          type="button"
-          onClick={() => navigate('/cliente/catalogo')}
-          className="mt-6 inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/15 text-[#9DC9B4] text-sm hover:bg-white/[0.06] active:scale-[0.97] transition"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
-          </svg>
-          Volver al catálogo
-        </button>
 
       </div>
     </div>

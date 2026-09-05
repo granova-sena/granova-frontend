@@ -69,7 +69,7 @@ function VentaModal({ onClose, onCreado }) {
   const cliente = clientes.find(c => String(c.id_cliente) === String(idCliente))
   const esJuridica = cliente?.tipo_persona === 'juridica'
   const esMayorista = cliente?.tipo_cliente === 'mayorista'
-  const descuentoEmpresaPct = Number(leerParametro('descuento_empresa_pct', 15))
+  const descuentoEmpresaPct = Number(leerParametro('descuento_empresa_pct', 20))
 
   const productoPorId = (id) => productos.find(p => String(p.id_producto) === String(id))
 

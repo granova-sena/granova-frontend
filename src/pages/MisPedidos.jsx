@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { API_URL } from "../config";
+import api from '../services/api'
 import { idDeTokenCliente } from '../services/session'
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -10,6 +10,7 @@ import FadeIn from '../components/ui/FadeIn';
 import OrderStepper from '../components/ui/OrderStepper';
 import EstadoPagoBadge from '../components/ui/EstadoPagoBadge';
 import OperacionBadge from '../components/ui/OperacionBadge';
+import Breadcrumb from '../components/ui/Breadcrumb';
 
 const METODOS_PASARELA = ['tarjeta', 'pse', 'nequi', 'daviplata']
 const esMetodoPasarela = (metodo) => METODOS_PASARELA.includes(String(metodo || '').toLowerCase())
@@ -24,26 +25,11 @@ const descargarFactura = async (id_pedido) => {
   try {
     // Genera la factura si no existe (el dueño del pedido la puede emitir).
     // Si ya existía, el backend responde 200 con la factura existente (idempotente).
-    const token = localStorage.getItem('token_cliente')
-    const resPost = await fetch(`${API_URL}/api/facturas`, {
-      method:  'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
-      body:    JSON.stringify({ id_pedido })
-    })
-    const jsonPost = await resPost.json().catch(() => null)
-
-    if (!resPost.ok || !jsonPost?.ok) {
-      throw new Error(jsonPost?.mensaje || jsonPost?.error || 'No se pudo generar la factura')
-    }
+    // api inyecta el token automáticamente y rechaza en statuses no-2xx.
+    await api.post('/facturas', { id_pedido })
 
     // Obtiene la factura
-    const res  = await fetch(`${API_URL}/api/facturas/${id_pedido}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    })
-    const json = await res.json()
+    const { data: json } = await api.get(`/facturas/${id_pedido}`)
 
     if (!json.ok) throw new Error(json.mensaje)
 
@@ -188,19 +174,17 @@ function MisPedidos() {
     async function cargarPedidos(silencioso = false) {
       try {
         if (!silencioso) setCargando(true)
-        const token = localStorage.getItem('token_cliente')
-        const q = busqueda ? `&q=${encodeURIComponent(busqueda)}` : ''
-        const res = await fetch(`${API_URL}/api/pedidos/cliente/${id_cliente}?page=${pagina}&limit=5${q}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        // api inyecta el token automáticamente (getActiveToken) y rechaza en no-2xx.
+        const { data } = await api.get(`/pedidos/cliente/${id_cliente}`, {
+          params: { page: pagina, limit: 5, ...(busqueda ? { q: busqueda } : {}) }
         })
-        const json = await res.json()
-        if (!json.ok) throw new Error(json.mensaje)
+        if (!data.ok) throw new Error(data.mensaje)
         if (!cancelado) {
-          setPedidos(json.data)
-          setPaginacion(json.paginacion || { totalPages: 1, totalRows: 0 })
+          setPedidos(data.data)
+          setPaginacion(data.paginacion || { totalPages: 1, totalRows: 0 })
         }
       } catch (err) {
-        if (!cancelado) setError(err.message)
+        if (!cancelado) setError(err.response?.data?.mensaje || err.response?.data?.error || err.message)
       } finally {
         if (!cancelado) setCargando(false)
       }
@@ -233,6 +217,7 @@ function MisPedidos() {
   return (
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-white">
+        <Breadcrumb items={[{ label: 'Mis compras' }]} />
         <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Historial</span>
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <h1 className="text-2xl sm:text-3xl font-semibold mt-2 tracking-tight">Mis compras</h1>

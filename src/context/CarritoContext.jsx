@@ -279,7 +279,7 @@ export function CarritoProvider({ children }) {
 
   // Descuento por volumen/mayorista como porcentaje
   const pctVolumen = DESCUENTO * 100
-  const pctJuridica = esJuridica ? leerParametro('descuento_empresa_pct', 15) : 0
+  const pctJuridica = esJuridica ? leerParametro('descuento_empresa_pct', 20) : 0
 
   // Subtotal base (sin ningún descuento)
   const subtotalBase = productos.reduce((acc, p) => {

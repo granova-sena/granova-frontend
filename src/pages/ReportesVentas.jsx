@@ -18,16 +18,44 @@ function ReportesVentas() {
   const [datos, setDatos] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [generandoPdf, setGenerandoPdf] = useState(false)
+  const [reportesEmpleados, setReportesEmpleados] = useState([])
+  const [totalEmpleados, setTotalEmpleados] = useState(0)
+  const [cargandoEmpleados, setCargandoEmpleados] = useState(true)
   const contenidoRef = useRef(null)
+
+  // Reportes que el admin ha registrado a cada empleado (vista general).
+  useEffect(() => {
+    setCargandoEmpleados(true)
+    const token = localStorage.getItem('token_empleado')
+    fetch(`${API_URL}/api/reportes/empleados?page=1&limit=50`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(res => res.json())
+      .then(json => {
+        if (json.ok) {
+          setReportesEmpleados(json.reportes || [])
+          setTotalEmpleados(json.paginacion?.total || 0)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCargandoEmpleados(false))
+  }, [])
 
   useEffect(() => {
     setCargando(true)
-    fetch(`${API_URL}/api/reportes/ventas?periodo=${periodoActivo}`)
-      .then(res => res.json())
+    const token = localStorage.getItem('token_empleado')
+    fetch(`${API_URL}/api/reportes/ventas?periodo=${periodoActivo}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(res => {
+        if (res.status === 401) throw new Error('Sesión expirada')
+        return res.json()
+      })
       .then(json => {
         if (json.ok) setDatos(json.data)
+        else throw new Error(json.mensaje || 'No se pudieron cargar los reportes')
       })
-      .catch(err => console.error(err))
+      .catch(err => toast.error(err.message || 'No se pudieron cargar los reportes'))
       .finally(() => setCargando(false))
   }, [periodoActivo])
 
@@ -101,6 +129,8 @@ function ReportesVentas() {
       <PageHeader
         titulo="Reportes de ventas"
         subtitulo={`Detalle de ventas por producto — ${tituloPeriodo}`}
+        breadcrumbs={[{ label: 'Dashboard', to: '/dashboard' }, { label: 'Reportes' }]}
+        volverA="/dashboard"
         acciones={(
           <BotonPrimario onClick={descargarPDF} disabled={generandoPdf || cargando}>
             ↓ {generandoPdf ? 'Generando...' : 'Descargar PDF'}
@@ -230,6 +260,54 @@ function ReportesVentas() {
           </PanelCard>
         </div>
       )}
+
+      {/* Reportes a empleados (vista general del admin) */}
+      <PanelCard animado={false} className="overflow-hidden">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-admin-heading">Reportes a empleados</h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {totalEmpleados > 0 ? `${totalEmpleados} reporte${totalEmpleados === 1 ? '' : 's'} en total` : 'Todos los reportes registrados por el admin'}
+            </p>
+          </div>
+        </div>
+        {cargandoEmpleados ? (
+          <div className="p-5">
+            <PanelSkeleton filas={2} columnas={3} />
+          </div>
+        ) : reportesEmpleados.length === 0 ? (
+          <div className="p-5">
+            <EmptyState icono="📝" titulo="Sin reportes" descripcion="Aún no hay reportes registrados para empleados." />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 bg-gray-50">
+                  <th className="py-3 px-5 font-medium">Empleado</th>
+                  <th className="py-3 px-5 font-medium">Motivo</th>
+                  <th className="py-3 px-5 font-medium">Registrado por</th>
+                  <th className="py-3 px-5 font-medium">Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportesEmpleados.map((r) => (
+                  <tr key={r.id_reporte} className="border-b border-gray-100 last:border-0">
+                    <td className="py-3 px-5 text-admin-heading font-medium">
+                      {r.empleado_nombre} {r.empleado_apellido}
+                    </td>
+                    <td className="py-3 px-5 text-gray-600 max-w-[260px] truncate" title={r.motivo}>{r.motivo}</td>
+                    <td className="py-3 px-5 text-gray-500">{r.creado_por_nombre || '—'}</td>
+                    <td className="py-3 px-5 text-gray-500">
+                      {new Date(r.fecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PanelCard>
     </div>
   )
 }

@@ -217,7 +217,7 @@ function RegistroEmpresa() {
             onClick={() => navigate("/")}
             className="mt-3 w-full h-11 rounded-xl text-white/60 text-sm hover:text-white transition"
           >
-            Volver al inicio
+            ← Volver al inicio
           </button>
         </motion.div>
       </div>
@@ -227,11 +227,8 @@ function RegistroEmpresa() {
   return (
     <div className="min-h-screen text-white" style={{ background: "#0a1a0a" }}>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-14">
-        <button type="button" onClick={() => navigate("/")} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/15 text-[#9DC9B4] text-sm mb-6 hover:bg-white/[0.06] active:scale-[0.97] transition">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
-          </svg>
-          Volver al inicio
+        <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2 text-[#9DC9B4] text-sm mb-6 hover:underline">
+          ← Volver al inicio
         </button>
 
         <div className="flex items-center gap-3 mb-2">
@@ -453,12 +450,9 @@ function RegistroEmpresa() {
                     <button
                       type="button"
                       onClick={() => setPaso(1)}
-                      className="sm:w-32 h-12 rounded-xl bg-white/[0.05] border border-white/10 text-white/70 text-sm font-medium hover:bg-white/[0.09] inline-flex items-center justify-center gap-2 transition"
+                      className="sm:w-32 h-12 rounded-xl bg-white/[0.05] border border-white/10 text-white/70 text-sm font-medium hover:bg-white/[0.09] transition"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                        <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
-                      </svg>
-                      Atrás
+                      ← Atrás
                     </button>
                     <button
                       type="submit"

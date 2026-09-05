@@ -12,6 +12,9 @@ const ESTADOS = [
   { valor: 'aceptada', etiqueta: 'Aceptada', color: 'bg-emerald-100 text-emerald-700' },
   { valor: 'vencida', etiqueta: 'Vencida', color: 'bg-amber-100 text-amber-700' },
   { valor: 'anulada', etiqueta: 'Anulada', color: 'bg-red-100 text-red-600' },
+  { valor: 'activa', etiqueta: 'Activa', color: 'bg-lime-100 text-lime-700' },
+  { valor: 'comprada', etiqueta: 'Comprada', color: 'bg-teal-100 text-teal-700' },
+  { valor: 'eliminada', etiqueta: 'Eliminada', color: 'bg-stone-100 text-stone-600' },
 ]
 
 function CotizacionesAdmin() {
@@ -66,6 +69,8 @@ function CotizacionesAdmin() {
       <PageHeader
         titulo="Cotizaciones"
         subtitulo="Cotizaciones emitidas por los clientes desde la tienda"
+        breadcrumbs={[{ label: 'Dashboard', to: '/dashboard' }, { label: 'Cotizaciones' }]}
+        volverA="/dashboard"
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

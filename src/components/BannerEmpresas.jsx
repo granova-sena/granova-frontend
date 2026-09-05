@@ -39,7 +39,7 @@ function BannerEmpresas() {
               <p className="mt-4 max-w-lg text-white/60 leading-relaxed">
                 Compra café para tu negocio con{' '}
                 <span className="font-bold text-[#8fb996]">
-                  {leerParametro('descuento_empresa_pct', 15)}% de descuento
+                  {leerParametro('descuento_empresa_pct', 20)}% de descuento
                 </span>{' '}
                 en todas tus compras, facturación a nombre de tu empresa y atención preferencial. Crea tu cuenta empresarial con tu NIT en menos de un minuto.
               </p>

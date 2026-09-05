@@ -402,32 +402,15 @@ function GestionPedidos() {
 
   const normalizar = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
-  // Filtro por método de pago + estado_pago + operación + estado aplicados en el
-  // cliente + búsqueda libre (pedido, cliente, correo, producto).
+  // Los filtros de operación/estado/método/manual/búsqueda los resuelve el
+  // servidor (para paginar sobre todo el listado); en cliente solo aplican
+  // los toggles de "Nuevos (24h)" y "Pendientes" sobre la página ya filtrada.
   const pedidosVisibles = useMemo(() => {
-    let base = filtroMetodo
-      ? pedidos.filter(p => (p.metodo_pago || 'sin_dato') === filtroMetodo)
-      : pedidos
-    base = filtroPago
-      ? base.filter(p => (p.estado_pago || 'sin_dato') === filtroPago)
-      : base
-    base = filtroOperacion
-      ? base.filter(p => (p.operacion || 'domicilio') === filtroOperacion)
-      : base
+    let base = pedidos
     if (filtroNuevo) base = base.filter(esNuevo)
     if (filtroPendiente) base = base.filter(p => p.estado === 'Pendiente')
-    if (filtroManual) base = base.filter(p => esMetodoManual(p.metodo_pago))
-    if (busqueda.trim()) {
-      const q = normalizar(busqueda)
-      base = base.filter(p =>
-        normalizar(p.pedido).includes(q) ||
-        normalizar(p.cliente).includes(q) ||
-        normalizar(p.email).includes(q) ||
-        normalizar(p.producto).includes(q)
-      )
-    }
     return base
-  }, [pedidos, filtroPago, filtroMetodo, filtroOperacion, filtroNuevo, filtroPendiente, filtroManual, busqueda])
+  }, [pedidos, filtroNuevo, filtroPendiente])
 
   const hayFiltros = !!(filtroPago || filtroMetodo || filtroOperacion || filtroNuevo || filtroPendiente || filtroManual || busqueda.trim())
 
@@ -450,7 +433,15 @@ function GestionPedidos() {
 
   const cargarPedidos = () => {
     setLoading(true)
-    api.get('/admin/pedidos/listado', { params: { page: pagina, limit: LIMITE } })
+    // Los filtros se resuelven en el servidor para que la paginación cuente
+    // sobre todos los pedidos que coinciden, no solo los de la página actual.
+    const params = { page: pagina, limit: LIMITE }
+    if (filtroOperacion) params.operacion = filtroOperacion
+    if (filtroPago) params.estado_pago = filtroPago
+    if (filtroMetodo) params.metodo_pago = filtroMetodo
+    if (filtroManual) params.manual = 'true'
+    if (busqueda.trim()) params.search = busqueda.trim()
+    api.get('/admin/pedidos/listado', { params })
       .then(res => {
         setPedidos(res.data.pedidos)
         setTotalPaginas(res.data.totalPaginas)
@@ -461,7 +452,7 @@ function GestionPedidos() {
   }
 
   useEffect(() => { cargarResumen() }, [])
-  useEffect(() => { cargarPedidos() }, [pagina])
+  useEffect(() => { cargarPedidos() }, [pagina, filtroOperacion, filtroPago, filtroMetodo, filtroManual, busqueda])
 
   const recargarTodo = () => {
     cargarResumen()

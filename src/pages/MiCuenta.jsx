@@ -7,6 +7,7 @@ import { leerParametro } from '../services/parametros'
 import { useCarrito } from '../context/CarritoContext'
 import { calcularNivel } from '../utils/lealtad'
 import LoyaltyRing from '../components/ui/LoyaltyRing'
+import Breadcrumb from '../components/ui/Breadcrumb'
 
 const ETIQUETAS_TIPO_PERSONA = { natural: 'Persona natural', juridica: 'Persona jurídica' }
 const ETIQUETAS_TIPO_DOCUMENTO = { CC: 'Cédula de ciudadanía (CC)', CE: 'Cédula de extranjería (CE)', NIT: 'NIT', PASAPORTE: 'Pasaporte' }
@@ -245,6 +246,7 @@ function MiCuenta() {
   return (
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-white">
+        <Breadcrumb items={[{ label: 'Mi cuenta' }]} />
         <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Tu perfil</span>
         <h1 className="text-2xl sm:text-3xl font-semibold mt-2 mb-8 sm:mb-10 tracking-tight">Mi cuenta</h1>
 
@@ -283,9 +285,9 @@ function MiCuenta() {
         <div className={`rounded-2xl p-6 sm:p-8 mb-5 border shadow-sm ${(esJuridica || tienePremio) ? 'bg-[#6FA98C]/15 border-[#6FA98C]/40' : 'bg-white/[0.08] border-white/15'}`}>
           {esJuridica ? (
             <>
-              <p className="text-lg font-semibold text-white mb-1">🏢 Tienes {leerParametro('descuento_empresa_pct', 15)}% de descuento en todos tus pedidos</p>
+              <p className="text-lg font-semibold text-white mb-1">🏢 Tienes {leerParametro('descuento_empresa_pct', 20)}% de descuento en todos tus pedidos</p>
               <p className="text-sm text-white/60 leading-relaxed">
-                Por comprar como empresa, el {leerParametro('descuento_empresa_pct', 15)}% se aplica automáticamente en cada pedido.
+                Por comprar como empresa, el {leerParametro('descuento_empresa_pct', 20)}% se aplica automáticamente en cada pedido.
               </p>
             </>
           ) : tienePremio ? (
@@ -308,7 +310,7 @@ function MiCuenta() {
               )}
               {!tieneDocumento && (
                 <p className="text-sm text-[#9DC9B4] mt-3 leading-relaxed">
-                  💡 ¿Compras como empresa? Registra tu NIT en la sección Identificación y obtén 10% en todos tus pedidos.
+                  💡 ¿Compras como empresa? Registra tu NIT en la sección Identificación y obtén {leerParametro('descuento_empresa_pct', 20)}% en todos tus pedidos.
                 </p>
               )}
             </>
@@ -338,7 +340,7 @@ function MiCuenta() {
             </div>
           ) : esJuridica ? (
             <p className="text-sm text-white/50 leading-relaxed">
-              🏢 Tu descuento de empresa ({leerParametro('descuento_empresa_pct', 15)}%) ya supera los cupones de lealtad — tus puntos se siguen acumulando para tu rango.
+              🏢 Tu descuento de empresa ({leerParametro('descuento_empresa_pct', 20)}%) ya supera los cupones de lealtad — tus puntos se siguen acumulando para tu rango.
             </p>
           ) : (
             <>

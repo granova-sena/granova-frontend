@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { API_URL } from "../config";
 import { leerParametro } from '../services/parametros';
 import FadeIn from '../components/ui/FadeIn';
+import Breadcrumb from '../components/ui/Breadcrumb';
 
 const IconoEnvio = (props) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" {...props}><path d="M3 7h11v10H3V7zm11 3h4l3 3v4h-7v-7z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><circle cx="7" cy="18" r="1.6" stroke="currentColor" strokeWidth="1.6" /><circle cx="17" cy="18" r="1.6" stroke="currentColor" strokeWidth="1.6" /></svg>
@@ -60,6 +61,7 @@ function Promociones() {
   return (
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-white">
+        <Breadcrumb items={[{ label: 'Promociones' }]} />
         <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Beneficios Granova</span>
         <h1 className="text-2xl sm:text-3xl font-semibold mt-2 mb-2 tracking-tight">Promociones</h1>
         <p className="text-white/50 text-sm mb-8 sm:mb-10 max-w-xl">
@@ -127,7 +129,7 @@ function Promociones() {
         <FadeIn>
           <div className="mt-6 p-6 sm:p-8 rounded-2xl text-center bg-[#6FA98C]">
             <p className="text-white font-medium mb-1">¿Listo para aprovechar tus descuentos?</p>
-            <p className="text-white/50 text-sm mb-5">{esJuridica ? `Tu ${leerParametro('descuento_empresa_pct', 15)}% de empresa ya está activo — el mejor descuento se aplica solo.` : 'Elige tu formato, compra al por mayor o canjea tus puntos — el mejor descuento se aplica solo.'}</p>
+            <p className="text-white/50 text-sm mb-5">{esJuridica ? `Tu ${leerParametro('descuento_empresa_pct', 20)}% de empresa ya está activo — el mejor descuento se aplica solo.` : 'Elige tu formato, compra al por mayor o canjea tus puntos — el mejor descuento se aplica solo.'}</p>
             <button
               type="button"
               onClick={() => navigate('/cliente/catalogo')}

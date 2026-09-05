@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
+import ScrollToTop from './components/ui/ScrollToTop'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import AuthCallback from './pages/AuthCallback'
@@ -50,6 +51,7 @@ import MisPedidos from './pages/MisPedidos'
 import Promociones from './pages/Promociones'
 import CarritoPage from './pages/CarritoPage'
 import CotizacionPage from './pages/CotizacionPage'
+import MisCotizaciones from './pages/MisCotizacionesPage'
 import ConfigurarPedidoPage from './pages/ConfigurarPedidoPage'
 import EstadoPedidoPage from './pages/EstadoPedidoPage'
 import PagarPage from './pages/PagarPage'
@@ -83,6 +85,7 @@ function App() {
           },
         }}
       />
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
@@ -115,6 +118,8 @@ function App() {
           <Route path="cuenta" element={<MiCuenta />} />
           <Route path="carrito" element={<CarritoPage />} />
           <Route path="cotizacion" element={<CotizacionPage />} />
+          <Route path="cotizaciones" element={<MisCotizaciones />} />
+          <Route path="cotizaciones/:id" element={<CotizacionPage />} />
           <Route path="configurar-pedido" element={<ConfigurarPedidoPage />} />
           <Route path="pagar" element={<PagarPage />} />
           <Route path="trazabilidad/:id" element={<TrazabilidadLotePage />} />

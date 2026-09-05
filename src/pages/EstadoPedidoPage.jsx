@@ -5,6 +5,7 @@ import FormularioResena from '../components/FormularioResena'
 import OrderStepper from '../components/ui/OrderStepper'
 import EstadoPagoBadge from '../components/ui/EstadoPagoBadge'
 import OperacionBadge from '../components/ui/OperacionBadge'
+import Breadcrumb from '../components/ui/Breadcrumb'
 
 const METODOS_PASARELA = ['tarjeta', 'pse', 'nequi', 'daviplata']
 const esMetodoPasarela = (metodo) => METODOS_PASARELA.includes(String(metodo || '').toLowerCase())
@@ -62,14 +63,20 @@ function EstadoPedidoPage() {
   }, [id])
 
   if (cargando) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1a0a' }}>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: '#0a1a0a' }}>
       <p className="text-white/50 text-sm">Cargando pedido...</p>
+      <button type="button" onClick={() => navigate('/cliente/pedidos')} className="text-[#9DC9B4] text-sm hover:underline">
+        ← Volver al historial
+      </button>
     </div>
   )
 
   if (error) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1a0a' }}>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: '#0a1a0a' }}>
       <p className="text-[#D85A30] text-sm">{error}</p>
+      <button type="button" onClick={() => navigate('/cliente/pedidos')} className="text-[#9DC9B4] text-sm hover:underline">
+        ← Volver al historial
+      </button>
     </div>
   )
 
@@ -86,6 +93,9 @@ function EstadoPedidoPage() {
   return (
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
       <div className="max-w-5xl mx-auto px-4 sm:px-8 py-10 text-white">
+
+        {/* Breadcrumb + volver */}
+        <Breadcrumb items={[{ label: 'Mis compras', ruta: '/cliente/pedidos' }, { label: 'Estado del pedido' }]} />
 
         {/* Encabezado */}
         <h1 className="text-2xl sm:text-3xl font-semibold mb-1 tracking-tight">Estado del pedido</h1>
@@ -250,18 +260,6 @@ function EstadoPedidoPage() {
             <p className="text-xs text-white/40">Si tienes dudas, contáctanos por WhatsApp 300 123 4567</p>
           </div>
         </div>
-
-        {/* Volver */}
-        <button
-          type="button"
-          onClick={() => navigate('/cliente/pedidos')}
-          className="mt-6 inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/15 text-[#9DC9B4] text-sm hover:bg-white/[0.06] active:scale-[0.97] transition"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
-          </svg>
-          Volver al historial
-        </button>
 
       </div>
     </div>

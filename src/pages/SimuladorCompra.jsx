@@ -7,6 +7,7 @@ import FadeIn from "../components/ui/FadeIn";
 import { SkeletonCard } from "../components/ui/Skeleton";
 import { ImagenProducto, adaptarProducto, eliminarDuplicados } from "./Catalogo";
 import toast from "react-hot-toast";
+import Breadcrumb from '../components/ui/Breadcrumb';
 
 const API_URL = `${BASE_API_URL}/productos`;
 
@@ -59,6 +60,32 @@ function volarProducto(producto, elementoOrigen) {
   } catch { /* silencioso */ }
 }
 
+// ── MEMORIA DE LA SIMULACIÓN ──────────────────────────────────────
+// La simulación se guarda POR USUARIO en localStorage (igual que el carrito)
+// para que no se pierda al ir a la cotización y volver al simulador. Sin
+// sesión activa se usa el sufijo "_invitado", igual que en el carrito.
+function idDeSimulacion() {
+  try {
+    return JSON.parse(localStorage.getItem("cliente"))?.id ?? "invitado";
+  } catch {
+    return "invitado";
+  }
+}
+const claveSimulacion = () => `granova_simulacion_u${idDeSimulacion()}`;
+
+function cargarSimulacion() {
+  try {
+    const guardado = localStorage.getItem(claveSimulacion());
+    if (!guardado) return [];
+    const raw = JSON.parse(guardado);
+    if (!Array.isArray(raw)) return [];
+    // Solo se restauran líneas con forma válida (key + producto).
+    return raw.filter((l) => l && l.key && l.p);
+  } catch {
+    return [];
+  }
+}
+
 // ── SIMULADOR DE COMPRA ────────────────────────────────────
 // El cliente arma su pedido aquí SIN tocar el carrito real y ve al instante
 // cuánto pagaría en total: aplica promociones por producto y el descuento
@@ -74,8 +101,14 @@ function SimuladorInterno() {
   const [error, setError] = useState(null);
 
   // Líneas del simulador: [{ key, p (producto adaptado), formatoSel, cant }]
-  const [lineas, setLineas] = useState([]);
+  // Se inician desde localStorage para conservar lo armado al volver aquí.
+  const [lineas, setLineas] = useState(cargarSimulacion);
   const [busqueda, setBusqueda] = useState("");
+
+  // Persiste las líneas cada vez que cambian (por usuario).
+  useEffect(() => {
+    try { localStorage.setItem(claveSimulacion(), JSON.stringify(lineas)); } catch { /* noop */ }
+  }, [lineas]);
 
   useEffect(() => {
     let cancelado = false;
@@ -163,7 +196,7 @@ function SimuladorInterno() {
   const volumenPct = tier ? Number(tier.descuento_pct) : 0;
   const fuentes = [
     { fuente: "volumen", pct: volumenPct },
-    { fuente: "empresa", pct: esJuridica ? leerParametro('descuento_empresa_pct', 15) : 0 },
+    { fuente: "empresa", pct: esJuridica ? leerParametro('descuento_empresa_pct', 20) : 0 },
     { fuente: "premio", pct: tienePremio && !esJuridica ? 10 : 0 },
   ].filter(f => f.pct > 0).sort((a, b) => b.pct - a.pct);
   const ganador = fuentes[0] || { fuente: null, pct: 0 };
@@ -197,18 +230,74 @@ function SimuladorInterno() {
     navigate("/cliente/carrito");
   }
 
+  // Convierte la simulación en ítems compatibles con carrito/cotización.
+  // Cada ítem lleva "cant" y "cantidad" para que tanto agregarAlCarrito como
+  // sincronizarCarrito los interpreten correctamente.
+  function construirItemsCotizacion() {
+    return lineas.map(l => {
+      const f = formatoDe(l);
+      const pct = Math.max(Number(l.p.promoPct) || 0, ganador.pct);
+      return {
+        id: l.p.id,
+        nombre: l.p.nombre,
+        presentacion: l.p.origen,
+        precio: f ? Number(f.precio) : l.p.precio,
+        cantidad: l.cant,
+        cant: l.cant,
+        img: l.p.img,
+        unidad: l.p.unidad,
+        id_formato: f ? f.id_formato : null,
+        etiqueta_formato: f ? f.etiqueta : "",
+        peso_kg: f ? f.peso_kg : null,
+        promo_pct: pct > 0 ? pct : null,
+        iva_pct: l.p.iva_pct,
+      };
+    });
+  }
+
+  // Cotización: la simulación se pasa por estado de navegación a la página de
+  // cotización SIN volcarla al carrito. Así el documento refleja EXACTAMENTE
+  // lo que se armó en el simulador y no se mezcla con los ítems del carrito.
+  function generarCotizacion() {
+    if (lineas.length === 0) {
+      toast.error("Agrega productos a la simulación para generar la cotización", { id: "sim-cotizacion", duration: 2000 });
+      return;
+    }
+    navigate("/cliente/cotizacion", {
+      state: {
+        items: construirItemsCotizacion(),
+        subtotal: subtotalBase,
+        descuentoMonto: ahorro,
+        total: subtotalFinal,
+        descuentoPct: ganador.pct,
+        descuentoFuente: ganador.fuente,
+        desdeSimulador: true,
+      },
+    });
+  }
+
   return (
     <div className="min-h-screen text-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+        <Breadcrumb items={[{ label: 'Simulador de compra' }]} />
 
         {/* Encabezado */}
         <FadeIn>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-11 h-11 rounded-xl bg-[#14291B] border border-[#6FA98C]/25 flex items-center justify-center text-xl">🧮</div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Simulador de compra</h1>
-              <p className="text-sm text-white/40 mt-0.5">Arma tu pedido y mira cuánto pagarías antes de comprometerte</p>
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-[#14291B] border border-[#6FA98C]/25 flex items-center justify-center text-xl">🧮</div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Simulador de compra</h1>
+                <p className="text-sm text-white/40 mt-0.5">Arma tu pedido y mira cuánto pagarías antes de comprometerte</p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={generarCotizacion}
+              className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-[#0F1D13] border border-[#6FA98C]/30 text-[#9DC9B4] text-sm font-medium hover:border-[#6FA98C]/60 hover:text-white transition shrink-0"
+            >
+              📋 Generar cotización
+            </button>
           </div>
         </FadeIn>
 

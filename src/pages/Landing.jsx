@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence, useScroll, useSpring, useTransform, useInView, animate } from 'framer-motion'
@@ -12,6 +12,7 @@ import FadeIn, { StaggerContainer, StaggerItem } from '../components/ui/FadeIn'
 import ImagenProducto from '../components/ImagenProducto'
 import BannerEmpresas from '../components/BannerEmpresas'
 import { useCarrito } from '../context/CarritoContext'
+import { useModalBehavior } from '../hooks/useModalBehavior'
 
 const EASE = [0.22, 1, 0.36, 1]
 
@@ -248,6 +249,9 @@ function Landing() {
 
         window.google.accounts.id.initialize({
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          // Opt-in a FedCM: sin esto, el método prompt() de One Tap dejará de
+          // funcionar cuando Google haga FedCM obligatorio (aviso GSI_LOGGER).
+          use_fedcm_for_prompt: true,
           callback: async (response) => {
             try {
               const respuesta = await fetch(`${API_URL}/auth/google-onetap`, {
@@ -302,6 +306,9 @@ function Landing() {
   useEffect(() => {
     setCantModal(1)
   }, [productoSeleccionado])
+
+  const cerrarModalProducto = useCallback(() => setProductoSeleccionado(null), [])
+  useModalBehavior(cerrarModalProducto, Boolean(productoSeleccionado))
 
   useEffect(() => {
     let cancelado = false
@@ -430,9 +437,9 @@ navigate('/cliente/carrito')
 
   const enlaceMenu = [
     { texto: 'Catálogo', href: '#catalogo-destacado' },
+    { texto: 'Empresas', href: '/cliente/empresas' },
     { texto: 'Nosotros', href: '#nosotros' },
     { texto: 'Proceso', href: '#proceso' },
-    { texto: 'Empresas', href: '/registro-empresa' },
   ]
 
   const irAEnlace = (l) => {
@@ -476,7 +483,7 @@ navigate('/cliente/carrito')
           {/* Menú hamburguesa móvil */}
           <button
             type="button"
-            className="md:hidden text-white/70 hover:text-white transition p-1"
+            className="lg:hidden text-white/70 hover:text-white transition p-1"
             onClick={() => setMenuAbierto(!menuAbierto)}
             aria-label="Abrir menú"
           >
@@ -500,7 +507,7 @@ navigate('/cliente/carrito')
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.28, ease: EASE }}
-              className="md:hidden overflow-hidden bg-granova-ink/95 backdrop-blur-md border-t border-white/10 px-4 pb-4 flex flex-col gap-4"
+              className="lg:hidden overflow-hidden bg-granova-ink/95 backdrop-blur-md border-t border-white/10 px-4 pb-4 flex flex-col gap-4"
             >
               {enlaceMenu.map((l) => (
                 <a key={l.href} href={l.href} onClick={(e) => { if (l.href.startsWith('/')) e.preventDefault(); irAEnlace(l) }} className="text-sm text-white/70 hover:text-granova-200 transition py-1.5">{l.texto}</a>
@@ -674,7 +681,15 @@ navigate('/cliente/carrito')
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <div className="p-6 flex flex-col gap-4">
+                    <div className="p-6 flex flex-col gap-4 relative">
+                      <button
+                        type="button"
+                        onClick={() => setProductoSeleccionado(null)}
+                        aria-label="Cerrar"
+                        className="absolute top-0 right-0 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white flex items-center justify-center transition"
+                      >
+                        ✕
+                      </button>
                       <div>
                         <p className="text-[10px] font-bold text-granova-400 uppercase tracking-widest mb-2 font-mono">
                           {productoSeleccionado.categoria_producto === 'maquina' ? 'Equipo especializado' : 'Café de origen'}

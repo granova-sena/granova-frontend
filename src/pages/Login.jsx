@@ -1,6 +1,6 @@
 // GRN-21 - Pantalla de Login de Granova
-import { useNavigate } from 'react-router-dom'
-import { useState, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { useEffect, useState, useRef } from 'react'
 
 import registerBg from '../assets/register-bg.mp4'
 import toast from 'react-hot-toast'
@@ -10,6 +10,7 @@ import { setClienteToken } from '../services/session'
 
 function Login() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { sincronizarSesion } = useCarrito()
   const [loading, setLoading] = useState(false)
   const [verContraseña, setVerContraseña] = useState(false)
@@ -21,6 +22,51 @@ function Login() {
   })
 
   const [error, setError] = useState('')
+
+  // Fallback de comunicación popup -> ventana principal cuando el navegador
+  // purga window.opener (el popup atraviesa api + accounts.google.com). El
+  // popup escribe google_login_result en localStorage y aquí lo leemos vía el
+  // evento "storage" (solo se dispara en otras ventanas, no en la escribiente).
+  useEffect(() => {
+    function procesarResultado() {
+      const raw = localStorage.getItem('google_login_result')
+      if (!raw) return
+      localStorage.removeItem('google_login_result')
+
+      let result
+      try {
+        result = JSON.parse(raw)
+      } catch {
+        return
+      }
+
+      const { token, cliente, error: err } = result
+
+      if (err) {
+        toast.dismiss()
+        toast.error(err)
+        return
+      }
+
+      if (token && cliente) {
+        setClienteToken(token)
+        localStorage.setItem('cliente', cliente)
+        sincronizarSesion()
+        navigate(location.state?.from || '/cliente')
+      }
+    }
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'google_login_result' && e.newValue) {
+        procesarResultado()
+      }
+    })
+
+    return () => {
+      window.removeEventListener('storage', procesarResultado)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function handleChange(e) {
     const { name, value } = e.target
@@ -82,7 +128,11 @@ function Login() {
       )
 
       await sincronizarSesion()
-      navigate('/cliente')
+
+      // Return-to: si el usuario vino desde una página con estado,
+      // vuelve ahí; si no, a su panel de cliente.
+      const destino = location.state?.from || '/cliente'
+      navigate(destino)
 
     } catch (error) {
       console.error('Error en Login:', error)
@@ -155,7 +205,7 @@ function Login() {
 
         popup.close()
         sincronizarSesion()
-        navigate('/cliente')
+        navigate(location.state?.from || '/cliente')
       }
     }
 
@@ -198,12 +248,9 @@ function Login() {
       <button
         type="button"
         onClick={() => navigate('/')}
-        className="absolute top-6 left-6 z-20 inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/15 text-white/50 text-sm hover:bg-white/[0.06] hover:text-white active:scale-[0.97] transition"
+        className="absolute top-6 left-6 z-20 flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
-        </svg>
-        Volver
+        ← Volver
       </button>
 
       <div

@@ -109,6 +109,7 @@ export function adaptarProducto(p) {
     origen: esMaquina
       ? [p.marca, p.modelo].filter(Boolean).join(" · ") || "Máquina de café"
       : [p.tipo_cafe, p.presentacion].filter(Boolean).join(" · ") || "Café Granova",
+    presentacion: p.presentacion || "",
     precio: Number(p.precio) || 0,
     precioDesde,
     formatos,
@@ -133,13 +134,27 @@ export function adaptarProducto(p) {
 // hace que React confunda nodos del DOM al reconciliar (causa típica del
 // error "Failed to execute 'removeChild' on 'Node'").
 export function eliminarDuplicados(productos) {
-  const vistos = new Set();
+  const vistos = new Map();
   const limpios = [];
   for (const p of productos) {
     if (p.id === undefined || p.id === null) continue;
-    if (vistos.has(p.id)) continue;
-    vistos.add(p.id);
-    limpios.push(p);
+    const idx = vistos.get(p.id);
+    if (idx === undefined) {
+      vistos.set(p.id, limpios.length);
+      limpios.push(p);
+      continue;
+    }
+    // Si ya existe una entrada para este producto, conservamos la que trae
+    // más información. El backend puede duplicar una fila (con/sin promo por
+    // el JOIN con promociones); aquí priorizamos la variante con promoción.
+    const actual = limpios[idx];
+    const actualTienePromo = Number(actual.promoPct) > 0;
+    const nuevoTienePromo = Number(p.promoPct) > 0;
+    if (nuevoTienePromo && !actualTienePromo) {
+      limpios[idx] = p;
+    } else if (!nuevoTienePromo && !actualTienePromo && (p.badge || '')) {
+      limpios[idx] = p;
+    }
   }
   return limpios;
 }
@@ -393,7 +408,7 @@ function CarritoDrawer({ carrito, setCarrito, onClose, onAumentar, descuentosVol
   const volumenPct = tier ? Number(tier.descuento_pct) : 0;
   const fuentes = [
     { fuente: 'volumen', pct: volumenPct },
-    { fuente: 'empresa', pct: esJuridica ? leerParametro('descuento_empresa_pct', 15) : 0 },
+    { fuente: 'empresa', pct: esJuridica ? leerParametro('descuento_empresa_pct', 20) : 0 },
     { fuente: 'premio', pct: tienePremio && !esJuridica ? 10 : 0 },
   ].filter(f => f.pct > 0).sort((a, b) => b.pct - a.pct);
   const ganador = fuentes[0] || { fuente: null, pct: 0 };
@@ -548,7 +563,7 @@ export function DetalleProducto({ p, onClose, onAgregar, esFavorito, onToggleFav
   // EL MAYOR GANA (igual que el backend): volumen vs empresa 10% vs promoción.
   // El precio mostrado es un estimado — el cobro real lo hace el servidor.
   const pctVolumen = tierActivo ? Number(tierActivo.descuento_pct) : 0;
-  const pctEmpresa = esJuridica ? leerParametro('descuento_empresa_pct', 15) : 0;
+  const pctEmpresa = esJuridica ? leerParametro('descuento_empresa_pct', 20) : 0;
   const pctPromo = p.promoPct || 0;
   const pctMostrado = Math.max(pctVolumen, pctEmpresa, pctPromo);
   const promoGana = pctPromo > 0 && pctPromo >= pctMostrado;
@@ -927,8 +942,8 @@ export function ProductoCard({ p, onAgregar, onVerDetalle, cantidadEnCarrito = 0
         <div className="flex items-end justify-between">
           <div>
             {(() => {
-              const pctMostrar = Math.max(p.promoPct || 0, esJuridica ? leerParametro('descuento_empresa_pct', 15) : 0);
-              const promoGana = (p.promoPct || 0) >= (esJuridica ? leerParametro('descuento_empresa_pct', 15) : 0) && p.promoPct > 0;
+              const pctMostrar = Math.max(p.promoPct || 0, esJuridica ? leerParametro('descuento_empresa_pct', 20) : 0);
+              const promoGana = (p.promoPct || 0) >= (esJuridica ? leerParametro('descuento_empresa_pct', 20) : 0) && p.promoPct > 0;
               const base = p.formatos.length > 0 ? p.precioDesde : p.precio;
               const precioCard = pctMostrar > 0 ? Math.round(base * (1 - pctMostrar / 100)) : base;
               const leyendaFormatos = p.formatos.map(f => f.etiqueta.replace(/^Paquete |^Bolsa /, "")).join(" · ");
@@ -1054,7 +1069,7 @@ function CatalogoInterno() {
   const navigate = useNavigate()
   const { cliente, sincronizarCarrito, productos: productosContexto } = useCarrito()
   const esJuridica = cliente?.tipo_persona === 'juridica'
-  const pctEmpresa = leerParametro('descuento_empresa_pct', 15)
+  const pctEmpresa = leerParametro('descuento_empresa_pct', 20)
   const [searchParams, setSearchParams] = useSearchParams();
   const seccionParam = searchParams.get("seccion");
   // La URL es la única fuente de verdad de la pestaña activa:
@@ -1064,7 +1079,7 @@ function CatalogoInterno() {
 
   useEffect(() => {
     setBusqueda("");
-    setFiltros({ tipo: "", disp: "", marca: "" });
+    setFiltros({ tipo: "", disp: "", marca: "", formatos: [] });
   }, [seccion]);
 
   const [productos, setProductos] = useState([]);
@@ -1080,6 +1095,14 @@ function CatalogoInterno() {
   const [error, setError] = useState(null);
   const [mostrarRecomendador, setMostrarRecomendador] = useState(false);
   const [recomendaciones, setRecomendaciones] = useState([]);
+  // Restaurar las recomendaciones persistidas del cliente (no se pierden al recargar/navegar)
+  useEffect(() => {
+    if (!cliente?.id) return
+    try {
+      const guardadas = localStorage.getItem(`granova_recomendaciones_${cliente.id}`)
+      if (guardadas) setRecomendaciones(JSON.parse(guardadas))
+    } catch {}
+  }, [cliente?.id])
   const [busqueda, setBusqueda] = useState("");
   const [buscaAbierto, setBuscaAbierto] = useState(false);
   // Campo de búsqueda enviado desde la landing (header público): /cliente/catalogo?q=...
@@ -1089,7 +1112,7 @@ function CatalogoInterno() {
   }, [qParam]);
   const [busquedaIdx, setBusquedaIdx] = useState(-1);
   const buscaRef = useRef(null);
-  const [filtros, setFiltros] = useState({ tipo: "", disp: "", marca: "" });
+  const [filtros, setFiltros] = useState({ tipo: "", disp: "", marca: "", formatos: [] });
   const [carritoOpen, setCarritoOpen] = useState(false);
   const [detalle, setDetalle] = useState(null);
   const [carrito, setCarrito] = useState(() => {
@@ -1312,15 +1335,29 @@ function CatalogoInterno() {
   const tiposDisponibles = [...new Set(cafeProductos.map(p => p.tipo))].filter(Boolean).sort();
   const marcasDisponibles = [...new Set(maquinasProductos.map(p => p.marca).filter(Boolean))].sort();
 
-  const filtrados = productosSeccion.filter(p => {
-    const matchBus  = p.nombre.toLowerCase().includes(busqueda.toLowerCase());
-    const matchTipo = !filtros.tipo || p.tipo === filtros.tipo;
-    const matchMarca = !filtros.marca || p.marca === filtros.marca;
-    const matchDisp = !filtros.disp || p.stockLabel === filtros.disp;
-    return matchBus && matchTipo && matchMarca && matchDisp;
-  });
+  // Identificador canónico de un formato según su peso (250g / 500g / 1kg...)
+  const normalizarFormato = (f) => {
+    const kg = Number(f?.peso_kg) || 0
+    if (kg === 0) return (f?.etiqueta || "").toString().toLowerCase()
+    const g = kg * 1000
+    return g >= 1000 ? `${g / 1000}kg` : `${g}g`
+  }
+  // Formatos disponibles fijos para el filtro del catálogo.
+  const formatosDisponibles = ["250g", "500g", "1kg"];
 
   const norm = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+  const filtrados = (busqueda.trim() ? productos.filter(p => p.disponible) : productosSeccion).filter(p => {
+    const matchBus  = p.nombre.toLowerCase().includes(busqueda.toLowerCase());
+    const matchTipo = !filtros.tipo || norm(p.tipo || "") === norm(filtros.tipo);
+    const matchMarca = !filtros.marca || p.marca === filtros.marca;
+    const matchPresentacion = !filtros.presentacion || norm(p.presentacion || "") === norm(filtros.presentacion);
+    // Formato (250/500/1kg...): multiselect; el producto coincide si tiene al menos uno de los elegidos
+    const matchFormato = !filtros.formatos.length || (p.formatos || []).some(f =>
+      filtros.formatos.includes(normalizarFormato(f))
+    );
+    return matchBus && matchTipo && matchMarca && matchPresentacion && matchFormato;
+  });
 
   const sugerencias = useMemo(() => {
     if (busqueda.trim().length < 2) return [];
@@ -1370,6 +1407,14 @@ function CatalogoInterno() {
     return true;
   }).slice(0, 8);
 
+  // Carruseles de máquinas/cafeteras (mismos criterios pero sobre maquinasProductos)
+  const carouselPromosMaquinas = maquinasProductos.filter(p => p.promoPct > 0).slice(0, 10);
+  const carouselPopularesMaquinas = [...maquinasProductos].sort((a, b) => b.stock - a.stock).slice(0, 8);
+  const carouselNuevosMaquinas = maquinasProductos.filter(p => {
+    if (!p.badge || p.badge !== "Nuevo") return false;
+    return true;
+  }).slice(0, 8);
+
   // ── Textos del hero según sección ──
   const heroTexto = {
     cafe: {
@@ -1388,7 +1433,11 @@ function CatalogoInterno() {
 
   const chips = seccion === "maquinas"
     ? [{ val: "", label: "Todas" }, ...marcasDisponibles.map(m => ({ val: m, label: m }))]
-    : [{ val: "", label: "Todos" }, ...tiposDisponibles.map(t => ({ val: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))];
+    : [
+        { val: "", label: "Todos", filtro: "tipo" },
+        { val: "grano", label: "Grano", filtro: "tipo" },
+        { val: "molido", label: "Molido", filtro: "tipo" },
+      ];
 
   const chipActivo = seccion === "maquinas" ? filtros.marca : filtros.tipo;
   const setChip = (val) => seccion === "maquinas" ? setFiltros(f => ({ ...f, marca: val })) : setFiltros(f => ({ ...f, tipo: val }));
@@ -1569,16 +1618,30 @@ function CatalogoInterno() {
                 {c.label}
               </MagneticChip>
             ))}
-            <span className="w-px h-5 bg-white/10 mx-1 hidden sm:block shrink-0" />
-            {["En stock", "Stock bajo"].map(d => (
-              <MagneticChip
-                key={d}
-                activo={filtros.disp === d}
-                onClick={() => setFiltros(f => ({ ...f, disp: f.disp === d ? "" : d }))}
-              >
-                {d}
-              </MagneticChip>
-            ))}
+            {seccion !== "maquinas" && (
+              <>
+                {formatosDisponibles.length > 0 && (
+                  <>
+                    <span className="w-px h-5 bg-white/10 mx-1 hidden sm:block shrink-0" />
+                    {formatosDisponibles.map(d => {
+                      const activo = filtros.formatos.includes(d)
+                      return (
+                        <MagneticChip
+                          key={d}
+                          activo={activo}
+                          onClick={() => setFiltros(f => ({
+                            ...f,
+                            formatos: activo ? f.formatos.filter(x => x !== d) : [...f.formatos, d],
+                          }))}
+                        >
+                          {d}
+                        </MagneticChip>
+                      )
+                    })}
+                  </>
+                )}
+              </>
+            )}
           </div>
       </div>
 
@@ -1604,13 +1667,18 @@ function CatalogoInterno() {
       {!cargando && !error && (
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-10">
 
-          {/* ── CARRUSEL CON PESTAÑAS (solo café) ── */}
+          {/* ── CARRUSEL CON PESTAÑAS (café y máquinas) ── */}
           <FadeIn>
-          {seccion === "cafe" && !busqueda.trim() && (() => {
+          {(!busqueda.trim()) && (() => {
+            const esMaq = seccion === "maquinas";
+            const carouselData = esMaq
+              ? { promos: carouselPromosMaquinas, populares: carouselPopularesMaquinas, nuevos: carouselNuevosMaquinas }
+              : { promos: carouselPromos, populares: carouselPopulares, nuevos: carouselNuevos };
+
             const tabsCarousel = [
-              { id: "ofertas",   label: "Ofertas",   emoji: "🏷️", items: carouselPromos },
-              { id: "populares", label: "Populares", emoji: "🔥", items: carouselPopulares },
-              { id: "nuevos",    label: "Nuevos",    emoji: "🆕", items: carouselNuevos },
+              { id: "ofertas",   label: "Ofertas",   emoji: "🏷️", items: carouselData.promos },
+              { id: "populares", label: "Populares", emoji: "🔥", items: carouselData.populares },
+              { id: "nuevos",    label: "Nuevos",    emoji: "🆕", items: carouselData.nuevos },
             ].filter(t => t.items.length > 0);
 
             if (tabsCarousel.length === 0) return null;
@@ -1641,9 +1709,9 @@ function CatalogoInterno() {
                 <CaruselGenerico
                   titulo={tabActiva.label}
                   subtitulo={
-                    tabActiva.id === "ofertas" ? "Los mejores descuentos de esta semana"
-                    : tabActiva.id === "populares" ? "Los cafés que todos están pidiendo"
-                    : "Los nuevos lotes que acabamos de recibir"
+                    tabActiva.id === "ofertas" ? (esMaq ? "Las cafeteras en oferta de esta semana" : "Los mejores descuentos de esta semana")
+                    : tabActiva.id === "populares" ? (esMaq ? "Las máquinas más pedidas" : "Los cafés que todos están pidiendo")
+                    : esMaq ? "Los equipos que acabamos de recibir" : "Los nuevos lotes que acabamos de recibir"
                   }
                   emoji={tabActiva.emoji}
                 >
@@ -1678,7 +1746,7 @@ function CatalogoInterno() {
                 {cliente?.tipo_persona === 'juridica' ? (
                   <span className="shrink-0 text-xs text-[#9DC9B4] bg-[#6FA98C]/10 border border-[#6FA98C]/30 rounded-full px-3.5 py-2">🏢 Ya tienes tu {pctEmpresa}%</span>
                 ) : (
-                  <button type="button" onClick={() => navigate('/cliente/simulador')} className="shrink-0 h-10 px-5 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">Granova Empresas →</button>
+                  <button type="button" onClick={() => navigate('/cliente/empresas')} className="shrink-0 h-10 px-5 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">Granova Empresas →</button>
                 )}
               </div>
               </FadeIn>
@@ -1694,7 +1762,7 @@ function CatalogoInterno() {
                     </div>
                     <button type="button" onClick={() => {
                       setBusqueda("");
-                      setFiltros({ tipo: "", disp: "", marca: "" });
+                      setFiltros({ tipo: "", disp: "", marca: "", formatos: [] });
                       cambiarSeccion("cafe");
                     }} className="text-sm text-[#9DC9B4] hover:text-white transition">Ver todos →</button>
                   </div>
@@ -1755,7 +1823,7 @@ function CatalogoInterno() {
           {/* RECOMENDADO PARA TI — MÁQUINAS */}
           {seccion === "maquinas" && !busqueda.trim() && recomendaciones.some(p => p.categoria_producto === 'maquina') && (
             <FadeIn>
-            <div>
+            <div id="catalogo-resultados">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <span className="text-xs font-medium text-[#9DC9B4] uppercase tracking-wide">Personalizado</span>
@@ -1922,7 +1990,21 @@ function CatalogoInterno() {
       {mostrarRecomendador && (
         <RecomendadorModal
           onClose={() => setMostrarRecomendador(false)}
-          onRecomendaciones={(datos) => setRecomendaciones(datos)}
+          onRecomendaciones={(datos) => {
+            setRecomendaciones(datos)
+            // Si las recomendaciones son de máquinas, cambiar a la pestaña Máquinas
+            // (y a Café si son de café) sin importar dónde estaba ubicado el usuario.
+            const hayMaquinas = (datos || []).some(p => p.categoria_producto === 'maquina')
+            if (hayMaquinas && seccion !== "maquinas") {
+              cambiarSeccion("maquinas")
+            } else if (!hayMaquinas && (datos || []).length > 0 && seccion !== "cafe") {
+              cambiarSeccion("cafe")
+            }
+            // Navegar con scroll hacia la sección de recomendados (tras cerrar el panel)
+            setTimeout(() => {
+              document.getElementById("catalogo-resultados")?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }, 250)
+          }}
         />
       )}
 

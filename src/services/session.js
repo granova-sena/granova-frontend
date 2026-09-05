@@ -2,7 +2,6 @@
 // Claves de localStorage por rol para evitar contaminación
 // entre sesiones de cliente y empleado/admin en el mismo navegador.
 import { jwtDecode } from 'jwt-decode'
-import { resetErroresVistos } from '../utils/toastError'
 
 const CLAVE_CLIENTE  = 'token_cliente'
 const CLAVE_EMPLEADO = 'token_empleado'
@@ -38,7 +37,6 @@ export function setClienteToken(token) {
   localStorage.removeItem(CLAVE_EMPLEADO)
   localStorage.removeItem('usuario')
   localStorage.setItem(CLAVE_CLIENTE, token)
-  resetErroresVistos()
 }
 
 /** Guarda el token del empleado/admin (login-admin). Elimina la sesión de cliente previa. */
@@ -46,13 +44,25 @@ export function setEmpleadoToken(token) {
   localStorage.removeItem(CLAVE_CLIENTE)
   localStorage.removeItem('cliente')
   localStorage.setItem(CLAVE_EMPLEADO, token)
-  resetErroresVistos()
 }
 
 /** Limpia la sesión del cliente (logout desde panel cliente). */
 export function clearClienteToken() {
   localStorage.removeItem(CLAVE_CLIENTE)
   localStorage.removeItem('cliente')
+  limpiarRecomendaciones()
+}
+
+/** Elimina las recomendaciones persistidas de cliente en localStorage. */
+export function limpiarRecomendaciones() {
+  try {
+    const claves = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith('granova_recomendaciones_')) claves.push(k)
+    }
+    claves.forEach((k) => localStorage.removeItem(k))
+  } catch {}
 }
 
 /** Limpia la sesión del empleado/admin (logout desde dashboard). */
@@ -68,6 +78,7 @@ export function limpiarTodo() {
   localStorage.removeItem('cliente')
   localStorage.removeItem('usuario')
   LEGACY.forEach((k) => localStorage.removeItem(k))
+  limpiarRecomendaciones()
 }
 
 /**

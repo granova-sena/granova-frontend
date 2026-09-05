@@ -39,6 +39,30 @@ function AuthCallback() {
             return;
         }
 
+        // Fallback sin opener: el popup y la ventana principal viven en el
+        // mismo origen (www.granovaoficial.com), así que podemos comunicarnos
+        // a través de localStorage + evento "storage" en lugar de opener.
+        // Esto cubre el caso en que el navegador purga window.opener cuando el
+        // popup atraviesa dominios de terceros (api + accounts.google.com).
+        if (token && clienteData) {
+            localStorage.setItem('google_login_result', JSON.stringify({
+                token,
+                cliente: clienteData,
+                ok: true,
+            }));
+            window.close();
+            return;
+        }
+
+        if (error) {
+            localStorage.setItem('google_login_result', JSON.stringify({
+                error,
+                ok: false,
+            }));
+            window.close();
+            return;
+        }
+
         // Si no hay opener (se abrió esta URL directo, sin popup), navegamos normal.
         navigate('/login');
     }, [navigate]);

@@ -1,12 +1,11 @@
+import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useCarrito } from '../context/CarritoContext'
 import { API_URL } from '../config'
-import api from '../services/api'
-import LogoGranova from '../components/ui/LogoGranova'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import toast from 'react-hot-toast'
+import { guardarCotizacion,obtenerCotizacion, comprarCotizacion} from '../services/cotizacionApi'
 
 const INFO_GRANOVA = {
   nombre: 'GRANOVA',
@@ -28,11 +27,113 @@ function numeroCotizacion() {
 
 function CotizacionPage() {
   const navigate = useNavigate()
-  const { productos, subtotal, descuentoMonto, total, DESCUENTO, datosCliente, cliente } = useCarrito()
-
+  const location = useLocation()
+  const { id } = useParams()
+  const { productos, subtotal: subtotalCarrito, descuentoMonto: descuentoMontoCarrito, total: totalCarrito, DESCUENTO, datosCliente, cliente, sincronizarCarrito } = useCarrito()
+  const [cotizacionGuardadaDatos, setCotizacionGuardadaDatos] = useState(null)
+  const [cargandoCotizacion, setCargandoCotizacion] = useState(!!id)
+  const [errorCarga, setErrorCarga] = useState(null)
   const [guardando, setGuardando] = useState(false)
-  const [misCotizaciones, setMisCotizaciones] = useState([])
-  const [cargandoHistorial, setCargandoHistorial] = useState(false)
+  const [cotizacionGuardada, setCotizacionGuardada] = useState(false)
+  const [metodoPago, setMetodoPago] = useState('nequi')
+  const [comprando, setComprando] = useState(false)
+
+  const METODOS_PAGO_COTIZACION = [
+    { id: 'nequi', nombre: 'Nequi', icono: '📱' },
+    { id: 'tarjeta', nombre: 'Tarjeta', icono: '💳' },
+    { id: 'pse', nombre: 'PSE', icono: '🏦' },
+    { id: 'contra_entrega', nombre: 'Pago contra entrega', icono: '🚚' },
+
+  ]
+  async function manejarComprarCotizacion() {
+  const direccion = datosCliente?.direccion || clienteSesion?.direccion
+  const ciudad = datosCliente?.ciudad || clienteSesion?.ciudad
+
+  if (!direccion || !ciudad) {
+    toast.error('Necesitamos tu dirección de envío para procesar la compra')
+    return
+  }
+
+  setComprando(true)
+  try {
+    const resultado = await comprarCotizacion(cotizacionGuardadaDatos.id_cotizacion, {
+      metodo_pago: metodoPago,
+      direccion_envio: direccion,
+      ciudad_envio: ciudad,
+    })
+    toast.success('¡Pedido creado! Ya puedes continuar con el pago')
+    navigate(`/cliente/pedidos/${resultado.id_pedido}`)
+  } catch (error) {
+    if (error.response?.status === 409) {
+      const { totalCotizado, totalActual } = error.response.data
+      const confirmar = window.confirm(
+        `El precio cambió de $${totalCotizado.toLocaleString('es-CO')} a $${totalActual.toLocaleString('es-CO')}. ¿Deseas continuar con el precio actual?`
+      )
+      if (confirmar) {
+        try {
+          const resultado = await comprarCotizacion(cotizacionGuardadaDatos.id_cotizacion, {
+            metodo_pago: metodoPago,
+            direccion_envio: direccion,
+            ciudad_envio: ciudad,
+            confirmarCambioPrecio: true,
+          })
+          toast.success('¡Pedido creado! Ya puedes continuar con el pago')
+          navigate(`/cliente/pedidos/${resultado.id_pedido}`)
+        } catch (segundoError) {
+          toast.error(segundoError.response?.data?.mensaje ?? 'No se pudo procesar la compra')
+        } finally {
+          setComprando(false)
+        }
+      } else {
+        setComprando(false)
+      }
+      return
+    }
+    toast.error(error.response?.data?.mensaje ?? 'No se pudo procesar la compra')
+    setComprando(false)
+  }
+}
+ 
+
+  useEffect(() => {
+    if (!id) return
+
+    let cancelado = false
+    async function cargar() {
+      try {
+        setCargandoCotizacion(true)
+        const datos = await obtenerCotizacion(id)
+        if (!cancelado) setCotizacionGuardadaDatos(datos)
+      } catch (err) {
+        console.error('Error cargando cotización:', err)
+        if (!cancelado) setErrorCarga(err.response?.data?.mensaje ?? 'No se pudo cargar la cotización')
+      } finally {
+        if (!cancelado) setCargandoCotizacion(false)
+      }
+    }
+    cargar()
+    return () => { cancelado = true }
+  }, [id])
+
+  async function manejarGuardarCotizacion() {
+  setGuardando(true)
+  try {
+    await guardarCotizacion({
+      items,
+      subtotal,
+      descuentoMonto,
+      total,
+      descuentoPct,
+      descuentoFuente: estadoCotizacion.descuentoFuente ?? null,
+    })
+    setCotizacionGuardada(true)
+    toast.success('Cotización guardada. Podrás verla en "Mis cotizaciones"')
+  } catch (error) {
+    const mensaje = error.response?.data?.mensaje ?? 'No se pudo guardar la cotizacion'
+    toast.error(mensaje)}
+    finally{
+      setGuardando(false)
+    }}
 
   const clienteSesion = (() => {
     try {
@@ -42,78 +143,99 @@ function CotizacionPage() {
     }
   })()
 
-  useEffect(() => {
-    if (!clienteSesion) return
-    let activo = true
-    setCargandoHistorial(true)
-    api.get('/cotizaciones')
-      .then(({ data }) => {
-        if (activo && data?.ok) setMisCotizaciones(data.cotizaciones || [])
-      })
-      .catch(() => {
-        if (activo) setMisCotizaciones([])
-      })
-      .finally(() => {
-        if (activo) setCargandoHistorial(false)
-      })
-    return () => { activo = false }
-  }, [])
-
-  const guardarCotizacion = async () => {
-    if (!clienteSesion) {
-      toast.error('Inicia sesión para guardar tu cotización')
-      return
-    }
-    if (productos.length === 0) return
-    setGuardando(true)
-    try {
-      const { data } = await api.post('/cotizaciones', {
-        numero_cotizacion: numero,
-        items: productos.map(p => ({
-          id_producto: p.id,
-          nombre: p.nombre,
-          presentacion: p.presentacion || p.etiqueta_formato || null,
-          cantidad: Number(p.cantidad ?? p.cant ?? 1),
-          precio: Number(p.precio),
-          subtotal: Number(p.precio) * Number(p.cantidad ?? p.cant ?? 1),
-        })),
-        subtotal,
-        descuento: descuentoMonto,
-        total,
-        validez_dias: DIAS_VALIDEZ,
-      })
-      if (data?.ok) {
-        toast.success(`Cotización ${numero} guardada`)
-        api.get('/cotizaciones')
-          .then(({ data: historial }) => {
-            if (historial?.ok) setMisCotizaciones(historial.cotizaciones || [])
-          })
-          .catch(() => {})
-      } else {
-        toast.error(data?.error || 'No se pudo guardar la cotización')
-      }
-    } catch (error) {
-      console.error('Error guardando cotización:', error)
-      toast.error(error?.response?.data?.error || 'No se pudo conectar con el servidor')
-    } finally {
-      setGuardando(false)
-    }
-  }
-
   const infoCliente = {
     nombre: datosCliente?.nombre || clienteSesion?.nombre || '—',
     apellido: clienteSesion?.apellido || '',
     razonSocial: clienteSesion?.razon_social || cliente?.razon_social || null,
     email: datosCliente?.correo || clienteSesion?.email || '—',
-    telefono: datosCliente?.telefono || '—',
-    direccion: datosCliente?.direccion || '—',
-    ciudad: datosCliente?.ciudad || '—',
+    telefono: datosCliente?.telefono || clienteSesion?.telefono || '—',
+    direccion: datosCliente?.direccion || clienteSesion?.direccion || '—',
+    ciudad: datosCliente?.ciudad || clienteSesion?.ciudad || '—',
     nit: clienteSesion?.numero_documento || null,
   }
 
   const fechaHoy = new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
   const fechaValida = new Date(Date.now() + DIAS_VALIDEZ * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
-  const numero = numeroCotizacion()
+
+  // Cotización generada desde el simulador: llega por estado de navegación y
+  // refleja EXACTAMENTE lo que se armó ahí (sin mezclar con el carrito).
+  // Si se abre directa (sin estado), se usa el carrito como respaldo.
+
+ const estadoCotizacion = location.state || {}
+
+const items = cotizacionGuardadaDatos?.productos
+  ? cotizacionGuardadaDatos.productos.map((p) => ({
+      id: p.id_producto,
+      nombre: p.nombre,
+      presentacion: p.presentacion,
+      etiqueta_formato: p.etiqueta_formato,
+      precio: Number(p.precio_unitario),
+      cantidad: p.cantidad,
+      id_formato: p.id_formato,
+      peso_kg: p.peso_kg,
+      promo_pct: p.promo_pct,
+      iva_pct: p.iva_pct,
+    }))
+  : Array.isArray(estadoCotizacion.items) && estadoCotizacion.items.length > 0
+    ? estadoCotizacion.items
+    : productos
+
+
+
+  const subtotal = cotizacionGuardadaDatos ? Number(cotizacionGuardadaDatos.subtotal) : estadoCotizacion.subtotal ?? subtotalCarrito
+  const descuentoMonto = cotizacionGuardadaDatos ? Number(cotizacionGuardadaDatos.descuento) : estadoCotizacion.descuentoMonto ?? descuentoMontoCarrito
+  const total = cotizacionGuardadaDatos ? Number(cotizacionGuardadaDatos.total) : estadoCotizacion.total ?? totalCarrito
+  const descuentoPct = cotizacionGuardadaDatos ? Number(cotizacionGuardadaDatos.descuento_pct) : estadoCotizacion.descuentoPct ?? (DESCUENTO * 100)
+  const numero = cotizacionGuardadaDatos?.numero_cotizacion ?? numeroCotizacion()
+
+  if (cargandoCotizacion) {
+  return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1a0a' }}>
+      <p className="text-white/50 text-sm">Cargando cotización...</p>
+    </div>
+  )
+}
+
+if (errorCarga) {
+  return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1a0a' }}>
+      <p className="text-[#D85A30] text-sm">{errorCarga}</p>
+    </div>
+  )
+}
+
+  // Sin productos (ni de simulación ni de carrito) no hay documento que mostrar.
+  if (items.length === 0) {
+    return (
+      <div className="min-h-screen px-4 sm:px-8 py-6" style={{ background: '#0a1a0a' }}>
+        <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#9DC9B4] text-sm mb-6 hover:underline">
+          ← Volver
+        </button>
+        <div className="max-w-4xl mx-auto rounded-2xl bg-white/[0.04] border border-white/10 py-16 text-center">
+          <p className="text-3xl mb-3">📋</p>
+          <p className="text-white/60 text-sm font-medium">No hay productos para cotizar</p>
+          <p className="text-white/30 text-xs mt-1">Arma una simulación y genera tu cotización desde allí</p>
+          <button
+            type="button"
+            onClick={() => navigate('/cliente/simulador')}
+            className="mt-6 h-10 px-6 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition"
+          >
+            Ir al simulador
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+
+  // Confirma la compra de ESTA cotización: sincroniza sus ítems al carrito
+  // (reemplazando lo que hubiera) para que el checkout confirme exactamente esto.
+  const confirmarPedidoDesdeCotizacion = () => {
+    if (estadoCotizacion.items) {
+      sincronizarCarrito(estadoCotizacion.items)
+    }
+    navigate('/cliente/configurar-pedido')
+  }
 
   const generarPDF = () => {
     const doc = new jsPDF()
@@ -155,7 +277,7 @@ function CotizacionPage() {
     autoTable(doc, {
       startY: 80,
       head: [['Producto', 'Presentación', 'Cantidad', 'Precio unitario', 'Subtotal']],
-      body: productos.map(p => [
+      body: items.map(p => [
         p.nombre,
         p.presentacion || p.etiqueta_formato || '-',
         p.cantidad ?? p.cant ?? 1,
@@ -174,7 +296,7 @@ function CotizacionPage() {
     doc.text(`Subtotal:`, 120, finalY)
     doc.text(`$${subtotal.toLocaleString('es-CO')}`, 196, finalY, { align: 'right' })
     if (descuentoMonto > 0) {
-      doc.text(`Descuento (${(DESCUENTO * 100).toFixed(0)}%):`, 120, finalY + 6)
+      doc.text(`Descuento (${descuentoPct.toFixed(0)}%):`, 120, finalY + 6)
       doc.text(`- $${descuentoMonto.toLocaleString('es-CO')}`, 196, finalY + 6, { align: 'right' })
     }
     doc.setFontSize(11)
@@ -197,66 +319,65 @@ function CotizacionPage() {
   }
 
   const enviarPorCorreo = async () => {
-    if (!clienteSesion?.email) {
-      toast.error('No hay sesión activa')
-      return
-    }
-    try {
-      const res = await fetch(`${API_URL}/api/correo/cotizacion`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: clienteSesion.email,
-          nombre: clienteSesion.nombre,
-          numero,
-          productos: productos.map(p => ({
-            nombre: p.nombre,
-            presentacion: p.presentacion,
-            cantidad: p.cantidad ?? p.cant ?? 1,
-            precio: p.precio,
-          })),
-          subtotal,
-          descuento: descuentoMonto,
-          total,
-        }),
-      })
-      const json = await res.json()
-      if (json.ok) {
-        toast.success('Cotización enviada a ' + clienteSesion.email)
-      } else {
-        toast.error(json.mensaje)
-      }
-    } catch (error) {
-      console.error('Error en CotizacionPage:', error)
-      toast.error('No se pudo conectar con el servidor')
-    }
+  if (!clienteSesion?.email) {
+    toast.error('No hay sesión activa')
+    return
   }
 
+  try {
+    // Si aún no está guardada, la guardamos primero para tener un número real
+    let idReal = cotizacionGuardadaDatos?.id_cotizacion
+    let numeroReal = numero
+    if (!cotizacionGuardadaDatos) {
+      const cotizacionNueva = await guardarCotizacion({
+        items,
+        subtotal,
+        descuentoMonto,
+        total,
+        descuentoPct,
+        descuentoFuente: estadoCotizacion.descuentoFuente ?? null,
+      })
+      numeroReal = cotizacionNueva?.numero_cotizacion ?? numero
+      idReal = cotizacionNueva?.id_cotizacion ?? null
+      setCotizacionGuardadaDatos(cotizacionNueva) // así el botón "Guardar" también refleja que ya se guardó
+      setCotizacionGuardada(true)
+    }
+
+    const res = await fetch(`${API_URL}/api/correo/cotizacion`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: clienteSesion.email,
+        nombre: clienteSesion.nombre,
+        numero: numeroReal,
+        id_cotizacion: idReal,
+        productos: items.map(p => ({
+          nombre: p.nombre,
+          presentacion: p.presentacion,
+          cantidad: p.cantidad ?? p.cant ?? 1,
+          precio: p.precio,
+        })),
+        subtotal,
+        descuento: descuentoMonto,
+        total,
+      }),
+    })
+    const json = await res.json()
+    if (json.ok) {
+      toast.success('Cotización enviada a ' + clienteSesion.email)
+    } else {
+      toast.error(json.mensaje)
+    }
+  } catch (error) {
+    console.error('Error en CotizacionPage:', error)
+    toast.error('No se pudo conectar con el servidor')
+  }
+}
   return (
     <div className="min-h-screen px-4 sm:px-8 py-6" style={{ background: '#0a1a0a' }}>
-      <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/15 text-[#9DC9B4] text-sm mb-6 hover:bg-white/[0.06] active:scale-[0.97] transition">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
-        </svg>
-        Volver
+      <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#9DC9B4] text-sm mb-6 hover:underline">
+        ← Volver
       </button>
-
-      {productos.length === 0 ? (
-        <div className="max-w-2xl mx-auto bg-[#FDFBF5] rounded-2xl p-10 text-center shadow-2xl">
-          <p className="text-xl font-bold text-[#1a2e1a] mb-2">No hay productos para cotizar</p>
-          <p className="text-sm text-[#3D3D3D]/70 mb-6">
-            Agrega productos a tu carrito para generar la cotización.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/cliente/catalogo')}
-            className="bg-[#6FA98C] text-white text-sm px-6 py-3 rounded-xl hover:bg-[#4F8A70] transition-colors"
-          >
-            Ir al catálogo
-          </button>
-        </div>
-      ) : (
-      <>
 
       {/* ── Documento ── */}
       <div className="max-w-4xl mx-auto bg-[#FDFBF5] rounded-xl overflow-hidden shadow-2xl mb-8">
@@ -265,7 +386,7 @@ function CotizacionPage() {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
             <div>
               <div className="flex items-center gap-3">
-                <LogoGranova tamano="lg" fondo="blanco" mostrarTexto={false} />
+                <img src="/logoGranova.jpeg" alt="Granova" className="w-14 h-14 object-contain rounded bg-white p-1" />
                 <div>
                   <p className="text-2xl font-bold text-white tracking-widest">GRANOVA</p>
                   <p className="text-[11px] text-white/60">{INFO_GRANOVA.lema}</p>
@@ -315,7 +436,7 @@ function CotizacionPage() {
                 </tr>
               </thead>
               <tbody>
-                {productos.map((p) => {
+                {items.map((p) => {
                   const cant = Number(p.cantidad ?? p.cant ?? 1)
                   return (
                     <tr key={p.id} className="border-b border-[#1a2e1a]/10">
@@ -346,7 +467,7 @@ function CotizacionPage() {
               </div>
               {descuentoMonto > 0 && (
                 <div className="flex justify-between text-[#1a2e1a]">
-                  <span>Descuento ({(DESCUENTO * 100).toFixed(0)}%)</span>
+                  <span>Descuento ({descuentoPct.toFixed(0)}%)</span>
                   <span>- ${descuentoMonto.toLocaleString('es-CO')}</span>
                 </div>
               )}
@@ -359,10 +480,41 @@ function CotizacionPage() {
           </div>
         </div>
       </div>
+        {cotizacionGuardadaDatos && cotizacionGuardadaDatos.estado === 'activa' && (
+  <div className="max-w-4xl mx-auto mb-6">
+    <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl p-5 sm:p-6">
+      <h3 className="text-sm font-semibold text-white mb-4">Selecciona tu método de pago</h3>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {METODOS_PAGO_COTIZACION.map((m) => (
+          <button
+            type="button"
+            key={m.id}
+            onClick={() => setMetodoPago(m.id)}
+            className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-center transition-colors
+              ${metodoPago === m.id ? 'border-[#6FA98C] bg-[#6FA98C]/10' : 'border-white/15 bg-white/[0.04] hover:border-[#6FA98C]/50'}`}
+          >
+            <span className="text-xl">{m.icono}</span>
+            <span className="text-xs font-medium text-white">{m.nombre}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Botones */}
       <div className="max-w-4xl mx-auto flex flex-col sm:flex-row gap-4">
-        <button
+        {estadoCotizacion.desdeSimulador && (
+    <button
+      type="button"
+      onClick={manejarGuardarCotizacion}
+      disabled={guardando || cotizacionGuardada}
+      className="flex-1 border border-white/15 bg-white/[0.08] backdrop-blur-xl text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/[0.14] transition-colors disabled:opacity-50"
+    >
+      {cotizacionGuardada ? '✅ Guardada' : guardando ? 'Guardando...' : '💾 Guardar cotización'}
+    </button>
+  )}
+      <button
           type="button"
           onClick={enviarPorCorreo}
           className="flex-1 border border-white/15 bg-white/[0.08] backdrop-blur-xl text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/[0.14] transition-colors"
@@ -376,74 +528,28 @@ function CotizacionPage() {
         >
           📄 Descargar PDF
         </button>
-        <button
-          type="button"
-          onClick={guardarCotizacion}
-          disabled={guardando || productos.length === 0}
-          className="flex-1 bg-[#B8860B] text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#9d740a] transition-colors disabled:opacity-60"
-        >
-          💾 {guardando ? 'Guardando...' : 'Guardar cotización'}
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate('/cliente/configurar-pedido')}
-          className="flex-1 bg-[#6FA98C] text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#4F8A70] transition-colors"
-        >
-          Confirmar pedido
-        </button>
+      {cotizacionGuardadaDatos && cotizacionGuardadaDatos.estado === 'activa' ? (
+  <button type="button" onClick={manejarComprarCotizacion}
+            className="flex-1 border border-white/15 bg-white/[0.08] backdrop-blur-xl text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/[0.14] transition-colors"
+ disabled={comprando} >
+    {comprando ? 'Procesando...' : '🛒 Comprar esta cotización'}
+  </button>
+) : cotizacionGuardadaDatos && cotizacionGuardadaDatos.estado === 'comprada' ? (
+  <button
+    type="button"
+    onClick={() => navigate(`/cliente/pedidos/${cotizacionGuardadaDatos.id_pedido}`)}
+    className="flex-1 bg-[#6FA98C] text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#4F8A70] transition-colors"
+  >
+    Ver mi pedido
+  </button>
+) : (
+  <button type="button" onClick={confirmarPedidoDesdeCotizacion} 
+      className="flex-1 bg-[#6FA98C] text-white text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#4F8A70] transition-colors"
+>
+    Confirmar pedido
+  </button>
+)}
       </div>
-
-      {/* ── Historial ── */}
-      {clienteSesion && (
-        <div className="max-w-4xl mx-auto mt-10 mb-4">
-          <p className="text-white font-semibold text-sm mb-3">📂 Mis cotizaciones guardadas</p>
-          {cargandoHistorial ? (
-            <div className="bg-white/[0.05] border border-white/10 rounded-xl p-6 text-white/50 text-sm">Cargando…</div>
-          ) : misCotizaciones.length === 0 ? (
-            <div className="bg-white/[0.05] border border-white/10 rounded-xl p-6 text-white/50 text-sm">
-              Aún no tienes cotizaciones guardadas.
-            </div>
-          ) : (
-            <div className="bg-white/[0.05] border border-white/10 rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-white/[0.08]">
-                    <th className="text-left px-4 py-3 font-semibold text-white/80">N°</th>
-                    <th className="text-left px-4 py-3 font-semibold text-white/80">Fecha</th>
-                    <th className="text-right px-4 py-3 font-semibold text-white/80">Total</th>
-                    <th className="text-right px-4 py-3 font-semibold text-white/80">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {misCotizaciones.map((c) => (
-                    <tr key={c.id_cotizacion} className="border-t border-white/10">
-                      <td className="px-4 py-3 text-white/90">{c.numero_cotizacion || `COT-${c.id_cotizacion}`}</td>
-                      <td className="px-4 py-3 text-white/60">
-                        {new Date(c.creada_en).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </td>
-                      <td className="px-4 py-3 text-right text-white/90">
-                        ${Number(c.total).toLocaleString('es-CO')}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className={
-                          c.estado === 'aceptada' ? 'text-emerald-300'
-                          : c.estado === 'vencida' ? 'text-amber-300'
-                          : c.estado === 'anulada' ? 'text-red-300'
-                          : 'text-sky-300'
-                        }>
-                          {c.estado}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-      </>
-      )}
     </div>
   )
 }

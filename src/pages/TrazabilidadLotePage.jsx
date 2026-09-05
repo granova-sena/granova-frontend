@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { API_URL } from "../config";
+import Breadcrumb from '../components/ui/Breadcrumb'
 
 // Diccionario: traduce el valor crudo de la base (tipo_evento) a lo que ve el cliente.
 // Las llaves coinciden exactamente con el CHECK de la tabla eventos_lote.
@@ -38,14 +39,20 @@ function TrazabilidadLotePage() {
   }, [id])
 
   if (cargando) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1a0a' }}>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: '#0a1a0a' }}>
       <p className="text-white/50 text-sm">Cargando trazabilidad...</p>
+      <button type="button" onClick={() => navigate('/cliente/pedidos')} className="text-[#9DC9B4] text-sm hover:underline">
+        ← Volver al historial
+      </button>
     </div>
   )
 
   if (error) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1a0a' }}>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: '#0a1a0a' }}>
       <p className="text-[#D85A30] text-sm">{error}</p>
+      <button type="button" onClick={() => navigate('/cliente/pedidos')} className="text-[#9DC9B4] text-sm hover:underline">
+        ← Volver al historial
+      </button>
     </div>
   )
 
@@ -55,6 +62,24 @@ function TrazabilidadLotePage() {
   return (
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
       <div className="max-w-3xl mx-auto px-4 sm:px-8 py-10 text-white">
+
+        {/* Breadcrumb + volver */}
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <button
+            type="button"
+            onClick={() => navigate('/cliente/pedidos')}
+            className="flex items-center gap-2 text-[#9DC9B4] text-sm hover:underline"
+          >
+            ← Volver
+          </button>
+          <a
+            href={`${API_URL}/lotes/${id}/certificado`}
+            download
+            className="flex items-center gap-2 bg-[#6FA98C] text-white text-sm px-4 py-2 rounded-lg font-medium"
+          >
+            📄 Descargar certificado
+          </a>
+        </div>
 
         <h1 className="text-2xl sm:text-3xl font-semibold mb-1 tracking-tight">Origen de tu café</h1>
         <p className="text-xs text-white/40 mb-8">Lote {lote.codigo_lote} · Variedad {lote.variedad}</p>
@@ -107,27 +132,6 @@ function TrazabilidadLotePage() {
               })}
             </div>
           )}
-        </div>
-{/* Volver + descargar certificado */}
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/15 text-[#9DC9B4] text-sm hover:bg-white/[0.06] active:scale-[0.97] transition"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-              <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
-            </svg>
-            Volver
-          </button>
-
-          <a
-            href={`${API_URL}/lotes/${id}/certificado`}
-            download
-            className="flex items-center gap-2 bg-[#6FA98C] text-white text-sm px-4 py-2 rounded-lg font-medium"
-          >
-            📄 Descargar certificado
-          </a>
         </div>
 
       </div>

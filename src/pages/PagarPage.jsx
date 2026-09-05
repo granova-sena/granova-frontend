@@ -202,6 +202,13 @@ function PagarPage() {
             >
               Ver mi pedido
             </button>
+            <button
+              type="button"
+              onClick={() => navigate('/cliente/carrito')}
+              className="px-6 py-3 border border-white/20 text-white/80 rounded-xl text-sm font-medium hover:bg-white/10 transition"
+            >
+              ← Volver al carrito
+            </button>
           </div>
         </div>
       </div>
@@ -233,10 +240,17 @@ function PagarPage() {
           )}
           <button
             type="button"
-            onClick={() => navigate(`/cliente/pedidos/${idPedido}`)}
+            onClick={() => navigate(idPedido ? `/cliente/pedidos/${idPedido}` : '/cliente/pedidos')}
             className="mt-6 px-8 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition"
           >
             Ver mi pedido
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/cliente/catalogo')}
+            className="mt-2 px-8 py-3 border border-white/20 text-white/80 rounded-xl text-sm font-medium hover:bg-white/10 transition"
+          >
+            Seguir comprando →
           </button>
         </div>
       </div>
@@ -266,10 +280,17 @@ function PagarPage() {
             </button>
             <button
               type="button"
-              onClick={() => navigate(`/cliente/pedidos/${idPedido}`)}
+              onClick={() => navigate(idPedido ? `/cliente/pedidos/${idPedido}` : '/cliente/pedidos')}
               className="px-6 py-3 border border-white/20 text-white/80 rounded-xl text-sm font-medium hover:bg-white/10 transition"
             >
               Ver mi pedido
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/cliente/carrito')}
+              className="px-6 py-3 border border-white/20 text-white/80 rounded-xl text-sm font-medium hover:bg-white/10 transition"
+            >
+              ← Volver al carrito
             </button>
           </div>
         </div>
@@ -289,10 +310,17 @@ function PagarPage() {
           </p>
           <button
             type="button"
-            onClick={() => navigate(`/cliente/pedidos/${idPedido}`)}
+            onClick={() => navigate(idPedido ? `/cliente/pedidos/${idPedido}` : '/cliente/pedidos')}
             className="px-6 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition"
           >
             Ver mi pedido
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/cliente/carrito')}
+            className="mt-2 px-6 py-3 border border-white/20 text-white/80 rounded-xl text-sm font-medium hover:bg-white/10 transition"
+          >
+            ← Volver al carrito
           </button>
         </div>
       </div>
@@ -357,6 +385,13 @@ function PagarPage() {
           </p>
         </div>
         )}
+        <button
+          type="button"
+          onClick={() => navigate('/cliente/carrito')}
+          className="mt-4 w-full px-6 py-2.5 text-sm text-white/50 hover:text-white transition"
+        >
+          ← Volver al carrito
+        </button>
       </div>
     </div>
   )

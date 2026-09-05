@@ -1,4 +1,5 @@
 import { Fragment } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 /* ============================================================
    PanelKit — componentes reutilizables del panel Admin/Empleado
@@ -14,15 +15,85 @@ const TONOS = {
   neutral: { bg: 'rgba(255,255,255,0.08)', color: '#8fa89b' },
 }
 
-/* Cabecera de página: título + subtítulo + acciones a la derecha */
-export function PageHeader({ titulo, subtitulo, acciones, className = '' }) {
+/* Miga de pan + botón "volver": navegación del panel.
+   breadcrumbs: [{ label, to? }] — el último (sin `to`) es la página actual.
+   volverA: ruta a la que regresa el botón "← Volver" (opcional). */
+export function Breadcrumbs({ breadcrumbs = [], volverA }) {
+  const navigate = useNavigate()
+  const ultimo = breadcrumbs.length - 1
   return (
-    <div className={`panel-come mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${className}`}>
-      <div className="min-w-0">
-        <h1 className="text-xl font-semibold tracking-tight text-admin-heading sm:text-2xl">{titulo}</h1>
-        {subtitulo && <p className="mt-0.5 text-sm text-gray-400">{subtitulo}</p>}
+    <nav className="panel-come mb-3 flex flex-wrap items-center gap-1 text-xs text-gray-500" aria-label="Breadcrumb">
+      {volverA && (
+        <button
+          type="button"
+          onClick={() => navigate(volverA)}
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 font-medium text-[#1D9E75] hover:bg-[#1D9E75]/10 transition"
+        >
+          ← Volver
+        </button>
+      )}
+      {volverA && breadcrumbs.length > 0 && <span className="text-gray-300">|</span>}
+      {breadcrumbs.map((b, i) => {
+        const esUltimo = i === ultimo
+        return (
+          <Fragment key={i}>
+            {esUltimo ? (
+              <span className="font-medium text-admin-heading">{b.label}</span>
+            ) : b.to ? (
+              <Link to={b.to} className="hover:text-[#1D9E75] transition">
+                {b.label}
+              </Link>
+            ) : (
+              <span>{b.label}</span>
+            )}
+            {!esUltimo && <span className="text-gray-300">/</span>}
+          </Fragment>
+        )
+      })}
+    </nav>
+  )
+}
+
+/* Cabecera de página: breadcrumb opcional + título + subtítulo + acciones.
+   Si no se pasa `breadcrumbs`, se deriva automáticamente de la ruta actual
+   (panel admin/empleado/logística) con su Índice y botón "Volver". */
+const PANEL_BASE = {
+  '/dashboard': { etiqueta: 'Dashboard', indice: '/dashboard' },
+  '/panel-empleado': { etiqueta: 'Panel empleado', indice: '/panel-empleado' },
+  '/panel-logistica': { etiqueta: 'Logística', indice: '/panel-logistica' },
+}
+
+function breadcrumbsDesdeRuta(pathname) {
+  const base = Object.keys(PANEL_BASE)
+    .sort((a, b) => b.length - a.length)
+    .find((p) => pathname === p || pathname.startsWith(p + '/'))
+  if (!base) return null
+  const b = PANEL_BASE[base]
+  const resto = pathname.slice(base.length).split('/').filter(Boolean)
+  if (resto.length === 0) return null
+  const etiqueta = resto.map((s) =>
+    s.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  ).join(' / ')
+  return [{ label: b.etiqueta, to: b.indice }, ...(etiqueta ? [{ label: etiqueta }] : [])]
+}
+
+export function PageHeader({ titulo, subtitulo, acciones, breadcrumbs, volverA, className = '' }) {
+  const location = useLocation()
+  const auto = breadcrumbs ? null : breadcrumbsDesdeRuta(location.pathname)
+  const migas = auto || breadcrumbs || []
+  const volver = volverA !== undefined ? volverA : (auto?.length ? auto[0].to : undefined)
+  return (
+    <div className="mb-6">
+      {migas.length > 0 && (
+        <Breadcrumbs breadcrumbs={migas} volverA={volver} />
+      )}
+      <div className={`panel-come flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${className}`}>
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight text-admin-heading sm:text-2xl">{titulo}</h1>
+          {subtitulo && <p className="mt-0.5 text-sm text-gray-400">{subtitulo}</p>}
+        </div>
+        {acciones && <div className="flex flex-wrap items-center gap-2">{acciones}</div>}
       </div>
-      {acciones && <div className="flex flex-wrap items-center gap-2">{acciones}</div>}
     </div>
   )
 }

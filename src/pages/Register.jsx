@@ -276,12 +276,9 @@ function Register() {
         <button
   type="button"
   onClick={() => navigate('/')}
-  className="absolute top-6 left-6 z-20 inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/15 text-white/50 text-sm hover:bg-white/[0.06] hover:text-white active:scale-[0.97] transition"
+  className="absolute top-6 left-6 z-20 flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition"
 >
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-    <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
-  </svg>
-  Volver
+  ← Volver
 </button>  
       <div className="relative z-10 w-full max-w-md mx-4 my-10 rounded-2xl p-6 sm:p-8" style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.15)' }}>
 
@@ -453,10 +450,7 @@ function Register() {
             </label>
 
             <div className="flex gap-3">
-              <button type="button" onClick={() => setStep(1)} disabled={cargando} className="flex-1 inline-flex items-center justify-center gap-2 py-3 rounded-xl text-sm text-white/70 hover:bg-white/10 transition disabled:opacity-50" style={{ border: '1px solid rgba(255,255,255,0.15)' }}>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clipRule="evenodd" />
-                </svg>
+              <button type="button" onClick={() => setStep(1)} disabled={cargando} className="flex-1 py-3 rounded-xl text-sm text-white/70 hover:bg-white/10 transition disabled:opacity-50" style={{ border: '1px solid rgba(255,255,255,0.15)' }}>
                 Atrás
               </button>
               <button type="button" onClick={handleRegister} disabled={cargando || !puedeContinuarPaso2 || !aceptaTerminos || !turnstileToken} className="flex-1 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50">

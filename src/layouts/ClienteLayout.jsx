@@ -10,9 +10,10 @@ import { cargarFavoritos } from '../pages/Catalogo'
 const ENLACES = [
   { to: '/cliente', label: 'Inicio', end: true },
   { to: '/cliente/catalogo', label: 'Catálogo' },
+  { to: '/cliente/simulador', label: 'Simulador' },
   { to: '/cliente/foros', label: 'Foros' },
   { to: '/cliente/pedidos', label: 'Mis compras' },
-  { to: '/cliente/cotizacion', label: 'Cotizaciones' },
+  { to: '/cliente/cotizaciones', label: 'Mis cotizaciones' },
   { to: '/cliente/promociones', label: 'Promociones' },
 ]
 

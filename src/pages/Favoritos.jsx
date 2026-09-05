@@ -15,6 +15,7 @@ import {
   guardarFavoritos,
   cruzaUmbral,
 } from "./Catalogo";
+import Breadcrumb from '../components/ui/Breadcrumb';
 
 const API_URL = `${BASE_API_URL}/productos`;
 
@@ -147,6 +148,7 @@ function FavoritosInterno() {
   return (
     <div className="min-h-screen text-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+        <Breadcrumb items={[{ label: 'Favoritos' }]} />
 
         {/* Encabezado */}
         <FadeIn>
