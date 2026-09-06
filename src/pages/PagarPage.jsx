@@ -200,7 +200,8 @@ function PagarPage() {
         setProcesando(false)
       })
     } catch (err) {
-      setError(err.message || 'No se pudo abrir el medio de pago de Wompi.')
+      const detalle = typeof err === 'string' ? err : (err?.message || '')
+      setError(detalle ? `No se pudo abrir el medio de pago de Wompi: ${detalle}` : 'No se pudo abrir el medio de pago de Wompi.')
       setProcesando(false)
     }
   }
