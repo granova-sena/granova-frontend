@@ -303,10 +303,10 @@ function Landing() {
   }, [navigate])
 
   const [productos, setProductos] = useState([])
+  const [topVendidosMap, setTopVendidosMap] = useState({})
   const [resenasMap, setResenasMap] = useState({})
   const [testimonios, setTestimonios] = useState([])
   const [cargando, setCargando] = useState(true)
-  const [filtro] = useState('LO MÁS PEDIDO')
   const [productoSeleccionado, setProductoSeleccionado] = useState(null)
   const [cantModal, setCantModal] = useState(1)
   const [emailNews, setEmailNews] = useState('')
@@ -332,6 +332,17 @@ function Landing() {
 
         const lista = data.data || []
         setProductos(lista)
+
+        // Ranking real de ventas para priorizar "Los más pedidos" (2 cafés + 2 máquinas).
+        const resTop = await fetch(`${API_URL}/productos/top-vendidos?limit=8&dias=90`).catch(() => null)
+        if (resTop && resTop.ok) {
+          const top = await resTop.json()
+          const mapa = {}
+          ;(top.data || []).forEach((r) => {
+            if (r.id_producto != null) mapa[String(r.id_producto)] = Number(r.unidades_vendidas) || 0
+          })
+          if (!cancelado) setTopVendidosMap(mapa)
+        }
 
         // Valoración y reseñas reales por producto: /api/resenas/producto/:id
         // es público y devuelve promedio + comentarios (nada inventado).
@@ -376,12 +387,34 @@ function Landing() {
     return () => { cancelado = true }
   }, [])
 
-  const productosFiltrados = productos.filter(p => {
-    if (filtro === 'LO MÁS PEDIDO') return true
-    if (filtro === 'CAFÉS ESPECIALES') return (p.categoria_producto || 'cafe') === 'cafe'
-    if (filtro === 'EQUIPOS Y MÁQUINAS') return p.categoria_producto === 'maquina'
-    return true
-  }).slice(0, 4)
+  // "Los más pedidos": prioriza por ventas reales y garantiza 2 cafés + 2 máquinas.
+  const productosFiltrados = (() => {
+    if (productos.length === 0) return []
+    const ventas = (p) => topVendidosMap[String(p.id_producto)] || 0
+    const ordenados = [...productos].sort((a, b) => ventas(b) - ventas(a))
+    const cafes = []
+    const maquinas = []
+    for (const p of ordenados) {
+      const esMaquina = (p.categoria_producto || 'cafe') === 'maquina'
+      if (esMaquina && maquinas.length < 2) maquinas.push(p)
+      if (!esMaquina && cafes.length < 2) cafes.push(p)
+      if (cafes.length === 2 && maquinas.length === 2) break
+    }
+    return [...cafes, ...maquinas]
+  })()
+
+  const etiquetasDeProducto = (p) => {
+    const promoPct = Number(p.promo?.descuento_pct || 0) || 0
+    const ventas = topVendidosMap[String(p.id_producto)] || 0
+    let diasNuevo = null
+    if (p.fecha_creacion) {
+      diasNuevo = (Date.now() - new Date(p.fecha_creacion).getTime()) / 86400000
+    }
+    const etiquetas = []
+    if (ventas > 0) etiquetas.push({ texto: 'Más pedido', clase: 'bg-[#6FA98C] text-[#0a1a0a]' })
+    if (diasNuevo !== null && diasNuevo <= 14) etiquetas.push({ texto: 'Nuevo', clase: 'bg-[#6FA98C]/10 text-[#9DC9B4] ring-1 ring-inset ring-[#6FA98C]/25' })
+    return { promoPct, etiquetas }
+  }
 
   const getResenas = (p) => resenasMap[String(p.id_producto)] || { promedio: 0, total: 0 }
 
@@ -415,6 +448,8 @@ function Landing() {
       iva_pct: p.iva_pct == null ? 5 : Number(p.iva_pct),
     }
   }
+
+  const sesionActiva = Boolean(localStorage.getItem('token_cliente'))
 
   const agregarDesdeModal = () => {
     const p = productoSeleccionado
@@ -598,7 +633,7 @@ navigate('/cliente/carrito')
 
         <AnimatePresence mode="wait">
           <motion.div
-            key={filtro}
+            key="los-mas-pedidos"
             variants={CONTENEDOR_VARIANTES}
             initial="hidden"
             animate="visible"
@@ -611,6 +646,7 @@ navigate('/cliente/carrito')
               ))
             ) : (
               productosFiltrados.map((p) => {
+                const etiq = etiquetasDeProducto(p)
                 return (
                   <motion.div key={p.id_producto} variants={TARJETA_VARIANTES} className="group h-full flex flex-col bg-granova-card rounded-3xl border border-white/5 hover:border-granova-400/30 hover:shadow-2xl hover:shadow-black/60 hover:-translate-y-2 transition-all duration-300 overflow-hidden">
                     <div className="aspect-square w-full shrink-0 bg-granova-card2 overflow-hidden relative">
@@ -619,6 +655,18 @@ navigate('/cliente/carrito')
                         alt={p.nombre}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       />
+                      <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
+                        {etiq.etiquetas.map((e) => (
+                          <span key={e.texto} className={`text-[9px] sm:text-[10px] font-bold px-2.5 py-1 rounded-full ${e.clase} uppercase tracking-wider`}>
+                            {e.texto}
+                          </span>
+                        ))}
+                      </div>
+                      {etiq.promoPct > 0 && (
+                        <span className="absolute top-3 right-3 text-[9px] sm:text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#D85A30] text-white uppercase">
+                          -{etiq.promoPct}%
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={() => setProductoSeleccionado(p)}
@@ -756,20 +804,41 @@ navigate('/cliente/carrito')
                       </div>
 
                       <div className="flex flex-col gap-2 mt-auto">
-                        <button
-                          type="button"
-                          onClick={agregarDesdeModal}
-                          className="w-full py-3 rounded-xl bg-granova-400 text-white font-semibold hover:bg-granova-500 transition text-sm"
-                        >
-                          Agregar al carrito
-                        </button>
-                        <button
-                          type="button"
-                          onClick={irAlCarrito}
-                          className="w-full py-3 rounded-xl border border-granova-400/50 text-granova-200 hover:bg-granova-400/10 transition text-sm"
-                        >
-                          Ver carrito →
-                        </button>
+                        {sesionActiva ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={agregarDesdeModal}
+                              className="w-full py-3 rounded-xl bg-granova-400 text-white font-semibold hover:bg-granova-500 transition text-sm"
+                            >
+                              Agregar al carrito
+                            </button>
+                            <button
+                              type="button"
+                              onClick={irAlCarrito}
+                              className="w-full py-3 rounded-xl border border-granova-400/50 text-granova-200 hover:bg-granova-400/10 transition text-sm"
+                            >
+                              Ver carrito →
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => navigate('/register')}
+                              className="w-full py-3 rounded-xl bg-granova-400 text-white font-semibold hover:bg-granova-500 transition text-sm"
+                            >
+                              Crear cuenta para comprar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => navigate('/login')}
+                              className="w-full py-3 rounded-xl border border-granova-400/50 text-granova-200 hover:bg-granova-400/10 transition text-sm"
+                            >
+                              Iniciar sesión
+                            </button>
+                          </>
+                        )}
                         <button
                           type="button"
                           onClick={() => setProductoSeleccionado(null)}

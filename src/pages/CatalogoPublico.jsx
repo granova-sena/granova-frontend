@@ -29,6 +29,7 @@ function renderEstrellas(promedio) {
 export default function CatalogoPublico() {
   const navigate = useNavigate()
   const [productos, setProductos] = useState([])
+  const [topVendidos, setTopVendidos] = useState({})
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [categoria, setCategoria] = useState('todos')
@@ -45,8 +46,19 @@ export default function CatalogoPublico() {
         const j = await res.json()
         const lista = (j.data || j.productos || []).map(adaptarProducto)
         const listaLimpia = eliminarDuplicados(lista)
+        const resTop = await fetch(`${API_URL}/productos/top-vendidos?limit=8&dias=90`).catch(() => null)
+        const mapa = {}
+        if (resTop && resTop.ok) {
+          const top = await resTop.json()
+          ;(top.data || []).forEach((r) => {
+            if (r.id_producto != null) {
+              mapa[String(r.id_producto)] = Number(r.unidades_vendidas) || 0
+            }
+          })
+        }
         if (!cancelado) {
           setProductos(listaLimpia)
+          setTopVendidos(mapa)
           setCargando(false)
         }
       } catch {
@@ -210,9 +222,21 @@ export default function CatalogoPublico() {
                     alt={p.nombre}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   />
-                  <span className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-[#9DC9B4] uppercase tracking-wider">
-                    {p.categoria === 'maquina' ? 'Equipo' : 'Café'}
-                  </span>
+                  <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-[#9DC9B4] uppercase tracking-wider">
+                      {p.categoria === 'maquina' ? 'Equipo' : 'Café'}
+                    </span>
+                    {topVendidos[p.id] > 0 && (
+                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#6FA98C] text-[#0a1a0a] uppercase tracking-wider">
+                        Popular
+                      </span>
+                    )}
+                    {p.badge && (
+                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#6FA98C]/10 text-[#9DC9B4] ring-1 ring-inset ring-[#6FA98C]/25 uppercase tracking-wider">
+                        {p.badge}
+                      </span>
+                    )}
+                  </div>
                   {p.promoPct > 0 && (
                     <span className="absolute top-3 right-3 text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#6FA98C] text-[#0a1a0a] uppercase">
                       -{p.promoPct}%
