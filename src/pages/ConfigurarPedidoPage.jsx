@@ -121,6 +121,41 @@ function ConfigurarPedidoPage() {
     observaciones: '',
   })
 
+  // Autocompleta los detalles del pedido con los datos del cliente logueado
+  // (nombre, correo, teléfono, dirección y ciudad). Primero se prellenan con
+  // el perfil guardado localmente y, si la sesión es válida, se refrescan con
+  // el perfil del backend por si cambió desde la última compra. Los campos
+  // siguen siendo editables antes de continuar.
+  useEffect(() => {
+    const id = idDeTokenCliente()
+    const token = localStorage.getItem('token_cliente')
+
+    const precargar = (c) => {
+      if (!c) return
+      const nombreCompleto = [c.nombre, c.apellido].filter(Boolean).join(' ').trim()
+      setForm(prev => ({
+        ...prev,
+        nombre: prev.nombre || nombreCompleto || '',
+        correo: prev.correo || c.email || '',
+        telefono: prev.telefono || c.telefono || '',
+        direccion: prev.direccion || c.direccion || '',
+        ciudad: prev.ciudad || c.ciudad || '',
+      }))
+    }
+
+    try {
+      const clienteLocal = JSON.parse(localStorage.getItem('cliente')) || {}
+      if (clienteLocal.email) precargar(clienteLocal)
+    } catch (e) { /* ignore */ }
+
+    if (id && token) {
+      api.get(`/clientes/${id}`)
+        .then(r => precargar(r.data?.data || r.data))
+        .catch(() => {})
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Facturación (PN/PJ) — como MercadoLibre: solo si el cliente la necesita.
   // - Si ya guardó su facturación (checkout o Mi Cuenta): se muestra un banner
   //   compacto permanente, sin formulario (la edición se hace desde Mi Cuenta).

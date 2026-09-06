@@ -18,6 +18,9 @@ const IconoUsuario = (props) => (
 const IconoUbicacion = (props) => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" {...props}><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.6" /></svg>
 )
+const IconoTelefono = (props) => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" {...props}><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 2 .7 2.9a2 2 0 01-.5 2.1L8 10a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.5c.9.3 1.9.6 2.9.7a2 2 0 011.7 2z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+)
 const IconoSalir = (props) => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" {...props}><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
 )
@@ -46,6 +49,14 @@ function MiCuenta() {
     numero_documento: cliente.numero_documento || '',
     digito_verificacion: cliente.digito_verificacion || '',
     razon_social: cliente.razon_social || '',
+  })
+
+  const [editandoContacto, setEditandoContacto] = useState(false)
+  const [guardandoContacto, setGuardandoContacto] = useState(false)
+  const [formContacto, setFormContacto] = useState({
+    telefono: cliente.telefono || '',
+    direccion: cliente.direccion || '',
+    ciudad: cliente.ciudad || '',
   })
 
   const inicial = (cliente.nombre || 'C').charAt(0).toUpperCase()
@@ -128,6 +139,68 @@ function MiCuenta() {
       toast.error('No se pudo conectar con el servidor', { id: 'perfil-identificacion' })
     } finally {
       setGuardando(false)
+    }
+  }
+
+  function handleCambioContacto(e) {
+    const { name, value } = e.target
+    setFormContacto(prev => ({ ...prev, [name]: value }))
+  }
+
+  async function guardarContacto() {
+    toast.dismiss('perfil-contacto')
+
+    const telefonoLimpio = formContacto.telefono.replace(/\s/g, '')
+    if (telefonoLimpio && !/^\d{7,15}$/.test(telefonoLimpio)) {
+      toast.error('El teléfono debe tener entre 7 y 15 dígitos', { id: 'perfil-contacto' })
+      return
+    }
+
+    if (!formContacto.direccion.trim() && !formContacto.ciudad.trim() && !telefonoLimpio) {
+      toast.error('Ingresa al menos un dato de contacto', { id: 'perfil-contacto' })
+      return
+    }
+
+    setGuardandoContacto(true)
+    try {
+      const token = localStorage.getItem('token_cliente')
+      const idCliente = idDeTokenCliente()
+      if (!idCliente) {
+        toast.error('Debes iniciar sesión para actualizar tu perfil', { id: 'perfil-contacto' })
+        return
+      }
+      const respuesta = await fetch(`${API_URL}/api/clientes/${idCliente}/contacto`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          telefono: telefonoLimpio,
+          direccion: formContacto.direccion.trim(),
+          ciudad: formContacto.ciudad.trim(),
+        }),
+      })
+
+      const datos = await respuesta.json()
+
+      if (!respuesta.ok) {
+        const msg = datos.error ?? datos.mensaje ?? 'Error al actualizar'
+        toast.error(msg, { id: 'perfil-contacto' })
+        if (respuesta.status === 401 || respuesta.status === 403) {
+          setTimeout(() => { limpiarTodo(); window.location.href = '/login'; }, 1500)
+        }
+        return
+      }
+
+      actualizarPerfilCliente(datos.data)
+      toast.success('Datos de contacto actualizados', { id: 'perfil-contacto' })
+      setEditandoContacto(false)
+    } catch (error) {
+      console.error('Error actualizando contacto:', error)
+      toast.error('No se pudo conectar con el servidor', { id: 'perfil-contacto' })
+    } finally {
+      setGuardandoContacto(false)
     }
   }
 
@@ -236,6 +309,12 @@ function MiCuenta() {
       { label: 'Razón social', valor: cliente.razon_social || '—' },
       { label: 'Dígito de verificación', valor: cliente.digito_verificacion || '—' },
     ] : []),
+  ]
+
+  const camposContacto = [
+    { label: 'Teléfono', valor: cliente.telefono || '—' },
+    { label: 'Dirección', valor: cliente.direccion || '—' },
+    { label: 'Ciudad', valor: cliente.ciudad || '—' },
   ]
 
   const estilosInput = {
@@ -438,6 +517,100 @@ function MiCuenta() {
         )}
       </div>
       )}
+
+        {/* DATOS DE CONTACTO (teléfono, dirección y ciudad editables) */}
+        <div className="rounded-2xl p-6 sm:p-8 mb-5 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <IconoTelefono className="text-white/40" />
+              <p className="text-sm font-semibold text-white">Datos de contacto</p>
+            </div>
+            {!editandoContacto && (
+              <button
+                type="button"
+                onClick={() => setEditandoContacto(true)}
+                className="text-xs font-medium text-[#9DC9B4] hover:underline bg-transparent border-0 p-0 cursor-pointer"
+              >
+                Editar
+              </button>
+            )}
+          </div>
+
+          {!editandoContacto ? (
+            <div className="flex flex-col">
+              {camposContacto.map((campo) => (
+                <div key={campo.label} className="flex items-center justify-between py-3 border-b border-white/15 last:border-0 last:pb-0">
+                  <span className="text-white/45 text-sm">{campo.label}</span>
+                  <span className="text-white text-sm font-medium">{campo.valor}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div>
+                <label htmlFor="telefono-perfil" className="block text-sm text-white/70 mb-1.5">Teléfono</label>
+                <input
+                  id="telefono-perfil"
+                  type="tel"
+                  name="telefono"
+                  value={formContacto.telefono}
+                  onChange={handleCambioContacto}
+                  placeholder="300 123 4567"
+                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                  style={estilosInput}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="direccion-perfil" className="block text-sm text-white/70 mb-1.5">Dirección</label>
+                <input
+                  id="direccion-perfil"
+                  type="text"
+                  name="direccion"
+                  value={formContacto.direccion}
+                  onChange={handleCambioContacto}
+                  placeholder="Calle 123 # 45-67"
+                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                  style={estilosInput}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="ciudad-perfil" className="block text-sm text-white/70 mb-1.5">Ciudad</label>
+                <input
+                  id="ciudad-perfil"
+                  type="text"
+                  name="ciudad"
+                  value={formContacto.ciudad}
+                  onChange={handleCambioContacto}
+                  placeholder="Neiva"
+                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none transition"
+                  style={estilosInput}
+                />
+              </div>
+
+              <div className="flex gap-3 mt-1">
+                <button
+                  type="button"
+                  onClick={() => setEditandoContacto(false)}
+                  disabled={guardandoContacto}
+                  className="flex-1 py-3 rounded-xl text-sm text-white/70 hover:bg-white/10 transition disabled:opacity-50"
+                  style={{ border: '1px solid rgba(255,255,255,0.15)' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={guardarContacto}
+                  disabled={guardandoContacto}
+                  className="flex-1 py-3 bg-[#6FA98C] text-white rounded-xl text-sm font-medium hover:bg-[#4F8A70] transition disabled:opacity-50"
+                >
+                  {guardandoContacto ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* IDENTIFICACIÓN */}
         <div className="rounded-2xl p-6 sm:p-8 mb-8 bg-white/[0.08] backdrop-blur-xl border border-white/15 shadow-sm">

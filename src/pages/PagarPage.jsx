@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { API_URL } from '../config'
-import { FormularioNequi } from '../components/pagos/formularioNequi'
-import { FormularioTarjeta } from '../components/pagos/FormularioTarjeta'
-import { FormularioPSE } from '../components/pagos/FormularioPSE'
+
+const WOMPI_WIDGET_URL = 'https://checkout.wompi.co/widget.js'
 
 function crearParticulas() {
   const colores = ['#6FA98C', '#9DC9B4', '#D85A30', '#D8A92E', '#ffffff', '#4C8C2A']
@@ -34,6 +33,17 @@ function Confeti() {
   )
 }
 
+function cargarScript(src) {
+  return new Promise((resolve, reject) => {
+    if (window.WidgetCheckout) return resolve()
+    const s = document.createElement('script')
+    s.src = src
+    s.onload = () => resolve()
+    s.onerror = () => reject(new Error('No se pudo cargar el medio de pago de Wompi'))
+    document.head.appendChild(s)
+  })
+}
+
 function PagarPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -42,82 +52,160 @@ function PagarPage() {
 
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
-  const [estadoPago, setEstadoPago] = useState(null)       // 'pendiente' | 'pagado' | 'fallido'
+  const [estadoPago, setEstadoPago] = useState(null)       // 'pendiente' | 'pagado' | 'fallido' | 'pendiente_verificacion'
   const [pago, setPago] = useState(null)                    // { metodo_pago, monto, referencia, ... }
+  const [checkout, setCheckout] = useState(null)            // config del widget Wompi (null = simulador)
   const [idPedido, setIdPedido] = useState(null)
   const [procesando, setProcesando] = useState(false)
   const [resultado, setResultado] = useState(null)          // { estado: 'aprobado' | 'rechazado', puntos }
-  const [modoPasarela, setModoPasarela] = useState('simulador')  // 'simulador' | 'wompi'
-  const [finWompi, setFinWompi] = useState(null)            // 'aprobado' | 'rechazado' cuando termina Wompi
-
-  useEffect(() => {
-    async function consultarEstado() {
-      setCargando(true)
-      setError(null)
-      const token = localStorage.getItem('token_cliente')
-      if (!token) {
-        setError('Debes iniciar sesión para completar el pago.')
-        setCargando(false)
-        return
-      }
-
-      // El frontend decide la UI según el modo de pasarela del backend.
-      try {
-        const resModo = await fetch(`${API_URL}/api/public/parametros/pasarela`)
-        const jsonModo = await resModo.json()
-        const modo = jsonModo?.data?.modo ?? jsonModo?.modo
-        if (modo) setModoPasarela(modo)
-      } catch (e) { /* si falla, seguimos en simulador */ }
-
-      // Si no venimos de la confirmación, intentamos resolver el pedido.
-      // La referencia (SIM-xxx) no es un id; necesitamos el id del pedido.
-      // Para la ruta directa "/pagar?ref=..." sin id_pedido, usamos el id
-      // que se guardó en localStorage al crear el último pedido pendiente.
-      let idAPreguntar = idPedidoParam
-      if (!idAPreguntar && referencia) {
-        idAPreguntar = localStorage.getItem('granova_pago_pedido_id') || ''
-      }
-
-      if (!idAPreguntar) {
-        setError('No se encontró el pedido a pagar.')
-        setCargando(false)
-        return
-      }
-
-      try {
-        const res = await fetch(`${API_URL}/api/pagos/pedido/${idAPreguntar}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const json = await res.json()
-        if (!json.ok) throw new Error(json.mensaje)
-        setIdPedido(Number(idAPreguntar))
-        setPago(json.data.pago)
-        setEstadoPago(json.data.estado_pago)
-
-        // Guardar el id para retomar la pasarela desde la ruta directa.
-        localStorage.setItem('granova_pago_pedido_id', String(idAPreguntar))
-        // Referencia por defecto si el uso directo no la trae.
-        if (!referencia && json.data.pago?.referencia) {
-          // no reescribimos searchParams; usamos pago.referencia más abajo.
-        }
-      } catch (err) {
-        setError(err.message || 'No se pudo consultar el estado del pago.')
-      } finally {
-        setCargando(false)
-      }
-    }
-    consultarEstado()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idPedidoParam])
+  const widgetAbierto = useRef(false)
 
   const refEfectiva = referencia || pago?.referencia || ''
 
-  // Al cambiar de pedido/modo se descarta un resultado Wompi anterior
-  // para poder volver a intentar el pago.
-  useEffect(() => {
-    setFinWompi(null)
-  }, [idPedido, modoPasarela, pago?.metodo_pago])
+  async function refreshEstado(mostrarCarga = false) {
+    if (mostrarCarga) {
+      setCargando(true)
+      setError(null)
+    }
+    const token = localStorage.getItem('token_cliente')
+    if (!token) {
+      if (mostrarCarga) {
+        setError('Debes iniciar sesión para completar el pago.')
+        setCargando(false)
+      }
+      return
+    }
 
+    // La referencia (SIM-xxx) no es un id; necesitamos el id del pedido.
+    // Para la ruta directa "/pagar?ref=..." sin id_pedido, usamos el id
+    // que se guardó en localStorage al crear el último pedido pendiente.
+    let idAPreguntar = idPedidoParam
+    if (!idAPreguntar && idPedido) idAPreguntar = String(idPedido)
+    if (!idAPreguntar && referencia) {
+      idAPreguntar = localStorage.getItem('granova_pago_pedido_id') || ''
+    }
+
+    if (!idAPreguntar) {
+      if (mostrarCarga) {
+        setError('No se encontró el pedido a pagar.')
+        setCargando(false)
+      }
+      return
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/pagos/pedido/${idAPreguntar}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json()
+      if (!json.ok) {
+        if (mostrarCarga) throw new Error(json.mensaje)
+        return
+      }
+      setIdPedido(Number(idAPreguntar))
+      setPago(json.data.pago)
+      setCheckout(json.data.checkout || null)
+      setEstadoPago(json.data.estado_pago)
+
+      localStorage.setItem('granova_pago_pedido_id', String(idAPreguntar))
+      if (json.data.estado_pago === 'pagado') {
+        setResultado(prev => (prev?.estado === 'aprobado' ? prev : { estado: 'aprobado' }))
+      }
+    } catch (err) {
+      if (mostrarCarga) setError(err.message || 'No se pudo consultar el estado del pago.')
+    } finally {
+      if (mostrarCarga) setCargando(false)
+    }
+  }
+
+  useEffect(() => {
+    refreshEstado(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idPedidoParam])
+
+  // Poll ligero: mientras el pago sigue 'pendiente', vamos preguntando si el
+  // webhook de Wompi (PSE/Nequi/Daviplata) ya lo confirmó.
+  useEffect(() => {
+    if (estadoPago !== 'pendiente' || cargando) return undefined
+    const id = setInterval(() => { refreshEstado(false) }, 5000)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estadoPago, cargando, idPedido])
+
+  // Al llegar con un pago de pasarela pendiente, el medio de pago (widget de
+  // Wompi) se abre SOLO la primera vez, sin que el cliente tenga que hacer clic.
+  useEffect(() => {
+    if (checkout && estadoPago === 'pendiente' && !procesando && !widgetAbierto.current) {
+      widgetAbierto.current = true
+      pagarConWompi()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkout, estadoPago, procesando])
+
+  // Le dice al backend que verifique la transacción real contra Wompi.
+  async function confirmarConWompi(transactionId) {
+    const token = localStorage.getItem('token_cliente')
+    try {
+      const res = await fetch(`${API_URL}/api/pagos/wompi/confirmar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ referencia: refEfectiva, transaction_id: transactionId }),
+      })
+      const json = await res.json()
+      if (!json.ok && res.status === 503) {
+        setError(json.mensaje)
+        return
+      }
+      if (json.ok) {
+        setEstadoPago(json.data.estado_pago)
+        if (json.data.estado_pago === 'pagado') {
+          setResultado({ estado: 'aprobado', ...json.data })
+        } else if (json.data.estado_pago === 'fallido') {
+          setResultado({ estado: 'rechazado', ...json.data })
+        }
+      }
+    } catch {
+      // Sin conexión: el polling y el webhook terminan confirmando.
+    }
+  }
+
+  async function pagarConWompi() {
+    if (!checkout || procesando) return
+    setError(null)
+    setProcesando(true)
+    try {
+      await cargarScript(WOMPI_WIDGET_URL)
+      const widget = new window.WidgetCheckout({
+        currency: checkout.currency,
+        amountInCents: checkout.amount_in_cents,
+        reference: checkout.reference,
+        publicKey: checkout.public_key,
+        signature: checkout.signature,
+        customerData: checkout.customer_data || undefined,
+        shippingAddress: checkout.shipping_address || undefined,
+      })
+      widget.open(async (resultadoWidget) => {
+        const tx = resultadoWidget?.transaction
+        if (!tx?.id) {
+          setError('El pago no se completó en el medio de pago.')
+          setProcesando(false)
+          return
+        }
+        if (tx.status === 'APPROVED') {
+          await confirmarConWompi(tx.id)
+        } else {
+          // PSE/Nequi/Daviplata quedan PENDING: el webhook confirma al terminar.
+          setError('Esperando confirmación del banco. Puedes cerrar esta pantalla.')
+        }
+        setProcesando(false)
+      })
+    } catch (err) {
+      setError(err.message || 'No se pudo abrir el medio de pago de Wompi.')
+      setProcesando(false)
+    }
+  }
+
+  // Simulador didáctico (PASARELA=simulador en el backend).
   async function procesar(resultadoValor) {
     setProcesando(true)
     setError(null)
@@ -153,27 +241,8 @@ function PagarPage() {
 
   const monto = pago?.monto ?? null
 
-  // Métodos que pasan por la pasarela Wompi real (modalTEST).
-  const METODOS_WOMPI = ['nequi', 'tarjeta', 'pse', 'daviplata']
-  const esPasarelaWompi = modoPasarela === 'wompi' && METODOS_WOMPI.includes((pago?.metodo_pago || '').toLowerCase())
-
-  function manejarFinWompi(estadoFinal) {
-    setFinWompi(estadoFinal)
-  }
-
-  function renderFormularioWompi() {
-    const metodo = (pago?.metodo_pago || '').toLowerCase()
-    if (metodo === 'nequi' || metodo === 'daviplata') {
-      return <FormularioNequi idPedido={idPedido} onFinalizado={manejarFinWompi} />
-    }
-    if (metodo === 'pse') {
-      return <FormularioPSE idPedido={idPedido} onFinalizado={manejarFinWompi} />
-    }
-    return <FormularioTarjeta idPedido={idPedido} onFinalizado={manejarFinWompi} />
-  }
-
-  // Estamos mostrando el estado cargando / error
-  if (cargando) {    return (
+  if (cargando) {
+    return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1a0a' }}>
         <div className="flex flex-col items-center gap-4 text-white">
           <motion.div
@@ -187,7 +256,7 @@ function PagarPage() {
     )
   }
 
-  if (error) {
+  if (error && estadoPago !== 'pendiente' && !pago) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1a0a' }}>
         <div className="max-w-md mx-auto px-6 py-12 text-white text-center rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl">
@@ -216,7 +285,7 @@ function PagarPage() {
   }
 
   // Pantalla de ÉXITO (pago aprobado)
-  if (resultado?.estado === 'aprobado' || estadoPago === 'pagado' || finWompi === 'aprobado') {
+  if (resultado?.estado === 'aprobado' || estadoPago === 'pagado') {
     return (
       <div className="min-h-screen flex items-center justify-center relative" style={{ background: '#0a1a0a' }}>
         <Confeti />
@@ -258,7 +327,7 @@ function PagarPage() {
   }
 
   // Pantalla de FALLO (pago rechazado)
-  if (resultado?.estado === 'rechazado' || finWompi === 'rechazado' || (estadoPago === 'fallido' && !resultado)) {
+  if (resultado?.estado === 'rechazado' || (estadoPago === 'fallido' && !resultado)) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1a0a' }}>
         <div className="max-w-md w-full mx-auto px-6 py-12 text-white text-center rounded-xl border border-[#D85A30]/30 bg-white/[0.08] backdrop-blur-xl">
@@ -327,7 +396,7 @@ function PagarPage() {
     )
   }
 
-  // Pasarela simulada (pago pendiente)
+  // Pago pendiente de pasarela (Wompi real o simulador)
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1a0a' }}>
       <div className="max-w-md w-full mx-auto px-6 py-10 text-white rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl">
@@ -360,38 +429,45 @@ function PagarPage() {
           </p>
         )}
 
-        {esPasarelaWompi ? (
-          renderFormularioWompi()
-        ) : (
         <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            disabled={procesando || !refEfectiva}
-            onClick={() => procesar('aprobado')}
-            className="px-6 py-3.5 bg-[#6FA98C] text-white rounded-xl text-sm font-semibold hover:bg-[#4F8A70] transition disabled:opacity-50"
-          >
-            {procesando ? 'Procesando...' : 'Pagar (simular éxito)'}
-          </button>
-          <button
-            type="button"
-            disabled={procesando || !refEfectiva}
-            onClick={() => procesar('rechazado')}
-            className="px-6 py-3.5 border border-white/20 text-white/80 rounded-xl text-sm font-medium hover:bg-white/10 transition disabled:opacity-50"
-          >
-            Cancelar (simular fallo)
-          </button>
-          <p className="text-[10px] text-white/30 text-center mt-2">
-            Pasarela simulada para pruebas. En producción se redirige a la entidad bancaria.
-          </p>
+          {checkout ? (
+            <>
+              <button
+                type="button"
+                disabled={procesando || !refEfectiva}
+                onClick={pagarConWompi}
+                className="px-6 py-3.5 bg-[#6FA98C] text-white rounded-xl text-sm font-semibold hover:bg-[#4F8A70] transition disabled:opacity-50"
+              >
+                {procesando ? 'Abriendo medio de pago...' : 'Pagar ahora 🔒'}
+              </button>
+              <p className="text-[10px] text-white/30 text-center mt-2">
+                Serás llevado al medio de pago seguro de Wompi. Al confirmar, tu pedido se envía en menos de 2 días.
+              </p>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={procesando || !refEfectiva}
+                onClick={() => procesar('aprobado')}
+                className="px-6 py-3.5 bg-[#6FA98C] text-white rounded-xl text-sm font-semibold hover:bg-[#4F8A70] transition disabled:opacity-50"
+              >
+                {procesando ? 'Procesando...' : 'Pagar (simular éxito)'}
+              </button>
+              <button
+                type="button"
+                disabled={procesando || !refEfectiva}
+                onClick={() => procesar('rechazado')}
+                className="px-6 py-3.5 border border-white/20 text-white/80 rounded-xl text-sm font-medium hover:bg-white/10 transition disabled:opacity-50"
+              >
+                Cancelar (simular fallo)
+              </button>
+              <p className="text-[10px] text-white/30 text-center mt-2">
+                Pasarela simulada para pruebas. En producción se redirige a la entidad bancaria.
+              </p>
+            </>
+          )}
         </div>
-        )}
-        <button
-          type="button"
-          onClick={() => navigate('/cliente/carrito')}
-          className="mt-4 w-full px-6 py-2.5 text-sm text-white/50 hover:text-white transition"
-        >
-          ← Volver al carrito
-        </button>
       </div>
     </div>
   )
