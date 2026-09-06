@@ -1990,14 +1990,13 @@ function CatalogoInterno() {
       {mostrarRecomendador && (
         <RecomendadorModal
           onClose={() => setMostrarRecomendador(false)}
-          onRecomendaciones={(datos) => {
+          onRecomendaciones={(datos, categoriaElegida) => {
             setRecomendaciones(datos)
-            // Si las recomendaciones son de máquinas, cambiar a la pestaña Máquinas
-            // (y a Café si son de café) sin importar dónde estaba ubicado el usuario.
-            const hayMaquinas = (datos || []).some(p => p.categoria_producto === 'maquina')
-            if (hayMaquinas && seccion !== "maquinas") {
+            // Cambiar a la pestaña según la categoría que respondió el cliente en el quiz
+            // (café → Cafés, máquina → Máquinas), no según lo que traiga el resultado.
+            if (categoriaElegida === 'maquina' && seccion !== "maquinas") {
               cambiarSeccion("maquinas")
-            } else if (!hayMaquinas && (datos || []).length > 0 && seccion !== "cafe") {
+            } else if (categoriaElegida === 'cafe' && seccion !== "cafe") {
               cambiarSeccion("cafe")
             }
             // Navegar con scroll hacia la sección de recomendados (tras cerrar el panel)

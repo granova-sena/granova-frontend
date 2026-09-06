@@ -140,7 +140,7 @@ function RecomendadorModal({ onClose, onRecomendaciones }) {
         })
         const json = await res.json()
         if (json.ok) {
-          onRecomendaciones(json.data)
+          onRecomendaciones(json.data, categoria)
           // Persistir las recomendaciones para que no se pierdan al recargar o navegar
           try {
             localStorage.setItem(`granova_recomendaciones_${id_cliente}`, JSON.stringify(json.data))
