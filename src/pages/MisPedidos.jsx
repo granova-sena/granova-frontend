@@ -12,7 +12,7 @@ import EstadoPagoBadge from '../components/ui/EstadoPagoBadge';
 import OperacionBadge from '../components/ui/OperacionBadge';
 import Breadcrumb from '../components/ui/Breadcrumb';
 
-const METODOS_PASARELA = ['wompi', 'tarjeta', 'pse', 'nequi', 'daviplata']
+const METODOS_PASARELA = ['tarjeta', 'pse', 'nequi', 'daviplata']
 const esMetodoPasarela = (metodo) => METODOS_PASARELA.includes(String(metodo || '').toLowerCase())
 
 function necesitaPagar(p) {

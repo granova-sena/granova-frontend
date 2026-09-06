@@ -13,7 +13,6 @@ const esMetodoManual = (metodo) => METODOS_MANUALES.includes(String(metodo || ''
 
 // Etiquetas legibles por método de pago.
 const ETIQUETA_METODO = {
-  wompi: 'En línea (Wompi)',
   tarjeta: 'Tarjeta',
   pse: 'PSE',
   nequi: 'Nequi',

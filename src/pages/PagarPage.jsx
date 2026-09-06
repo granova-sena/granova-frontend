@@ -404,7 +404,7 @@ function PagarPage() {
         <div className="flex flex-col gap-3 text-sm rounded-xl border border-white/10 bg-white/[0.03] p-4 mb-6">
           <div className="flex justify-between">
             <span className="text-white/50">Método</span>
-            <span className="font-medium capitalize">{pago?.metodo_pago === 'wompi' ? 'Pago en línea' : (pago?.metodo_pago || 'online')}</span>
+            <span className="font-medium capitalize">{pago?.metodo_pago || 'online'}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-white/50">Referencia</span>
