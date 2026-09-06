@@ -9,10 +9,7 @@ import api from '../services/api'
 const pasos = ['Datos y dirección', 'Método de pago', 'Confirmación']
 
 const metodosPago = [
-  { id: 'tarjeta', nombre: 'Tarjeta de crédito/débito', descripcion: 'Paga con tu tarjeta de forma segura.', icono: '💳', pasarela: true, color: '#6FA98C' },
-  { id: 'pse', nombre: 'PSE', descripcion: 'Pagos en línea desde tu banco.', icono: '🏦', pasarela: true, color: '#4C8C2A' },
-  { id: 'nequi', nombre: 'Nequi', descripcion: 'Paga fácilmente desde tu cuenta Nequi.', icono: '📱', pasarela: true, color: '#7B2D8B' },
-  { id: 'daviplata', nombre: 'Daviplata', descripcion: 'Paga fácilmente desde tu cuenta Daviplata.', icono: '📲', pasarela: true, color: '#C8102E' },
+  { id: 'wompi', nombre: 'Pago en línea (Wompi)', descripcion: 'Tarjeta, PSE, Nequi o Daviplata. Eliges el medio dentro de Wompi.', icono: '🔒', pasarela: true, color: '#6FA98C' },
   { id: 'transferencia', nombre: 'Transferencia bancaria', descripcion: 'Te enviaremos los datos para realizar la transferencia.', icono: '🏦', pasarela: false },
   { id: 'efectivo', nombre: 'Efectivo', descripcion: 'Te enviaremos los datos para pagar en efectivo.', icono: '💵', pasarela: false },
   { id: 'contra_entrega', nombre: 'Pago contra entrega', descripcion: 'Pagas cuando recibas tu pedido.', icono: '🚚', pasarela: false },
@@ -100,7 +97,7 @@ function ConfigurarPedidoPage() {
   const [idPedido, setIdPedido] = useState(null)
   const [numeroPedido, setNumeroPedido] = useState(null)
   const [pasoActual, setPasoActual] = useState(0)
-  const [metodoPago, setMetodoPago] = useState('pse')
+  const [metodoPago, setMetodoPago] = useState('wompi')
   const [intentoContinuar, setIntentoContinuar] = useState(false)
   const [sectores, setSectores] = useState([])
 

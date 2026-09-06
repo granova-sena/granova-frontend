@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { API_URL } from '../config'
@@ -58,7 +58,6 @@ function PagarPage() {
   const [idPedido, setIdPedido] = useState(null)
   const [procesando, setProcesando] = useState(false)
   const [resultado, setResultado] = useState(null)          // { estado: 'aprobado' | 'rechazado', puntos }
-  const widgetAbierto = useRef(false)
 
   const refEfectiva = referencia || pago?.referencia || ''
 
@@ -132,15 +131,8 @@ function PagarPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estadoPago, cargando, idPedido])
 
-  // Al llegar con un pago de pasarela pendiente, el medio de pago (widget de
-  // Wompi) se abre SOLO la primera vez, sin que el cliente tenga que hacer clic.
-  useEffect(() => {
-    if (checkout && estadoPago === 'pendiente' && !procesando && !widgetAbierto.current) {
-      widgetAbierto.current = true
-      pagarConWompi()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkout, estadoPago, procesando])
+  // El medio de pago (widget de Wompi) se abre cuando el cliente hace clic en
+  // "Pagar ahora 🔒", no automáticamente al llegar a la página.
 
   // Le dice al backend que verifique la transacción real contra Wompi.
   async function confirmarConWompi(transactionId) {
@@ -412,7 +404,7 @@ function PagarPage() {
         <div className="flex flex-col gap-3 text-sm rounded-xl border border-white/10 bg-white/[0.03] p-4 mb-6">
           <div className="flex justify-between">
             <span className="text-white/50">Método</span>
-            <span className="font-medium capitalize">{pago?.metodo_pago || 'online'}</span>
+            <span className="font-medium capitalize">{pago?.metodo_pago === 'wompi' ? 'Pago en línea' : (pago?.metodo_pago || 'online')}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-white/50">Referencia</span>

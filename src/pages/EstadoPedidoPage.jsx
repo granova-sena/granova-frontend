@@ -7,7 +7,7 @@ import EstadoPagoBadge from '../components/ui/EstadoPagoBadge'
 import OperacionBadge from '../components/ui/OperacionBadge'
 import Breadcrumb from '../components/ui/Breadcrumb'
 
-const METODOS_PASARELA = ['tarjeta', 'pse', 'nequi', 'daviplata']
+const METODOS_PASARELA = ['wompi', 'tarjeta', 'pse', 'nequi', 'daviplata']
 const esMetodoPasarela = (metodo) => METODOS_PASARELA.includes(String(metodo || '').toLowerCase())
 
 function necesitaPagar(estadoPago, metodoPago) {
@@ -145,7 +145,7 @@ function EstadoPedidoPage() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-xs">
             <div className="flex-1 flex flex-wrap gap-2">
               <span className="text-white/40">Método:</span>
-              <span className="text-white capitalize">{pedido.metodo_pago || '—'}</span>
+              <span className="text-white capitalize">{pedido.metodo_pago === 'wompi' ? 'Pago en línea' : (pedido.metodo_pago || '—')}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-white/40">Total:</span>
@@ -173,7 +173,7 @@ function EstadoPedidoPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-white/40">Método de pago</span>
-                <span className="text-[#9DC9B4] font-medium">{pedido.metodo_pago}</span>
+                <span className="text-[#9DC9B4] font-medium">{pedido.metodo_pago === 'wompi' ? 'Pago en línea (Wompi)' : (pedido.metodo_pago || '—')}</span>
               </div>
               <div className="flex justify-between gap-4">
                 <span className="text-white/40">Dirección</span>

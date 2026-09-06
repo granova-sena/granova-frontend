@@ -21,6 +21,7 @@ function esLogistica() {
 }
 
 const ETIQUETA_METODO = {
+  wompi: 'En línea (Wompi)',
   tarjeta: 'Tarjeta', pse: 'PSE', nequi: 'Nequi', daviplata: 'Daviplata',
   transferencia: 'Transferencia', efectivo: 'Efectivo', contra_entrega: 'Contra entrega',
 }
