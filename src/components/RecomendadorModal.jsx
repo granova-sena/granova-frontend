@@ -26,7 +26,6 @@ const PREGUNTAS_CAFE = [
     id: 'presupuesto',
     pregunta: '¿Cuál es tu presupuesto por kg?',
     opciones: [
-      { valor: 'menos_20000', label: 'Menos de $20.000', emoji: '💚', desc: 'Económico' },
       { valor: '20000_50000', label: '$20.000 - $50.000', emoji: '💛', desc: 'Equilibrado' },
       { valor: 'mas_50000', label: 'Más de $50.000', emoji: '💎', desc: 'Premium' },
     ]
@@ -56,9 +55,9 @@ const PREGUNTAS_MAQUINA = [
     id: 'presupuesto_equipo',
     pregunta: '¿Cuánto quieres invertir?',
     opciones: [
-      { valor: 'economico', label: 'Menos de $1M', emoji: '💚', desc: 'Básico y práctico' },
-      { valor: 'medio', label: '$1M - $3M', emoji: '💛', desc: 'Equilibrado' },
-      { valor: 'premium', label: 'Más de $3M', emoji: '💎', desc: 'Alta gama' },
+      { valor: 'economico', label: 'Hasta $300.000', emoji: '💚', desc: 'Básico y práctico' },
+      { valor: 'medio', label: '$300.000 - $700.000', emoji: '💛', desc: 'Equilibrado' },
+      { valor: 'premium', label: 'Más de $700.000', emoji: '💎', desc: 'Alta gama' },
     ]
   }
 ]
