@@ -240,6 +240,16 @@ function Landing() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // Llegada con ancla (ej: /#empresas desde el header del catálogo): llevar
+  // la vista directo a la sección.
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash) {
+      const destino = document.querySelector(hash)
+      if (destino) destino.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [])
+
   useEffect(() => {
     const inicializarOneTap = () => {
       try {
@@ -437,7 +447,7 @@ navigate('/cliente/carrito')
 
   const enlaceMenu = [
     { texto: 'Catálogo', href: '#catalogo-destacado' },
-    { texto: 'Empresas', href: '/cliente/empresas' },
+    { texto: 'Empresas', href: '#empresas' },
     { texto: 'Nosotros', href: '#nosotros' },
     { texto: 'Proceso', href: '#proceso' },
   ]

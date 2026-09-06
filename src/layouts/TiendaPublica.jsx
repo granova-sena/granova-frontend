@@ -24,7 +24,7 @@ export default function TiendaPublica({ children }) {
   const navLinks = [
     { texto: 'Inicio', ruta: '/' },
     { texto: 'Catálogo', ruta: '/catalogo' },
-    { texto: 'Empresas', ruta: '/cliente/empresas' },
+    { texto: 'Empresas', ruta: '/#empresas' },
   ]
 
   return (
