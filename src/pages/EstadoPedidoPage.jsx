@@ -10,7 +10,8 @@ import Breadcrumb from '../components/ui/Breadcrumb'
 const METODOS_PASARELA = ['tarjeta', 'pse', 'nequi', 'daviplata']
 const esMetodoPasarela = (metodo) => METODOS_PASARELA.includes(String(metodo || '').toLowerCase())
 
-function necesitaPagar(estadoPago, metodoPago) {
+function necesitaPagar(estadoPago, metodoPago, estadoPedido) {
+  if (estadoPedido === 'cancelado') return false
   if (estadoPago === 'fallido') return true
   // Pendiente con método de pasarela (online): el cliente aún debe pagar.
   if (estadoPago === 'pendiente' && esMetodoPasarela(metodoPago)) return true
@@ -114,7 +115,7 @@ function EstadoPedidoPage() {
         </p>
 
         {/* Aviso + botón "Pagar ahora" si el pago quedó pendiente/fallido */}
-        {necesitaPagar(pedido.estado_pago, pedido.metodo_pago) && (
+        {necesitaPagar(pedido.estado_pago, pedido.metodo_pago, pedido.estado) && (
           <div className="rounded-xl border border-[#D8A92E]/30 bg-[#D8A92E]/10 px-5 py-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex-1">
               <p className="text-sm font-medium text-white">
@@ -158,6 +159,18 @@ function EstadoPedidoPage() {
         <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl p-6 sm:p-8 mb-6">
           <p className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-4">Entrega</p>
           <OrderStepper estado={pedido.estado} fechaPedido={formatearFecha(pedido.fecha_pedido)} />
+          {pedido.estimados && (
+            <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 flex items-center gap-3">
+              <span className="text-lg">🕒</span>
+              <p className="text-xs text-white/70 leading-relaxed">
+                {pedido.operacion === 'reparto' ? (
+                  <>Preparación ~{pedido.estimados.preparacion_horas} h · Entrega en la próxima ruta de tu sector (~{pedido.estimados.entrega_horas} h)</>
+                ) : (
+                  <>Preparación ~{pedido.estimados.preparacion_horas} h · Entrega estimada en ~{pedido.estimados.entrega_horas} h</>
+                )}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Cards info */}

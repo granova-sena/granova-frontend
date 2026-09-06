@@ -91,10 +91,17 @@ const descargarFactura = async (id_pedido) => {
 
     const finalY = doc.lastAutoTable.finalY + 10
 
+    // Precios finales (IVA incluido), igual que las cotizaciones:
+    // el subtotal es la suma directa de los productos, sin desglose de IVA.
+    const subtotalBruto = (factura.productos || []).reduce(
+      (acc, p) => acc + Number(p.subtotal || 0),
+      0
+    )
+
     doc.setFontSize(9)
     doc.setTextColor(80)
     doc.text('Subtotal:', 130, finalY)
-    doc.text(`$${Number(factura.subtotal).toLocaleString()}`, 175, finalY, { align: 'right' })
+    doc.text(`$${subtotalBruto.toLocaleString()}`, 175, finalY, { align: 'right' })
 
     if (factura.descuento > 0) {
       doc.setTextColor(200, 0, 0)
@@ -108,23 +115,18 @@ const descargarFactura = async (id_pedido) => {
       doc.text(`$${Number(factura.envio).toLocaleString()}`, 175, finalY + 12, { align: 'right' })
     }
 
-    // Desglose de IVA por tasa
-    const tasaInicio = finalY + 18
-    if (Array.isArray(factura.impuestos_por_tasa) && factura.impuestos_por_tasa.length > 0) {
-      factura.impuestos_por_tasa.forEach((t, i) => {
-        doc.text(`IVA ${t.tasa}%:`, 130, tasaInicio + i * 6)
-        doc.text(`$${Number(t.valor).toLocaleString()}`, 175, tasaInicio + i * 6, { align: 'right' })
-      })
-    } else {
-      doc.text('Impuestos:', 130, tasaInicio)
-      doc.text(`$${Number(factura.impuestos || 0).toLocaleString()}`, 175, tasaInicio, { align: 'right' })
-    }
+    const filaTotal = finalY + 18
 
     doc.setTextColor(0)
     doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
-    doc.text('TOTAL:', 130, tasaInicio + 10)
-    doc.text(`$${Number(factura.total).toLocaleString()}`, 175, tasaInicio + 10, { align: 'right' })
+    doc.text('TOTAL (IVA incluido):', 130, filaTotal)
+    doc.text(`$${Number(factura.total).toLocaleString()}`, 175, filaTotal, { align: 'right' })
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(120)
+    doc.text('* Todos los precios incluyen IVA.', 130, filaTotal + 6)
 
     doc.save(`factura-${factura.numero_factura}.pdf`)
 

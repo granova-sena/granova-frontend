@@ -125,6 +125,11 @@ function SelectorPedidos({ seleccionados, onCambio }) {
                     <span className="text-xs text-gray-500">{p.cantidad} kg</span>
                     <span className="text-xs" style={{ color: '#D8A92E' }}>{p.sector_envio || 'Sin sector'}</span>
                     <EstadoPagoBadge estadoPago={p.estado_pago} compacto />
+                    {p.estado_pago !== 'pagado' && p.estado_pago !== 'fallido' && esMetodoManual(p) && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium whitespace-nowrap">
+                        {p.estado_pago === 'pendiente_verificacion' ? '⏳ Verificar pago' : '💵 Cobrar al entregar'}
+                      </span>
+                    )}
                   </div>
                 </div>
               </label>
@@ -449,6 +454,11 @@ function ModalDetalle({ despacho, pedidos, onCerrar, onCambio, esEscritor }) {
                       <span className="text-xs text-gray-400">
                         {ETIQUETA_METODO[p.metodo_pago] || p.metodo_pago}
                       </span>
+                      {p.estado_pago !== 'pagado' && p.estado_pago !== 'fallido' && esMetodoManual(p) && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium whitespace-nowrap">
+                          {p.estado_pago === 'pendiente_verificacion' ? '⏳ Verificar pago' : '💵 Cobrar al entregar'}
+                        </span>
+                      )}
                     </div>
                   </div>
                   {esEscritor && !soloLectura && (

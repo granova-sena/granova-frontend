@@ -317,7 +317,19 @@ function PedidosReparto() {
                           {p.estado}
                         </span>
                       </td>
-                      <td className="px-6 py-4"><EstadoPagoBadge estadoPago={p.estado_pago} compacto /></td>
+                      <td className="px-6 py-4">
+<EstadoPagoBadge estadoPago={p.estado_pago} compacto />
+                  {p.estado_pago !== 'pagado' && p.estado_pago !== 'fallido' && esMetodoManual(p) && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium whitespace-nowrap">
+                      {p.estado_pago === 'pendiente_verificacion' ? '⏳ Verificar pago' : '💵 Cobrar al entregar'}
+                    </span>
+                  )}
+                        {p.estado_pago !== 'pagado' && p.estado_pago !== 'fallido' && esMetodoManual(p) && (
+                          <span className="block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium whitespace-nowrap text-center">
+                            {p.estado_pago === 'pendiente_verificacion' ? '⏳ Verificar pago' : '💵 Cobrar al entregar'}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-6 py-4">
                         <span className="text-xs px-2 py-1 rounded-full bg-[#D8A92E]/15 text-[#B8860B]" style={{ border: '1px solid rgba(216,169,46,0.4)' }}>
                           {p.sector_envio || 'Sin sector'}

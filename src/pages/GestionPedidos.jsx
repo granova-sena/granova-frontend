@@ -111,6 +111,11 @@ function FilaPedido({ p, procesando, aceptarPedido, abrirModalRechazo, setFactur
                   {ETIQUETA_METODO[p.metodo_pago] || p.metodo_pago}
                 </span>
               )}
+              {p.estado_pago !== 'pagado' && p.estado_pago !== 'fallido' && esMetodoManual(p.metodo_pago) && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium whitespace-nowrap">
+                  {p.estado_pago === 'pendiente_verificacion' ? '⏳ Verificar pago' : '💵 Cobrar al entregar'}
+                </span>
+              )}
             </>
           )}
         </div>
@@ -270,6 +275,11 @@ function TarjetaPedido({ p, procesando, aceptarPedido, abrirModalRechazo, setFac
           {p.metodo_pago && (
             <span className="text-[10px] text-gray-400">
               {ETIQUETA_METODO[p.metodo_pago] || p.metodo_pago}
+            </span>
+          )}
+          {p.estado_pago !== 'pagado' && p.estado_pago !== 'fallido' && esMetodoManual(p.metodo_pago) && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium whitespace-nowrap">
+              {p.estado_pago === 'pendiente_verificacion' ? '⏳ Verificar pago' : '💵 Cobrar al entregar'}
             </span>
           )}
         </div>
