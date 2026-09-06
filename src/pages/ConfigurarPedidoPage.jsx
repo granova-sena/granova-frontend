@@ -671,9 +671,9 @@ function ConfigurarPedidoPage() {
                           if (resultado.descuento_ganado) {
                             setPremioGanado(true)
                             toast.success('🎉 ¡Aplicaste tu premio del 10% en esta compra!')
-                          } else if (!resultado.descuento_empresa && resultado.unidades_acumuladas > 0) {
-                            toast.success(`🏆 Llevas ${resultado.unidades_acumuladas} de 5 productos para tu premio del 10%`)
                           }
+                          // El avance del premio ("Llevas X de 5...") se muestra
+                          // en la pantalla de éxito del pago, no antes de pagar.
                           if (resultado.puntos_ganados > 0) {
                             setPuntosGanados(resultado.puntos_ganados)
                             toast.success(`🎉 ¡Ganaste ${resultado.puntos_ganados} puntos de lealtad!`)

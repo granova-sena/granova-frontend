@@ -21,6 +21,13 @@ function necesitaPagar(p) {
   return false
 }
 
+// El cliente solo puede cancelar lo que aún no se pagó ni se despachó:
+// sin dinero movido, únicamente se libera el stock reservado.
+function puedeCancelar(p) {
+  if (p.estado_pago === 'pagado') return false
+  return ['confirmado', 'pendiente'].includes(p.estado)
+}
+
 const descargarFactura = async (id_pedido) => {
   try {
     // Genera la factura si no existe (el dueño del pedido la puede emitir).
@@ -154,6 +161,7 @@ function MisPedidos() {
   const [refresco, setRefresco] = useState(0)
   const [textoBusqueda, setTextoBusqueda] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [cancelandoId, setCancelandoId] = useState(null)
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -180,7 +188,9 @@ function MisPedidos() {
         })
         if (!data.ok) throw new Error(data.mensaje)
         if (!cancelado) {
-          setPedidos(data.data)
+          // Los pedidos cancelados (auto a las 3 h o manual) no se muestran:
+          // la lista queda con compras reales y pendientes por pagar.
+          setPedidos((data.data || []).filter((p) => p.estado !== 'cancelado'))
           setPaginacion(data.paginacion || { totalPages: 1, totalRows: 0 })
         }
       } catch (err) {
@@ -213,6 +223,20 @@ function MisPedidos() {
 
   const formatearNumero = (id) =>
     `PED-${new Date().getFullYear()}-${String(id).padStart(4, '0')}`
+
+  async function cancelarPedido(p) {
+    if (!window.confirm(`¿Cancelar el pedido ${p.numero_pedido || formatearNumero(p.id_pedido)}? Se liberará el stock reservado.`)) return
+    setCancelandoId(p.id_pedido)
+    try {
+      await api.post(`/pedidos/${p.id_pedido}/cancelar`)
+      toast.success('Pedido cancelado')
+      setPedidos((prev) => prev.filter((x) => x.id_pedido !== p.id_pedido))
+    } catch (err) {
+      toast.error(err.response?.data?.mensaje || err.response?.data?.error || 'No se pudo cancelar el pedido')
+    } finally {
+      setCancelandoId(null)
+    }
+  }
 
   return (
     <div className="min-h-screen" style={{ background: '#0a1a0a' }}>
@@ -311,23 +335,47 @@ function MisPedidos() {
                 </div>
 
                 {necesitaPagar(p) ? (
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/cliente/pagar?ref=&id_pedido=${p.id_pedido}`)}
-                    className="shrink-0 px-4 py-2 bg-[#6FA98C] text-white rounded-xl text-xs font-medium hover:bg-[#4F8A70] transition"
-                  >
-                    💳 Pagar ahora
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/cliente/pagar?ref=&id_pedido=${p.id_pedido}`)}
+                      className="shrink-0 px-4 py-2 bg-[#6FA98C] text-white rounded-xl text-xs font-medium hover:bg-[#4F8A70] transition"
+                    >
+                      💳 Pagar ahora
+                    </button>
+                    {puedeCancelar(p) && (
+                      <button
+                        type="button"
+                        disabled={cancelandoId === p.id_pedido}
+                        onClick={() => cancelarPedido(p)}
+                        className="shrink-0 px-3 py-2 border border-white/20 text-white/60 rounded-xl text-xs font-medium hover:text-[#D85A30] hover:border-[#D85A30]/50 disabled:opacity-40 transition"
+                      >
+                        {cancelandoId === p.id_pedido ? 'Cancelando...' : 'Cancelar'}
+                      </button>
+                    )}
+                  </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => descargarFactura(p.id_pedido)}
-                    title="Descargar factura"
-                    aria-label="Descargar factura"
-                    className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/50 hover:text-[#9DC9B4] hover:bg-white/20 transition"
-                  >
-                    ⬇️
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => descargarFactura(p.id_pedido)}
+                      title="Descargar factura"
+                      aria-label="Descargar factura"
+                      className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/50 hover:text-[#9DC9B4] hover:bg-white/20 transition"
+                    >
+                      ⬇️
+                    </button>
+                    {puedeCancelar(p) && (
+                      <button
+                        type="button"
+                        disabled={cancelandoId === p.id_pedido}
+                        onClick={() => cancelarPedido(p)}
+                        className="shrink-0 px-3 py-2 border border-white/20 text-white/60 rounded-xl text-xs font-medium hover:text-[#D85A30] hover:border-[#D85A30]/50 disabled:opacity-40 transition"
+                      >
+                        {cancelandoId === p.id_pedido ? 'Cancelando...' : 'Cancelar'}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
 

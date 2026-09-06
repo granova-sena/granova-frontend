@@ -300,6 +300,11 @@ function PagarPage() {
               ⭐ ¡Ganaste {resultado.puntos_ganados} puntos de lealtad!
             </p>
           )}
+          {resultado?.unidades_acumuladas != null && Number(resultado.unidades_acumuladas) > 0 && (
+            <p className="text-sm text-[#D8A92E] bg-[#D8A92E]/10 border border-[#D8A92E]/25 rounded-lg px-4 py-2 mb-2">
+              🏆 Llevas {resultado.unidades_acumuladas} de 5 productos para tu premio del 10%
+            </p>
+          )}
           <button
             type="button"
             onClick={() => navigate(idPedido ? `/cliente/pedidos/${idPedido}` : '/cliente/pedidos')}
