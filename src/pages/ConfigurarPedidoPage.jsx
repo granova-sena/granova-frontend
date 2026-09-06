@@ -25,13 +25,32 @@ function formatearIdPedido(id) {
   return `PED-${new Date().getFullYear()}-${String(id).padStart(4, '0')}`
 }
 
-function ResumenLateral() {
+function ResumenLateral({ pedidoConfirmado = null }) {
   const { subtotal, subtotalBase, descuentoProductos, descuentoCuponMonto, total, DESCUENTO, esMayorista, productos, cuponPct } = useCarrito()
 
   return (
     <div className="w-full lg:w-72 shrink-0 flex flex-col gap-4">
       <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl p-6">
         <h3 className="text-sm font-semibold text-white mb-4">Resumen del pedido</h3>
+        {pedidoConfirmado ? (
+          <div className="flex flex-col gap-3 text-sm">
+            <div className="flex justify-between mb-2">
+              <span className="text-sm text-white/50">
+                Pedido {pedidoConfirmado.numero ? `#${pedidoConfirmado.numero}` : 'creado'}
+              </span>
+            </div>
+            <div className="flex justify-between border-t border-white/10 pt-3">
+              <span className="text-white/60">Total a pagar</span>
+              <span className="font-semibold text-white">${Number(pedidoConfirmado.total).toLocaleString()}</span>
+            </div>
+            <p className="text-[11px] text-white/40">
+              {pedidoConfirmado.metodo === 'contra_entrega'
+                ? 'Se cobra al momento de la entrega.'
+                : 'Tu pedido quedó confirmado. El pago se gestiona por separado.'}
+            </p>
+          </div>
+        ) : (
+          <>
         <div className="flex justify-between mb-4">
           <span className="text-sm text-white/50">{productos.length} productos</span>
         </div>
@@ -60,6 +79,8 @@ function ResumenLateral() {
           </div>
           <p className="text-[11px] text-white/40">Todos los precios incluyen IVA</p>
         </div>
+          </>
+        )}
       </div>
 
       <div className="rounded-xl border border-white/15 bg-white/[0.08] backdrop-blur-xl p-6 flex flex-col gap-4">
@@ -96,6 +117,7 @@ function ConfigurarPedidoPage() {
   const [error, setError] = useState(null)
   const [idPedido, setIdPedido] = useState(null)
   const [numeroPedido, setNumeroPedido] = useState(null)
+  const [totalConfirmado, setTotalConfirmado] = useState(null)
   const [pasoActual, setPasoActual] = useState(0)
   const [metodoPago, setMetodoPago] = useState('pse')
   const [intentoContinuar, setIntentoContinuar] = useState(false)
@@ -639,6 +661,7 @@ function ConfigurarPedidoPage() {
                         if (resultado.ok) {
                           setIdPedido(resultado.id_pedido)
                           setNumeroPedido(resultado.numero_pedido || formatearIdPedido(resultado.id_pedido))
+                          setTotalConfirmado(resultado.total ?? 0)
                           if (resultado.descuento_empresa) {
                             toast.success('🏢 ¡Descuento de empresa aplicado en tu pedido!')
                           }
@@ -757,7 +780,9 @@ function ConfigurarPedidoPage() {
               )}
             </div>
           )}
-          <ResumenLateral />
+          <ResumenLateral
+              pedidoConfirmado={idPedido ? { numero: numeroPedido, total: totalConfirmado, metodo: metodoPago } : null}
+            />
         </div>
 
         {/* Botones navegación */}
