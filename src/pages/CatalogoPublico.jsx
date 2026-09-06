@@ -74,7 +74,11 @@ export default function CatalogoPublico() {
 
   const terminoBusqueda = normalizarNombre(busqueda)
   const filtrados = productos.filter((p) => {
-    if (categoria !== 'todos' && p.categoria !== categoria) return false
+    if (categoria === 'cafe' && p.categoria !== 'cafe') return false
+    if (categoria === 'maquina' && p.categoria !== 'maquina') return false
+    if (categoria === 'popular' && !(topVendidos[p.id] > 0)) return false
+    if (categoria === 'oferta' && !(p.promoPct > 0)) return false
+    if (categoria === 'nuevo' && p.badge !== 'Nuevo') return false
     if (terminoBusqueda) {
       const n = normalizarNombre(`${p.nombre} ${p.origen} ${p.tipo}`)
       if (!n.includes(terminoBusqueda)) return false
@@ -146,11 +150,14 @@ export default function CatalogoPublico() {
           </div>
 
           <div className="flex items-center gap-1.5 rounded-xl px-1 py-1 bg-white/[0.04] border border-white/10">
-            {[
-              { id: 'todos', label: 'Todo' },
-              { id: 'cafe', label: 'Cafés' },
-              { id: 'maquina', label: 'Equipos' },
-            ].map((c) => (
+            {[ 
+                { id: 'todos', label: 'Todo' },
+                { id: 'cafe', label: 'Cafés' },
+                { id: 'maquina', label: 'Equipos' },
+                { id: 'popular', label: 'Populares' },
+                { id: 'oferta', label: 'Ofertas' },
+                { id: 'nuevo', label: 'Nuevos' },
+              ].map((c) => (
               <button
                 key={c.id}
                 type="button"

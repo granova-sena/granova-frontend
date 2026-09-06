@@ -308,14 +308,9 @@ function Landing() {
   const [testimonios, setTestimonios] = useState([])
   const [cargando, setCargando] = useState(true)
   const [productoSeleccionado, setProductoSeleccionado] = useState(null)
-  const [cantModal, setCantModal] = useState(1)
   const [emailNews, setEmailNews] = useState('')
   const [newsOk, setNewsOk] = useState(false)
   const [pasoActivo, setPasoActivo] = useState(0)
-
-  useEffect(() => {
-    setCantModal(1)
-  }, [productoSeleccionado])
 
   const cerrarModalProducto = useCallback(() => setProductoSeleccionado(null), [])
   useModalBehavior(cerrarModalProducto, Boolean(productoSeleccionado))
@@ -454,14 +449,14 @@ function Landing() {
   const agregarDesdeModal = () => {
     const p = productoSeleccionado
     if (!p) return
-    agregarAlCarrito(itemParaCarrito(p, cantModal))
-    toast.success(`${p.nombre} · ${cantModal} ${p.categoria_producto === 'maquina' ? 'unidad(es)' : 'kg'} agregado al carrito`)
+    agregarAlCarrito(itemParaCarrito(p, 1))
+    toast.success(`${p.nombre} agregado al carrito`)
     setProductoSeleccionado(null)
   }
 
   const irAlCarrito = () => {
     if (productoSeleccionado) {
-      agregarAlCarrito(itemParaCarrito(productoSeleccionado, cantModal))
+      agregarAlCarrito(itemParaCarrito(productoSeleccionado, 1))
       setProductoSeleccionado(null)
     }
 navigate('/cliente/carrito')
@@ -775,32 +770,11 @@ navigate('/cliente/carrito')
 
                       <div className="bg-white/[0.03] rounded-2xl p-4 border border-white/[0.06] flex items-center justify-between">
                         <p className="text-2xl font-bold text-white">
-                          ${(Number(productoSeleccionado.precio || 0) * cantModal).toLocaleString('es-CO')}
+                          ${(Number(productoSeleccionado.precio || 0)).toLocaleString('es-CO')}
                           <span className="text-sm font-normal text-white/40 ml-1">
                             {productoSeleccionado.categoria_producto === 'maquina' ? '/unidad' : '/kg'}
                           </span>
                         </p>
-
-                        {/* Selector de cantidad */}
-                        <div className="flex items-center gap-2 bg-white/[0.05] rounded-xl border border-white/10 p-1">
-                          <button
-                            type="button"
-                            onClick={() => setCantModal(c => Math.max(1, c - 1))}
-                            className="w-8 h-8 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition text-lg leading-none"
-                            aria-label="Restar cantidad"
-                          >
-                            −
-                          </button>
-                          <span className="w-6 text-center text-sm font-semibold tabular-nums">{cantModal}</span>
-                          <button
-                            type="button"
-                            onClick={() => setCantModal(c => Math.min(50, c + 1))}
-                            className="w-8 h-8 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition text-lg leading-none"
-                            aria-label="Sumar cantidad"
-                          >
-                            +
-                          </button>
-                        </div>
                       </div>
 
                       <div className="flex flex-col gap-2 mt-auto">
