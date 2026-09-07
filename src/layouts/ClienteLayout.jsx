@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import LogoGranova from '../components/ui/LogoGranova'
 import AsistenteWidgetCliente from '../components/AsistenteWidgetCliente'
 import CampanitaNotificaciones from '../components/CampanitaNotificaciones'
 import ModalResenaPedido from '../components/ModalResenaPedido'
+import CarritoDrawer from '../components/CarritoDrawer'
 import { useCarrito } from '../context/CarritoContext'
 import { cargarFavoritos } from '../pages/Catalogo'
+import { API_URL } from '../config'
 
 const ENLACES = [
   { to: '/cliente', label: 'Inicio', end: true },
@@ -19,12 +21,91 @@ const ENLACES = [
 
 function ClienteLayout() {
   const navigate = useNavigate()
-  const { limpiarSesion } = useCarrito()
+  const location = useLocation()
+  const {
+    limpiarSesion,
+    productos,
+    sincronizarCarrito,
+    aumentarCantidad,
+  } = useCarrito()
   const [menuOpen, setMenuOpen] = useState(false)
   const [cuentaOpen, setCuentaOpen] = useState(false)
   const [resenaPedido, setResenaPedido] = useState(null)
   const [numFavoritos, setNumFavoritos] = useState(() => (cargarFavoritos() || new Set()).size)
   const cuentaRef = useRef(null)
+
+  // ── CARRITO GLOBAL ──────────────────────────────────────────
+  // El catálogo y la página de carrito manejan su propio Drawer con reglas
+  // propias (umbrales de cantidad), así que el Drawer global solo aplica en
+  // el resto de páginas del cliente para que el asistente de IA pueda abrir
+  // el carrito desde CUALQUIER página (evento 'carrito-toggle').
+  const usaDrawerPropio = ['/cliente/catalogo', '/cliente/carrito'].includes(location.pathname)
+  const [carritoGlobalOpen, setCarritoGlobalOpen] = useState(false)
+  const [descuentosVolumen, setDescuentosVolumen] = useState([])
+
+  // Representación del contexto (fuente de verdad) en el formato que entiende
+  // el CarritoDrawer (mismo formato que usa el catálogo: 'cant' en vez de 'cantidad').
+  const aFormatoDrawer = (p) => ({
+    id: p.id,
+    nombre: p.nombre,
+    precio: p.precio,
+    cant: p.cant ?? p.cantidad ?? 1,
+    img: p.img || '',
+    unidad: p.unidad || 'kg',
+    origen: p.presentacion || '',
+    id_formato: p.id_formato ?? null,
+    peso_kg: p.peso_kg ?? null,
+    etiqueta_formato: p.etiqueta_formato || '',
+    promoPct: p.promo_pct ?? null,
+    stock: p.stock ?? 999,
+    iva_pct: p.iva_pct == null ? 5 : Number(p.iva_pct),
+  })
+  const carritoGlobal = (productos || []).map(aFormatoDrawer)
+  const carritoGlobalRef = useRef(carritoGlobal)
+  // Ref actualizada tras cada render (sin setState) para que el handler del
+  // drawer siempre lea el carrito vigente al mutar cantidad/quitar producto.
+  useEffect(() => {
+    carritoGlobalRef.current = (productos || []).map(aFormatoDrawer)
+  })
+
+  // El asistente (o cualquier código) dispara 'carrito-toggle' con
+  // event.detail.abierto para abrir/cerrar el carrito desde cualquier lugar.
+  useEffect(() => {
+    function onCarritoToggle(e) {
+      setCarritoGlobalOpen(e.detail?.abierto ?? true)
+    }
+    window.addEventListener('carrito-toggle', onCarritoToggle)
+    return () => window.removeEventListener('carrito-toggle', onCarritoToggle)
+  }, [])
+
+  // Descuentos por volumen para el Drawer (mismo endpoint público del catálogo).
+  useEffect(() => {
+    let activo = true
+    fetch(`${API_URL}/productos`)
+      .then(r => r.json())
+      .then(j => { if (activo && j.ok) setDescuentosVolumen(j.descuentosVolumen || []) })
+      .catch(() => {})
+    return () => { activo = false }
+  }, [])
+
+  // El Drawer muta su lista y volvemos a sincronizar el contexto al final.
+  const actualizarCarritoGlobal = (updater) => {
+    const siguiente = updater(carritoGlobalRef.current)
+    sincronizarCarrito(siguiente.map(d => ({
+      id: d.id,
+      nombre: d.nombre,
+      presentacion: d.origen || '',
+      precio: d.precio,
+      cantidad: d.cant ?? 1,
+      img: d.img || '',
+      unidad: d.unidad || 'kg',
+      id_formato: d.id_formato ?? null,
+      etiqueta_formato: d.etiqueta_formato || '',
+      peso_kg: d.peso_kg ?? null,
+      promo_pct: d.promoPct ?? null,
+      iva_pct: d.iva_pct == null ? 5 : Number(d.iva_pct),
+    })))
+  }
 
   const cliente = (() => {
     try {
@@ -206,6 +287,22 @@ function ClienteLayout() {
 
       <Outlet />
       <AsistenteWidgetCliente />
+
+      {/* Drawer global del carrito: lo abre el asistente desde cualquier
+          página (evento 'carrito-toggle'). El catálogo y la página de carrito
+          usan su propio drawer, así que acá se omite. */}
+      {!usaDrawerPropio && carritoGlobalOpen && (
+        <CarritoDrawer
+          carrito={carritoGlobal}
+          setCarrito={actualizarCarritoGlobal}
+          onClose={() => {
+            setCarritoGlobalOpen(false)
+            window.dispatchEvent(new CustomEvent('carrito-toggle', { detail: { abierto: false } }))
+          }}
+          onAumentar={aumentarCantidad}
+          descuentosVolumen={descuentosVolumen}
+        />
+      )}
 
       {/* Modal reseña desde notificación */}
       {resenaPedido && (
