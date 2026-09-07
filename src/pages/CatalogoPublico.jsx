@@ -149,7 +149,7 @@ export default function CatalogoPublico() {
             />
           </div>
 
-          <div className="flex items-center gap-1.5 rounded-xl px-1 py-1 bg-white/[0.04] border border-white/10">
+          <div className="flex items-center gap-1.5 rounded-xl px-1 py-1 bg-white/[0.04] border border-white/10 flex-1 min-w-0 overflow-x-auto">
             {[ 
                 { id: 'todos', label: 'Todo' },
                 { id: 'cafe', label: 'Cafés' },
@@ -162,7 +162,7 @@ export default function CatalogoPublico() {
                 key={c.id}
                 type="button"
                 onClick={() => setCategoria(c.id)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap shrink-0 ${
                   categoria === c.id
                     ? 'bg-[#6FA98C] text-[#0a1a0a]'
                     : 'text-white/60 hover:text-white'

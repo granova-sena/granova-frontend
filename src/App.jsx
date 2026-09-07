@@ -58,6 +58,7 @@ import PagarPage from './pages/PagarPage'
 import TrazabilidadLotePage from './pages/TrazabilidadLotePage'
 import ComparacionPage from './pages/ComparacionPage'
 import Empresas from './pages/Empresas'
+import { TerminosYCondiciones, PoliticaPrivacidad, PoliticaCookies } from './pages/Legal'
 import TiendaPublica from './layouts/TiendaPublica'
 
 function App() {
@@ -92,6 +93,9 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/registro-empresa" element={<RegistroEmpresa />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/terminos" element={<TerminosYCondiciones />} />
+        <Route path="/privacidad" element={<PoliticaPrivacidad />} />
+        <Route path="/cookies" element={<PoliticaCookies />} />
         {/* Catálogo público de exhibición: invitados solo ven información de los productos.
             La compra y el catálogo funcional (carrito) viven en /cliente/catalogo. */}
         <Route path="/catalogo" element={<TiendaPublica><CatalogoPublico /></TiendaPublica>} />
@@ -163,7 +167,6 @@ function App() {
           <Route path="empleados" element={<Empleados />} />
           <Route path="respuestas" element={<RespuestasEmpleados />} />
           <Route path="logistica" element={<Logistica />} />
-          <Route path="usuarios" element={<Logistica />} />
 
           {/* Ventas */}
           <Route path="ventas" element={<RegistroDeVentas />} />

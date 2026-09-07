@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { API_URL } from "../config";
+import { useCarrito } from '../context/CarritoContext'
+import { adaptarProducto } from '../pages/Catalogo'
 
 const NEON = '#39ff8a'
 const NEON_DIM = 'rgba(57,255,138,0.35)'
@@ -60,13 +62,53 @@ function obtenerClienteSesion() {
   return null
 }
 
+// ── AGREGAR PRODUCTOS AL CARRITO DESDE EL CHAT ──────────────────────────
+// El webhook de n8n puede responder con accion: "agregar_carrito" y
+// parametros { idProducto|id|productoId, cantidad, idFormato?, nombre? }.
+// Acá resolvemos el producto real del catálogo y lo agregamos al carrito
+// del cliente con la misma forma que usa la página de catálogo.
+let catalogoCacheProductos = null
+async function obtenerCatalogoProductos() {
+  if (catalogoCacheProductos) return catalogoCacheProductos
+  try {
+    const res = await fetch(`${API_URL}/productos`)
+    const json = await res.json()
+    if (json.ok) catalogoCacheProductos = json.data.map(adaptarProducto)
+  } catch {
+    catalogoCacheProductos = catalogoCacheProductos || []
+  }
+  return catalogoCacheProductos || []
+}
+
+function idDeProducto(params) {
+  const candidatos = [params.idProducto, params.productoId, params.id, params.id_producto]
+  for (const c of candidatos) {
+    if (c === undefined || c === null || c === '') continue
+    const n = Number(c)
+    if (Number.isFinite(n)) return n
+  }
+  return null
+}
+
+async function resolverProducto(params) {
+  const catalogo = await obtenerCatalogoProductos()
+  const id = idDeProducto(params)
+  if (id) return catalogo.find(p => p.id === id) || null
+  const nombre = quitarAcentos((params.nombre || params.producto || '').toLowerCase()).trim()
+  if (nombre) {
+    return catalogo.find(p => quitarAcentos(p.nombre).toLowerCase().includes(nombre)) || null
+  }
+  return null
+}
+
 function AsistenteWidgetCliente() {
   const navigate = useNavigate()
+  const { agregarAlCarrito } = useCarrito()
   const [abierto, setAbierto] = useState(false)
   const [mensajes, setMensajes] = useState([
     {
       autor: 'asistente',
-      texto: '¡Hola! Soy el asistente de Granova. Puedo ayudarte a elegir un café, resolver dudas sobre tu pedido o contarte de nuestras fincas. ¿En qué te ayudo?',
+      texto: '¡Hola! Soy el asistente de Granova. Puedo ayudarte a elegir un café, agregarlo a tu carrito, resolver dudas sobre tu pedido o contarte de nuestras fincas. ¿En qué te ayudo?',
     },
   ])
   const [entrada, setEntrada] = useState('')
@@ -99,6 +141,46 @@ function AsistenteWidgetCliente() {
     if (abierto) inputRef.current?.focus()
   }, [abierto])
 
+  async function aplicarAgregarCarrito(params) {
+    try {
+      if (!params || typeof params !== 'object') return 'No recibí los datos del producto.'
+      const cantidad = Math.max(1, Math.floor(Number(params.cantidad) || 1))
+      const producto = await resolverProducto(params)
+      if (!producto) return 'No encontré ese producto en el catálogo. Intenta de nuevo con otro nombre.'
+      if (!producto.disponible) return 'Ese producto no está disponible en este momento.'
+
+      let precio = Number(producto.precio) || 0
+      let idFormato = null
+      let pesoKg = producto.peso_kg ?? null
+      let etiquetaFormato = producto.etiqueta_formato || ''
+      const idxFormato = Number(params.idFormato ?? params.formato)
+      if (Number.isFinite(idxFormato) && (producto.formatos || []).length > 0) {
+        const f = producto.formatos.find(x => Number(x.id_formato) === idxFormato)
+        if (f) {
+          precio = Number(f.precio || f.price) || precio
+          idFormato = Number(f.id_formato)
+          pesoKg = Number(f.peso_kg) || null
+          etiquetaFormato = f.etiqueta || ''
+        }
+      }
+
+      agregarAlCarrito({
+        ...producto,
+        cant: cantidad,
+        precio,
+        id_formato: idFormato,
+        peso_kg: pesoKg,
+        etiqueta_formato: etiquetaFormato,
+      })
+      window.dispatchEvent(new CustomEvent('carrito-toggle', { detail: { abierto: true } }))
+      const cantidadTexto = cantidad > 1 ? ` (${cantidad} ${producto.unidad === 'unidad' ? 'unidades' : 'kg'})` : ''
+      return `✓ Listo, agregué "${producto.nombre}" a tu carrito.${cantidadTexto}`
+    } catch (error) {
+      console.error('Error agregando al carrito desde el asistente:', error)
+      return 'No pude agregar el producto al carrito. Intenta de nuevo.'
+    }
+  }
+
   async function enviarMensaje(e) {
     e.preventDefault()
     const texto = entrada.trim()
@@ -127,6 +209,11 @@ function AsistenteWidgetCliente() {
           texto: data.respuesta || 'No obtuve una respuesta del asistente.',
         },
       ])
+
+      if (data.accion === 'agregar_carrito') {
+        const textoCarrito = await aplicarAgregarCarrito(data.parametros || {})
+        setMensajes((prev) => [...prev, { autor: 'asistente', texto: textoCarrito }])
+      }
 
       if (data.accion === 'navegar' && data.parametros?.ruta) {
         const rutaFinal = normalizarRuta(data.parametros.ruta)

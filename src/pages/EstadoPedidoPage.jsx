@@ -10,6 +10,13 @@ import Breadcrumb from '../components/ui/Breadcrumb'
 const METODOS_PASARELA = ['tarjeta', 'pse', 'nequi', 'daviplata']
 const esMetodoPasarela = (metodo) => METODOS_PASARELA.includes(String(metodo || '').toLowerCase())
 
+const ESTADO_DESPACHO = {
+  Preparando: { texto: 'Preparando salida', color: '#D8A92E' },
+  'En ruta': { texto: 'En camino', color: '#0ea5e9' },
+  Entregado: { texto: 'Entregado', color: '#1D9E75' },
+  Novedad: { texto: 'Novedad', color: '#D85A30' },
+}
+
 function necesitaPagar(estadoPago, metodoPago, estadoPedido) {
   if (estadoPedido === 'cancelado') return false
   if (estadoPago === 'fallido') return true
@@ -88,6 +95,13 @@ function EstadoPedidoPage() {
 
   const formatearNumero = (id) =>
     `PED-${new Date().getFullYear()}-${String(id).padStart(4, '0')}`
+
+  const formatearFechaHora = (fecha) =>
+    new Date(fecha).toLocaleString('es-CO', {
+      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+    })
+
+  const estadoDespacho = pedido.rastreo ? (ESTADO_DESPACHO[pedido.rastreo.estado_despacho] || ESTADO_DESPACHO.Preparando) : null
 
   const productoEnResena = pedido.productos?.find(p => p.id_detalle === resenaAbierta)
 
@@ -243,9 +257,57 @@ function EstadoPedidoPage() {
                 <p className="text-white/40">Ciudad</p>
                 <p className="text-white font-semibold mt-1">{pedido.ciudad_envio}</p>
               </div>
-              <div className="mt-2 w-full border border-white/15 rounded-xl py-2 text-xs text-white/60 flex items-center justify-center gap-2 bg-white/[0.03]">
-                📍 El rastreo se te enviará por correo al despachar tu pedido
-              </div>
+              {pedido.rastreo ? (
+                <div className="mt-2 rounded-xl border border-[#6FA98C]/25 bg-[#6FA98C]/10 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[#9DC9B4] font-semibold">🚚 Rastreo del envío</p>
+                    {estadoDespacho && (
+                      <span className="text-[10px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap"
+                        style={{ color: estadoDespacho.color, backgroundColor: `${estadoDespacho.color}1f`, border: `1px solid ${estadoDespacho.color}55` }}>
+                        {estadoDespacho.texto}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2 text-xs text-white/80">
+                    <div className="flex justify-between gap-4">
+                      <span className="text-white/40">Guía</span>
+                      <span className="font-mono text-[#9DC9B4] font-medium">{pedido.rastreo.guia}</span>
+                    </div>
+                    {pedido.rastreo.transportadora && (
+                      <div className="flex justify-between gap-4">
+                        <span className="text-white/40">Transportadora</span>
+                        <span className="text-right font-medium">
+                          {pedido.rastreo.transportadora}
+                          {pedido.rastreo.tipo_vehiculo ? ` · ${pedido.rastreo.tipo_vehiculo}` : ''}
+                          {pedido.rastreo.placa ? ` · ${pedido.rastreo.placa}` : ''}
+                        </span>
+                      </div>
+                    )}
+                    {pedido.rastreo.sector_destino && (
+                      <div className="flex justify-between gap-4">
+                        <span className="text-white/40">Sector</span>
+                        <span className="text-right font-medium">{pedido.rastreo.sector_destino}</span>
+                      </div>
+                    )}
+                    {pedido.rastreo.fecha_salida && (
+                      <div className="flex justify-between gap-4">
+                        <span className="text-white/40">Salió</span>
+                        <span className="text-right">{formatearFechaHora(pedido.rastreo.fecha_salida)}</span>
+                      </div>
+                    )}
+                    {pedido.rastreo.fecha_entrega && (
+                      <div className="flex justify-between gap-4">
+                        <span className="text-white/40">Entregado</span>
+                        <span className="text-right">{formatearFechaHora(pedido.rastreo.fecha_entrega)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2 w-full border border-white/15 rounded-xl py-2 text-xs text-white/60 flex items-center justify-center gap-2 bg-white/[0.03]">
+                  📍 El rastreo estará disponible al despachar tu pedido
+                </div>
+              )}
             </div>
           </div>
 

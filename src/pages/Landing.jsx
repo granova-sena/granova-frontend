@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence, useScroll, useSpring, useTransform, useInView, animate } from 'framer-motion'
 import useEmblaCarousel from 'embla-carousel-react'
@@ -1027,12 +1027,10 @@ navigate('/cliente/carrito')
           <div className="border-t border-white/10 pt-6 sm:pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-xs text-white/40">© 2026 Granova. Todos los derechos reservados.</p>
             <div className="flex gap-4 sm:gap-6">
-              {['Privacidad', 'Términos', 'Cookies'].map((item, i) => (
-                <button key={i} type="button" onClick={() => toast.info(`${item}: documento disponible próximamente`)} className="text-xs text-white/40 hover:text-white/70 transition">
-                  {item}
-                </button>
-              ))}
-            </div>
+                <Link to="/privacidad" className="text-xs text-white/40 hover:text-white/70 transition">Privacidad</Link>
+                <Link to="/terminos" className="text-xs text-white/40 hover:text-white/70 transition">Términos</Link>
+                <Link to="/cookies" className="text-xs text-white/40 hover:text-white/70 transition">Cookies</Link>
+              </div>
           </div>
         </div>
       </footer>

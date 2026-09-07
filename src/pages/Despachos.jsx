@@ -47,6 +47,21 @@ function BadgeEstado({ estado }) {
   )
 }
 
+const ENTREGA_ESTADO = {
+  entregado: { label: '✅ Entregado', color: '#1D9E75', bg: 'rgba(29,158,117,0.14)' },
+  novedad: { label: '⚠️ Novedad', color: '#D85A30', bg: 'rgba(216,90,48,0.14)' },
+  pendiente: { label: '🕒 En camino', color: '#64748b', bg: 'rgba(100,116,139,0.12)' },
+}
+function BadgeEntrega({ estado }) {
+  const cfg = ENTREGA_ESTADO[estado] || ENTREGA_ESTADO.pendiente
+  return (
+    <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap"
+      style={{ color: cfg.color, backgroundColor: cfg.bg }}>
+      {cfg.label}
+    </span>
+  )
+}
+
 /* ============================================================
    Selector de pedidos disponibles (reparto) con checkboxes.
    Usado en el modal de "Nueva salida" y en "Agregar pedidos".
@@ -281,8 +296,12 @@ function ModalDetalle({ despacho, pedidos, onCerrar, onCambio, esEscritor }) {
   const [porQuitar, setPorQuitar] = useState(null)
   const [porCobrar, setPorCobrar] = useState(null)
   const [confirmarEntregado, setConfirmarEntregado] = useState(false)
+  const [porEntregarPedido, setPorEntregarPedido] = useState(null)
+  const [revertirPara, setRevertirPara] = useState(null)
+  const [novedadPara, setNovedadPara] = useState(null)
   const [facturaId, setFacturaId] = useState(null)
   const [procesando, setProcesando] = useState(null)
+  const [procesandoPedido, setProcesandoPedido] = useState(null)
 
   useModalBehavior(() => { if (!agregarAbierto) onCerrar() }, true)
 
@@ -328,6 +347,24 @@ function ModalDetalle({ despacho, pedidos, onCerrar, onCambio, esEscritor }) {
     }
   }
 
+  const marcarPedido = async (idPedido, accion, motivo) => {
+    setProcesandoPedido(idPedido)
+    try {
+      const body = { accion }
+      if (accion === 'novedad') body.motivo = motivo
+      await api.patch(`/despachos/${despacho.id}/pedidos/${idPedido}`, body)
+      toast.success(accion === 'entregado' ? 'Pedido marcado como entregado' : accion === 'novedad' ? 'Novedad registrada' : 'Marcado revertido')
+      setPorEntregarPedido(null)
+      setNovedadPara(null)
+      setRevertirPara(null)
+      onCambio()
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message)
+    } finally {
+      setProcesandoPedido(null)
+    }
+  }
+
   const agregarPedidos = async (ids) => {
     setProcesando('agregar')
     try {
@@ -353,6 +390,11 @@ function ModalDetalle({ despacho, pedidos, onCerrar, onCambio, esEscritor }) {
           <div className="flex items-center gap-3">
             <h3 className="text-base font-semibold text-admin-heading">Salida {despacho.guia}</h3>
             <BadgeEstado estado={estado} />
+            {pedidos.length > 0 && estado !== 'Preparando' && (
+              <span className="text-xs text-gray-500">
+                {pedidos.filter((x) => x.entrega_estado === 'entregado').length}/{pedidos.length} entregados
+              </span>
+            )}
           </div>
           <button onClick={onCerrar} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
@@ -445,6 +487,9 @@ function ModalDetalle({ despacho, pedidos, onCerrar, onCambio, esEscritor }) {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-medium text-admin-heading">{p.pedido}</p>
                       <span className="text-xs text-gray-400">{formatFecha(p.fecha)}</span>
+                      {(estado === 'En ruta' || estado === 'Novedad') && (
+                        <BadgeEntrega estado={p.entrega_estado || 'pendiente'} />
+                      )}
                     </div>
                     <p className="text-xs text-gray-500 truncate">{p.cliente} · {p.producto}</p>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -459,10 +504,37 @@ function ModalDetalle({ despacho, pedidos, onCerrar, onCambio, esEscritor }) {
                           {p.estado_pago === 'pendiente_verificacion' ? '⏳ Verificar pago' : '💵 Cobrar al entregar'}
                         </span>
                       )}
+                      {p.entrega_estado === 'novedad' && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-medium whitespace-nowrap">
+                          {p.motivo_novedad || 'Novedad'}
+                        </span>
+                      )}
                     </div>
                   </div>
                   {esEscritor && !soloLectura && (
                     <div className="shrink-0 flex flex-col items-end gap-2">
+                      {(estado === 'En ruta' || estado === 'Novedad') && (
+                        <>
+                          {p.entrega_estado !== 'entregado' && (
+                            <button type="button" onClick={() => setPorEntregarPedido(p.id)} disabled={procesandoPedido === p.id}
+                              className="text-xs px-3 py-1.5 rounded-lg bg-[#1D9E75] text-white hover:bg-[#178a64] transition disabled:opacity-50 whitespace-nowrap">
+                              ✅ Entregar
+                            </button>
+                          )}
+                          {p.entrega_estado === 'pendiente' && (
+                            <button type="button" onClick={() => setNovedadPara({ id: p.id })} disabled={procesandoPedido === p.id}
+                              className="text-xs px-3 py-1.5 rounded-lg border border-red-300 text-red-500 hover:bg-red-50 transition disabled:opacity-50 whitespace-nowrap">
+                              ⚠️ Novedad
+                            </button>
+                          )}
+                          {p.entrega_estado !== 'pendiente' && (
+                            <button type="button" onClick={() => setRevertirPara(p.id)} disabled={procesandoPedido === p.id}
+                              className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-50 whitespace-nowrap">
+                              ↩️ Revertir
+                            </button>
+                          )}
+                        </>
+                      )}
                       {estado === 'Preparando' && (
                         <button type="button" onClick={() => setPorQuitar(p.id)}
                           className="text-xs px-3 py-1.5 rounded-lg border border-red-300 text-red-500 hover:bg-red-50 transition">
@@ -514,6 +586,32 @@ function ModalDetalle({ despacho, pedidos, onCerrar, onCambio, esEscritor }) {
         onConfirmar={quitarPedido}
         onCancelar={() => setPorQuitar(null)}
       />
+      <ConfirmDialog
+        abierto={!!porEntregarPedido}
+        titulo="¿Marcar pedido entregado?"
+        mensaje="Este pedido pasará a 'Entregado' y el cliente recibirá su notificación. Si es el último de la salida, el despacho quedará entregado."
+        confirmarTexto="Marcar entregado"
+        onConfirmar={() => marcarPedido(porEntregarPedido, 'entregado')}
+        onCancelar={() => setPorEntregarPedido(null)}
+      />
+      <ConfirmDialog
+        abierto={!!revertirPara}
+        titulo="¿Revertir marcado?"
+        mensaje="El pedido volverá a 'En camino' y se quitará su entrega o novedad."
+        confirmarTexto="Revertir"
+        onConfirmar={() => marcarPedido(revertirPara, 'pendiente')}
+        onCancelar={() => setRevertirPara(null)}
+      />
+
+      {novedadPara && (
+        <NovedadModal
+          pedido={novedadPara.id}
+          despachoId={despacho.id}
+          onCancelar={() => setNovedadPara(null)}
+          onConfirmar={(motivo) => marcarPedido(novedadPara.id, 'novedad', motivo)}
+          procesando={procesandoPedido === novedadPara.id}
+        />
+      )}
 
       {facturaId && <FacturaModal idPedido={facturaId} onClose={() => setFacturaId(null)} />}
     </div>
@@ -579,6 +677,42 @@ function MiniSelectorPedidos({ seleccion, onCambio, search }) {
             )
           })
         )}
+      </div>
+    </div>
+  )
+}
+
+/* Modal para registrar el motivo de una novedad puntual del pedido. */
+function NovedadModal({ despachoId, pedido, onCancelar, onConfirmar, procesando }) {
+  const [motivo, setMotivo] = useState('')
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl panel-come">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h3 className="text-base font-semibold text-admin-heading">Registrar novedad</h3>
+          <button onClick={onCancelar} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">¿Qué pasó con este pedido?</label>
+            <textarea
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              rows={3}
+              placeholder="Ej: el cliente no estaba en casa, dirección incorrecta, devolución..."
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1D9E75] transition text-gray-800 resize-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={onCancelar} disabled={procesando}
+              className="flex-1 text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">Cancelar</button>
+            <button type="button" disabled={procesando || motivo.trim().length < 3}
+              onClick={() => onConfirmar(motivo.trim())}
+              className="flex-1 text-sm px-4 py-2 rounded-lg bg-[#D85A30] text-white hover:bg-[#b8492a] transition disabled:opacity-50">
+              {procesando ? 'Guardando...' : 'Guardar novedad'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -727,7 +861,16 @@ function Despachos() {
                       <td className="px-6 py-4 text-gray-600">{formatFecha(d.fecha_programada)}</td>
                       <td className="px-6 py-4 text-center text-gray-600">{d.num_pedidos}</td>
                       <td className="px-6 py-4 text-center text-gray-600">{d.total_unidades} kg</td>
-                      <td className="px-6 py-4"><BadgeEstado estado={d.estado} /></td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col items-center gap-1">
+                          <BadgeEstado estado={d.estado} />
+                          {d.entregados_count > 0 && (
+                            <span className="text-[10px] text-gray-400">
+                              {d.entregados_count}/{d.num_pedidos} entregados
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-center">
                         <button type="button" onClick={() => abrirDetalle(d.id)}
                           className="text-blue-600 hover:text-blue-800 text-sm font-medium transition">Ver detalle</button>
@@ -744,7 +887,12 @@ function Despachos() {
                 <div key={d.id} className="p-4 flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium text-admin-heading">{d.guia}</p>
-                    <BadgeEstado estado={d.estado} />
+                    <div className="flex flex-col items-end gap-0.5">
+                      <BadgeEstado estado={d.estado} />
+                      {d.entregados_count > 0 && (
+                        <span className="text-[10px] text-gray-400">{d.entregados_count}/{d.num_pedidos} entregados</span>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm text-gray-600">{d.transportadora || 'Sin vehículo'} {d.tipo_vehiculo ? `· ${d.tipo_vehiculo}` : ''}</p>
                   <div className="grid grid-cols-2 gap-1.5 text-sm">

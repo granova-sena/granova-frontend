@@ -386,7 +386,7 @@ if (errorCarga) {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
             <div>
               <div className="flex items-center gap-3">
-                <img src="/logoGranova.jpeg" alt="Granova" className="w-14 h-14 object-contain rounded bg-white p-1" />
+                <img src="/logoGranova.png" alt="Granova" className="w-14 h-14 object-contain rounded bg-white p-1" />
                 <div>
                   <p className="text-2xl font-bold text-white tracking-widest">GRANOVA</p>
                   <p className="text-[11px] text-white/60">{INFO_GRANOVA.lema}</p>

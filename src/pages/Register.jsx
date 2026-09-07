@@ -539,6 +539,12 @@ function Register() {
                 <p><strong className="text-white/80">10. Limitación de Responsabilidad</strong><br />
                 Granova no será responsable por daños indirectos, incidentales o consecuentes derivados del uso de nuestro servicio. Nuestra responsabilidad máxima será limitada al valor del último pedido realizado.</p>
 
+                <div className="pt-1">
+                  <button type="button" onClick={() => { setModalTerminosAbierto(false); navigate('/terminos') }} className="text-[#9DC9B4] cursor-pointer hover:underline bg-transparent border-0 p-0 font-inherit text-xs">
+                    Ver documento completo →
+                  </button>
+                </div>
+
                 <p className="text-white/40 italic">Última actualización: Septiembre 2026</p>
               </div>
               <div className="flex gap-3 px-5 py-4 border-t border-white/10">

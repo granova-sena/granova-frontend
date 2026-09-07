@@ -56,10 +56,8 @@
     const nFactura = factura?.numero_factura || factura?.pedido?.numero_factura || `FE-${idPedido}`
     const fecha = factura?.fecha || factura?.fecha_emision
     const subtotal = Number(factura?.subtotal ?? factura?.pedido?.subtotal ?? 0)
-    const impuestos = Number(factura?.impuestos ?? factura?.pedido?.impuestos ?? 0)
     const total = Number(factura?.total ?? factura?.pedido?.total ?? 0)
     const estadoPago = factura?.estado_pago
-    const impuestosPorTasa = factura?.impuestos_por_tasa || []
     const productos = factura?.productos || factura?.pedido?.items || []
     const descuento = Number(factura?.descuento ?? 0)
     const envio = Number(factura?.envio ?? factura?.costo_envio ?? 0)
@@ -127,17 +125,12 @@
         doc.text(`Envío: ${formatMoney(envio)}`, 150, linea, { align: 'right' })
         linea += 6
       }
-      doc.text(`Impuestos: ${formatMoney(impuestos)}`, 150, linea, { align: 'right' })
-      linea += 6
-      if (impuestosPorTasa.length > 0) {
-        impuestosPorTasa.forEach((t, i) => {
-          doc.text(`IVA ${t.tasa}%: ${formatMoney(t.valor)}`, 150, linea + i * 5, { align: 'right' })
-        })
-        linea += impuestosPorTasa.length * 5
-      }
       doc.setFontSize(12)
       doc.setTextColor(30, 30, 30)
-      doc.text(`Total: ${formatMoney(total)}`, 150, linea, { align: 'right' })
+      doc.text(`Total (IVA incluido): ${formatMoney(total)}`, 150, linea, { align: 'right' })
+      doc.setFontSize(8)
+      doc.setTextColor(120, 120, 120)
+      doc.text('* Todos los precios incluyen IVA.', 150, linea + 5, { align: 'right' })
 
       if (estadoPago) {
         const estadoY = linea + 10
@@ -240,11 +233,8 @@
                 {envio > 0 && (
                   <p className="text-gray-500">Envío: <span className="text-gray-800">{formatMoney(envio)}</span></p>
                 )}
-                <p className="text-gray-500">Impuestos: <span className="text-gray-800">{formatMoney(impuestos)}</span></p>
-                {impuestosPorTasa.length > 0 && impuestosPorTasa.map((t, i) => (
-                  <p key={i} className="text-gray-500">IVA {t.tasa}%: <span className="text-gray-800">{formatMoney(t.valor)}</span></p>
-                ))}
-                <p className="text-base font-semibold text-gray-800">Total: {formatMoney(total)}</p>
+                <p className="text-base font-semibold text-gray-800">Total (IVA incluido): {formatMoney(total)}</p>
+                <p className="text-xs text-gray-400">* Todos los precios incluyen IVA.</p>
               </div>
 
               {estadoPago && (

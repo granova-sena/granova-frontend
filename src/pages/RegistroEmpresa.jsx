@@ -523,6 +523,12 @@ function RegistroEmpresa() {
                 <p><strong className="text-white/80">7. Protección de Datos</strong><br />
                 Sus datos serán tratados de conformidad con nuestra Política de Privacidad y la normatividad vigente en materia de protección de datos personales (Ley 1581 de 2012 en Colombia).</p>
 
+                <div className="pt-1">
+                  <button type="button" onClick={() => { setModalTerminosAbierto(false); navigate('/terminos') }} className="text-[#9DC9B4] cursor-pointer hover:underline bg-transparent border-0 p-0 font-inherit text-xs">
+                    Ver documento completo →
+                  </button>
+                </div>
+
                 <p><strong className="text-white/80">8. Uso del Servicio</strong><br />
                 Usted se compromete a utilizar el servicio de manera lícita y respetuosa. Está prohibido el uso fraudulento, la suplantación de identidad o cualquier actividad que pueda dañar la integridad del servicio.</p>
 

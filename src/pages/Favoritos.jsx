@@ -145,6 +145,12 @@ function FavoritosInterno() {
 
   const favoritosLista = productos.filter(p => favoritos.has(p.id));
 
+  const limpiarFavoritos = () => {
+    setFavoritos(new Set());
+    guardarFavoritos(new Set());
+    toast("Lista de favoritos limpiada", { icon: "🧹" });
+  };
+
   return (
     <div className="min-h-screen text-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
@@ -174,6 +180,22 @@ function FavoritosInterno() {
             <button type="button" onClick={() => window.location.reload()} className="mt-5 h-10 px-6 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">
               Reintentar
             </button>
+          </div>
+        ) : favoritos.size > 0 && favoritosLista.length === 0 ? (
+          <div className="mt-10 rounded-2xl bg-[#0F1D13] border border-white/[0.08] py-16 text-center">
+            <div className="w-14 h-14 mx-auto rounded-full bg-[#14291B] flex items-center justify-center mb-3">
+              <IconoCorazon className="text-[#D85A30]" width={22} height={22} lleno />
+            </div>
+            <p className="text-white/60 text-sm font-medium">Tienes {favoritos.size} {favoritos.size === 1 ? "favorito guardado" : "favoritos guardados"}.</p>
+            <p className="text-white/40 text-xs mt-1">Pero los productos no aparecen en el catálogo actual. Esto suele pasar si los guardaste con otra cuenta o si el producto fue desactivado.</p>
+            <div className="flex items-center justify-center gap-3 mt-5 flex-wrap">
+              <Link to="/cliente/catalogo" className="h-10 px-6 leading-10 rounded-xl bg-[#6FA98C] text-white text-sm font-semibold hover:bg-[#4F8A70] transition">
+                Explorar el catálogo
+              </Link>
+              <button type="button" onClick={limpiarFavoritos} className="h-10 px-6 rounded-xl border border-white/15 text-white/60 text-sm hover:text-white hover:border-white/30 transition">
+                Limpiar lista
+              </button>
+            </div>
           </div>
         ) : favoritosLista.length > 0 ? (
           <>

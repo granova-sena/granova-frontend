@@ -1767,20 +1767,23 @@ function CatalogoInterno() {
                     }} className="text-sm text-[#9DC9B4] hover:text-white transition">Ver todos →</button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {recomendaciones.filter(p => p.categoria_producto === 'cafe').map(p => (
-                      <ProductoCard
-                        key={p.id_producto}
-                        p={adaptarProducto(p)}
-                        onAgregar={agregar}
-                        onVerDetalle={verDetalle}
-                        cantidadEnCarrito={carrito.find(c => c.id === p.id_producto)?.cant || 0}
-                        esFavorito={favoritos.has(p.id_producto)}
-                        onToggleFavorito={toggleFavorito}
-                        seleccionadoComparar={seleccionadosComparar.includes(p.id_producto)}
-                        onToggleComparar={() => alternarComparar(p.id_producto)}
-                        esJuridica={esJuridica}
-                      />
-                    ))}
+                    {recomendaciones.filter(p => p.categoria_producto === 'cafe').map(r => {
+                      const p = adaptarProducto(r);
+                      return (
+                        <ProductoCard
+                          key={p.id}
+                          p={p}
+                          onAgregar={agregar}
+                          onVerDetalle={verDetalle}
+                          cantidadEnCarrito={carrito.find(c => c.id === p.id)?.cant || 0}
+                          esFavorito={favoritos.has(p.id)}
+                          onToggleFavorito={toggleFavorito}
+                          seleccionadoComparar={seleccionadosComparar.includes(p.id)}
+                          onToggleComparar={() => alternarComparar(p.id)}
+                          esJuridica={esJuridica}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
                 </FadeIn>
@@ -1832,20 +1835,23 @@ function CatalogoInterno() {
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {recomendaciones.filter(p => p.categoria_producto === 'maquina').map(p => (
-                  <ProductoCard
-                    key={p.id_producto}
-                    p={adaptarProducto(p)}
-                    onAgregar={agregar}
-                    onVerDetalle={verDetalle}
-                    cantidadEnCarrito={carrito.find(c => c.id === p.id_producto)?.cant || 0}
-                    esFavorito={favoritos.has(p.id_producto)}
-                    onToggleFavorito={toggleFavorito}
-                    seleccionadoComparar={seleccionadosComparar.includes(p.id_producto)}
-                    onToggleComparar={() => alternarComparar(p.id_producto)}
-                    esJuridica={esJuridica}
-                  />
-                ))}
+                {recomendaciones.filter(p => p.categoria_producto === 'maquina').map(r => {
+                  const p = adaptarProducto(r);
+                  return (
+                    <ProductoCard
+                      key={p.id}
+                      p={p}
+                      onAgregar={agregar}
+                      onVerDetalle={verDetalle}
+                      cantidadEnCarrito={carrito.find(c => c.id === p.id)?.cant || 0}
+                      esFavorito={favoritos.has(p.id)}
+                      onToggleFavorito={toggleFavorito}
+                      seleccionadoComparar={seleccionadosComparar.includes(p.id)}
+                      onToggleComparar={() => alternarComparar(p.id)}
+                      esJuridica={esJuridica}
+                    />
+                  );
+                })}
               </div>
             </div>
             </FadeIn>
