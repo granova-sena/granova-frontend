@@ -35,15 +35,13 @@ function CotizacionPage() {
   const [errorCarga, setErrorCarga] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [cotizacionGuardada, setCotizacionGuardada] = useState(false)
-  const [metodoPago, setMetodoPago] = useState('nequi')
+  const [metodoPago, setMetodoPago] = useState('pse')
   const [comprando, setComprando] = useState(false)
 
   const METODOS_PAGO_COTIZACION = [
-    { id: 'nequi', nombre: 'Nequi', icono: '📱' },
-    { id: 'tarjeta', nombre: 'Tarjeta', icono: '💳' },
-    { id: 'pse', nombre: 'PSE', icono: '🏦' },
+    { id: 'pse', nombre: 'Pago en línea (Wompi)', icono: '🔒' },
+    { id: 'efectivo', nombre: 'Efectivo', icono: '💵' },
     { id: 'contra_entrega', nombre: 'Pago contra entrega', icono: '🚚' },
-
   ]
   async function manejarComprarCotizacion() {
   const direccion = datosCliente?.direccion || clienteSesion?.direccion

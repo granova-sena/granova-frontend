@@ -12,6 +12,7 @@ const METODOS_MANUALES = ['transferencia', 'efectivo', 'contra_entrega']
 const esMetodoManual = (metodo) => METODOS_MANUALES.includes(String(metodo || '').toLowerCase())
 
 // Etiquetas legibles por método de pago.
+const METODOS_FILTRO = ['pse', 'efectivo', 'contra_entrega']
 const ETIQUETA_METODO = {
   tarjeta: 'Tarjeta',
   pse: 'PSE',
@@ -612,8 +613,8 @@ function GestionPedidos() {
             <span>→</span>
             <span className="px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-medium">✅ Entregado</span>
             <span className="mx-1 text-gray-300">|</span>
-            <span>💰 marca el pago en métodos manuales (transferencia / efectivo / contra entrega).</span>
-            <span className="text-gray-900 font-medium">Tarjeta · PSE · Nequi · Daviplata se confirman solos.</span>
+            <span>💰 marca el pago en métodos manuales (efectivo / contra entrega).</span>
+            <span className="text-gray-900 font-medium">Wompi (Tarjeta · PSE · Nequi) confirma el pago solo.</span>
           </div>
         </div>
       )}
@@ -708,8 +709,8 @@ function GestionPedidos() {
               className="text-xs px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-500 hover:border-gray-300 focus:outline-none focus:border-[#1D9E75] transition"
             >
               <option value="">Método: todos</option>
-              {Object.entries(ETIQUETA_METODO).map(([clave, label]) => (
-                <option key={clave} value={clave}>{label}</option>
+              {METODOS_FILTRO.map((m) => (
+                <option key={m} value={m}>{ETIQUETA_METODO[m]}</option>
               ))}
             </select>
             {hayFiltros && (

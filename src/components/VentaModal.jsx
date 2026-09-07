@@ -10,7 +10,7 @@ function nuevoItem() {
   return { key: contadorId, id_producto: '', id_formato: '', cantidad: '' }
 }
 
-const METODOS = ['nequi', 'daviplata', 'tarjeta', 'pse', 'efectivo', 'transferencia', 'contra_entrega']
+const METODOS = ['pse', 'efectivo', 'contra_entrega']
 const ETIQUETA_METODO = {
   nequi: 'Nequi', daviplata: 'Daviplata', tarjeta: 'Tarjeta', pse: 'PSE',
   efectivo: 'Efectivo', transferencia: 'Transferencia', contra_entrega: 'Contra entrega',
@@ -45,7 +45,7 @@ function VentaModal({ onClose, onCreado }) {
   const [error, setError] = useState(null)
 
   const [idCliente, setIdCliente] = useState('')
-  const [metodoPago, setMetodoPago] = useState('nequi')
+  const [metodoPago, setMetodoPago] = useState('efectivo')
   const [estadoPago, setEstadoPago] = useState('pagado')
   const [direccion, setDireccion] = useState('')
   const [ciudad, setCiudad] = useState('')

@@ -9,8 +9,7 @@ import api from '../services/api'
 const pasos = ['Datos y dirección', 'Método de pago', 'Confirmación']
 
 const metodosPago = [
-  { id: 'pse', nombre: 'Pago en línea (Wompi)', descripcion: 'Tarjeta, PSE, Nequi o Daviplata. Eliges el medio dentro de Wompi.', icono: '🔒', pasarela: true, color: '#6FA98C' },
-  { id: 'transferencia', nombre: 'Transferencia bancaria', descripcion: 'Te enviaremos los datos para realizar la transferencia.', icono: '🏦', pasarela: false },
+  { id: 'pse', nombre: 'Pago en línea (Wompi)', descripcion: 'Tarjeta, PSE o Nequi. Eliges el medio dentro de Wompi.', icono: '🔒', pasarela: true, color: '#6FA98C' },
   { id: 'efectivo', nombre: 'Efectivo', descripcion: 'Te enviaremos los datos para pagar en efectivo.', icono: '💵', pasarela: false },
   { id: 'contra_entrega', nombre: 'Pago contra entrega', descripcion: 'Pagas cuando recibas tu pedido.', icono: '🚚', pasarela: false },
 ]
@@ -718,7 +717,7 @@ function ConfigurarPedidoPage() {
                   </p>
                   <div className="w-full max-w-sm rounded-xl border border-[#D8A92E]/30 bg-[#D8A92E]/10 px-4 py-3 text-left text-xs text-amber-100/80">
                     <p className="font-semibold text-amber-200 mb-1">💡 Recuerda</p>
-                    <p>Para <span className="font-semibold">transferencia</span> o <span className="font-semibold">efectivo</span>, el pago debe
+                    <p>Para <span className="font-semibold">efectivo</span>, el pago debe
                     aprobarse manualmente antes de que el pedido avance.</p>
                   </div>
                   <button
