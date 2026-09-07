@@ -31,6 +31,29 @@ function quitarAcentos(texto) {
   return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 }
 
+// Extrae el texto legible de la respuesta del asistente sin depender de un
+// único campo (respuesta, mensaje, message, output, string suelto, etc.).
+function extraerTextoRespuesta(entrada) {
+  if (entrada == null || entrada === '') return ''
+  if (typeof entrada === 'string') return entrada.trim()
+  if (Array.isArray(entrada)) {
+    return entrada.map((e) => extraerTextoRespuesta(e)).filter(Boolean).join('\n').trim()
+  }
+  if (typeof entrada === 'object') {
+    for (const clave of ['respuesta', 'mensaje', 'message', 'text', 'output', 'content', 'reply', 'contenido']) {
+      const valor = entrada[clave]
+      if (valor != null && String(valor).trim()) return String(valor).trim()
+    }
+    if (Array.isArray(entrada.choices) && entrada.choices[0]?.message?.content) {
+      return String(entrada.choices[0].message.content).trim()
+    }
+    if (entrada.result != null || entrada.data != null) {
+      return extraerTextoRespuesta(entrada.result ?? entrada.data)
+    }
+  }
+  return ''
+}
+
 function normalizarRuta(ruta) {
   if (!ruta) return null
   let limpia = ruta.trim()
@@ -206,7 +229,7 @@ function AsistenteWidgetCliente() {
         ...prev,
         {
           autor: 'asistente',
-          texto: data.respuesta || 'No obtuve una respuesta del asistente.',
+          texto: extraerTextoRespuesta(data) || 'No obtuve una respuesta del asistente.',
         },
       ])
 

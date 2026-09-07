@@ -132,7 +132,8 @@ const descargarFactura = async (id_pedido) => {
 
   } catch (error) {
     console.error('Error descargando factura:', error.message)
-    toast.error('No se pudo generar la factura')  }
+    toast.error(error.response?.data?.mensaje ?? 'No se pudo generar la factura')
+  }
 }
 
 const estadoTexto = {
@@ -358,15 +359,27 @@ function MisPedidos() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => descargarFactura(p.id_pedido)}
-                      title="Descargar factura"
-                      aria-label="Descargar factura"
-                      className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/50 hover:text-[#9DC9B4] hover:bg-white/20 transition"
-                    >
-                      ⬇️
-                    </button>
+                    {p.estado_pago === 'pagado' ? (
+                      <button
+                        type="button"
+                        onClick={() => descargarFactura(p.id_pedido)}
+                        title="Descargar factura"
+                        aria-label="Descargar factura"
+                        className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/50 hover:text-[#9DC9B4] hover:bg-white/20 transition"
+                      >
+                        ⬇️
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => toast('🔒 La factura se habilita cuando tu pago esté confirmado.')}
+                        title="La factura estará disponible cuando tu pago esté confirmado"
+                        aria-label="Factura pendiente de pago"
+                        className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/30 cursor-not-allowed transition"
+                      >
+                        🔒
+                      </button>
+                    )}
                     {puedeCancelar(p) && (
                       <button
                         type="button"

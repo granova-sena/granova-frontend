@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import toast from 'react-hot-toast'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { jsPDF } from 'jspdf'
-import html2canvas from 'html2canvas'
+import autoTable from 'jspdf-autotable'
 import { API_URL } from '../config'
 import { PageHeader, PanelCard, PanelSkeleton, EmptyState, BotonPrimario } from '../components/ui/panel/PanelKit'
 
@@ -84,40 +84,120 @@ function ReportesVentas() {
 
   const tituloPeriodo = PERIODOS.find(p => p.valor === periodoActivo)?.label || 'Este mes'
 
-  // Genera un PDF a partir de una "foto" real de lo que se ve en pantalla
-  // (usa html2canvas para capturar el DOM tal cual está renderizado, y jsPDF
-  // solo lo empaqueta como imagen dentro del PDF).
+  // Genera un PDF directo con jsPDF + autoTable (sin depender de capturas del
+  // DOM ni de los gráficos), con todo el contenido del reporte: resumen,
+  // tendencia, top productos y reportes a empleados.
   const descargarPDF = async () => {
-    if (!contenidoRef.current) return
+    if (!datos) {
+      toast.error('Aún no hay datos para este período')
+      return
+    }
     setGenerandoPdf(true)
     try {
-      const canvas = await html2canvas(contenidoRef.current, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        useCORS: true,
-      })
-      const imagen = canvas.toDataURL('image/png')
-
       const doc = new jsPDF('p', 'pt', 'a4')
-      const anchoPagina = doc.internal.pageSize.getWidth()
-      const altoImagen = (canvas.height * anchoPagina) / canvas.width
+      const ancho = doc.internal.pageSize.getWidth()
+      const margen = 40
 
-      let alturaRestante = altoImagen
-      let posicionY = 0
+      doc.setFontSize(16)
+      doc.setTextColor(45, 90, 39)
+      doc.text('GRANOVA', ancho / 2, 40, { align: 'center' })
+      doc.setFontSize(11)
+      doc.setTextColor(0)
+      doc.text('Reporte de ventas', ancho / 2, 58, { align: 'center' })
+      doc.setFontSize(9)
+      doc.setTextColor(100)
+      doc.text(`Periodo: ${tituloPeriodo}`, ancho / 2, 72, { align: 'center' })
+      doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, ancho / 2, 84, { align: 'center' })
 
-      doc.addImage(imagen, 'PNG', 0, posicionY, anchoPagina, altoImagen)
-      alturaRestante -= doc.internal.pageSize.getHeight()
+      const estiloHead = { fillColor: [45, 90, 39], textColor: 255, fontSize: 9 }
+      const estiloBody = { fontSize: 9 }
 
-      // Si el contenido es más alto que una hoja A4, sigue en páginas siguientes
-      while (alturaRestante > 0) {
-        posicionY = alturaRestante - altoImagen
-        doc.addPage()
-        doc.addImage(imagen, 'PNG', 0, posicionY, anchoPagina, altoImagen)
-        alturaRestante -= doc.internal.pageSize.getHeight()
+      let y = 100
+
+      // Resumen del periodo
+      doc.setFontSize(10)
+      doc.setTextColor(0)
+      doc.text('Resumen del periodo', margen, y)
+      y += 6
+      const resumen = datos.resumen || {}
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margen, right: margen },
+        theme: 'grid',
+        headStyles: estiloHead,
+        bodyStyles: estiloBody,
+        head: [['Total ventas', 'Kg vendidos', 'Clientes únicos', 'Ticket promedio']],
+        body: [[
+          `$${Number(resumen.total_ventas || 0).toLocaleString('es-CO')}`,
+          `${Number(resumen.productos_vendidos || 0).toLocaleString('es-CO')} kg`,
+          Number(resumen.clientes_unicos || 0).toLocaleString('es-CO'),
+          `$${Math.round(Number(resumen.ticket_promedio || 0)).toLocaleString('es-CO')}`,
+        ]],
+      })
+      y = doc.lastAutoTable.finalY + 28
+
+      // Tendencia de ventas
+      doc.setFontSize(10)
+      doc.setTextColor(0)
+      doc.text('Tendencia de ventas', margen, y)
+      y += 6
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margen, right: margen },
+        theme: 'striped',
+        headStyles: estiloHead,
+        bodyStyles: estiloBody,
+        head: [['Periodo', 'Ventas']],
+        body: tendencia.map(t => [t.semana, `$${Number(t.ventas).toLocaleString('es-CO')}`]),
+      })
+      y = doc.lastAutoTable.finalY + 28
+
+      // Top productos vendidos
+      doc.setFontSize(10)
+      doc.setTextColor(0)
+      doc.text('Top productos vendidos', margen, y)
+      y += 6
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margen, right: margen },
+        theme: 'striped',
+        headStyles: estiloHead,
+        bodyStyles: estiloBody,
+        head: [['#', 'Producto', 'Categoría', 'Kg vendidos', 'Total ventas', '%']],
+        body: topProductos.map((p, i) => [String(i + 1), p.nombre, p.categoria, p.kg, p.total, `${p.pct}%`]),
+      })
+      y = doc.lastAutoTable.finalY + 28
+
+      // Reportes a empleados
+      doc.setFontSize(10)
+      doc.setTextColor(0)
+      doc.text('Reportes a empleados', margen, y)
+      y += 6
+      const segundosEmp = reportesEmpleados.map(r => [
+        `${r.empleado_nombre} ${r.empleado_apellido}`,
+        r.motivo,
+        r.creado_por_nombre || '—',
+        new Date(r.fecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }),
+      ])
+      if (segundosEmp.length === 0) {
+        doc.setFontSize(9)
+        doc.setTextColor(120)
+        doc.text('Sin reportes registrados.', margen, y + 6)
+      } else {
+        autoTable(doc, {
+          startY: y,
+          margin: { left: margen, right: margen },
+          theme: 'striped',
+          headStyles: estiloHead,
+          bodyStyles: estiloBody,
+          head: [['Empleado', 'Motivo', 'Registrado por', 'Fecha']],
+          body: segundosEmp,
+        })
       }
 
       doc.save(`reporte-ventas-${periodoActivo}.pdf`)
     } catch (err) {
+      console.error('No se pudo generar el PDF:', err)
       toast.error('No se pudo generar el PDF: ' + err.message)
     } finally {
       setGenerandoPdf(false)
